@@ -10,11 +10,10 @@ import { OptionsView } from '@/components/Options/OptionsView';
 export default function Page() {
   const {
     traffic, setTraffic, selectedReq, selectedId, setSelectedId, isIntercepting, interceptMode, ignoredMethods, updateConfig, resumeRequest,
-    isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit
+    isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit, repeaterRequests, setRepeaterRequests, prefs, updatePrefs,
   } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options'>('history');
-  const [repeaterRequests, setRepeaterRequests] = useState<RepeaterRequest[]>([]);
 
   const pendingCount = traffic.filter(t => t.is_intercepted).length;
 
@@ -33,14 +32,26 @@ export default function Page() {
   };
 
   const handleDeleteHistoryRequest = (id: string) => {
+    // 1. Optimistically update the UI
     setTraffic(traffic.filter(t => t.id !== id));
     if (selectedId === id) setSelectedId(null);
+
+    // 2. Tell the SQLite Master DB to delete the row
+    fetch(`/api/history/${id}`, { method: 'DELETE' }).catch(err =>
+      console.error('Failed to delete history item:', err)
+    );
   };
 
   const handleClearHistory = () => {
+    // 1. Optimistically clear the UI
     setTraffic([]);
     setSelectedId(null);
-    fetch('/api/traffic', { method: 'DELETE' }).catch(err => console.error('Failed to clear history:', err));
+
+    // 2. Tell the SQLite Master DB to drop the whole table
+    // (Make sure this points to /api/history and NOT /api/traffic!)
+    fetch('/api/history', { method: 'DELETE' }).catch(err =>
+      console.error('Failed to clear history:', err)
+    );
   };
 
   const handleUpdateRepeaterRequest = (id: string, updates: Partial<RepeaterRequest>) => {
@@ -176,7 +187,7 @@ export default function Page() {
         )}
 
         {activeTab === 'options' && (
-          <OptionsView />
+          <OptionsView prefs={prefs} updatePrefs={updatePrefs} />
         )}
 
       </main>

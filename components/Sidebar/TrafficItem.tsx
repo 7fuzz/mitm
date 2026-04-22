@@ -32,15 +32,15 @@ export const TrafficItem = memo(({
   };
 
   const activeBorder =
-    activeColor === 'purple' ? 'border-purple-500' :
-      activeColor === 'sky' ? 'border-sky-500' :
-        'border-emerald-500';
+    activeColor === 'purple' ? 'border-l-purple-500' :
+      activeColor === 'sky' ? 'border-l-sky-500' :
+        'border-l-emerald-500';
 
   return (
     <div
       onClick={() => onClick(id)}
-      className={`cursor-pointer hover:bg-zinc-800/50 transition-colors border-l-2 group ${isActive ? `bg-zinc-800/50 ${activeBorder}` : 'border-transparent'
-        } ${isIntercepted ? 'border-rose-500 bg-rose-500/5' : ''}`}
+      className={`cursor-pointer hover:bg-zinc-800/50 transition-colors border-l-2 group ${isActive ? `bg-zinc-800/50 ${activeBorder}` : 'border-l-transparent'
+        } ${isIntercepted ? 'border-l-rose-500 bg-rose-500/5' : ''}`}
     >
       <div className="p-3 space-y-1.5 flex flex-col min-w-0">
         <div className="flex items-center gap-2 justify-between">

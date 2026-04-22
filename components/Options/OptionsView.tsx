@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react';
 
-export function OptionsView() {
+interface Props {
+  prefs: { history: boolean, repeater: boolean, bindings: boolean, limits: boolean, intercept: boolean };
+  updatePrefs: (p: any) => void;
+}
+
+export function OptionsView({ prefs, updatePrefs }: Props) {
   const [bindings, setBindings] = useState<string[]>(['8080']);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
+  // 1. Fetch from the new Master DB endpoint
   useEffect(() => {
-    fetch('/api/proxy-settings')
+    fetch('/api/state')
       .then(res => res.json())
-      .then(data => {
-        setBindings(data.bindings && data.bindings.length > 0 ? data.bindings : ['8080']);
-      });
+      .then(state => {
+        if (state.network && state.network.bindings && state.network.bindings.length > 0) {
+          setBindings(state.network.bindings);
+        }
+      })
+      .catch(e => console.error("Failed to load settings", e));
   }, []);
 
   const handleBindingChange = (index: number, value: string) => {
@@ -33,10 +42,11 @@ export function OptionsView() {
     try {
       const cleanBindings = bindings.filter(b => b.trim() !== '');
 
-      const res = await fetch('/api/proxy-settings', {
+      // 2. Save directly into the SQLite state table!
+      const res = await fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bindings: cleanBindings }),
+        body: JSON.stringify({ network: { bindings: cleanBindings } }),
       });
 
       const data = await res.json();
@@ -44,13 +54,17 @@ export function OptionsView() {
         setSaveMessage('Network listeners updated successfully!');
         setBindings(cleanBindings.length > 0 ? cleanBindings : ['8080']);
       } else {
-        setSaveMessage(`Error: ${data.error}`);
+        setSaveMessage(`Error: Failed to save to database`);
       }
     } catch (e) {
       setSaveMessage('Failed to connect to proxy engine.');
     }
     setIsSaving(false);
     setTimeout(() => setSaveMessage(''), 3000);
+  };
+
+  const togglePref = (key: keyof typeof prefs) => {
+    updatePrefs({ ...prefs, [key]: !prefs[key] });
   };
 
   return (
@@ -130,7 +144,7 @@ export function OptionsView() {
               <h4 className="text-zinc-300 text-[10px] font-bold uppercase tracking-widest">Setup Instructions:</h4>
               <ol className="list-decimal list-inside text-xs text-zinc-500 font-mono space-y-2">
                 <li>Connect your device to the same Wi-Fi network.</li>
-                <li>Configure your device's proxy to point to <strong className="text-sky-400">YOUR_IP</strong> and the configured <strong className="text-amber-400">PORT</strong>.</li>
+                <li>Configure your device's proxy to point to your <strong className="text-sky-400">IP address</strong>.</li>
                 <li>Download the certificate below and transfer it to the device.</li>
                 <li>Go to device settings and explicitly <strong className="text-emerald-400">Trust the Root Certificate</strong>.</li>
               </ol>
@@ -143,6 +157,59 @@ export function OptionsView() {
             >
               Download Root CA (.pem)
             </a>
+          </div>
+        </div>
+
+        {/* Data Persistence */}
+        <div className="p-6 border border-zinc-800 rounded bg-zinc-900/30 space-y-6">
+          <h2 className="text-purple-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+            <span className="opacity-50">#</span> 3. Master_Database
+          </h2>
+
+          <p className="text-zinc-400 text-xs font-mono leading-relaxed mb-4">
+            Select which configuration elements are permanently saved to the local SQLite database. Disabling a toggle will stop future saves, but will not erase existing data.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.history} onChange={() => togglePref('history')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">HTTP History</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Logs traffic to DB</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.repeater} onChange={() => togglePref('repeater')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Repeater Workspace</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Saves tabs & payloads</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.bindings} onChange={() => togglePref('bindings')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Network Bindings</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Saves IP & Ports</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.intercept} onChange={() => togglePref('intercept')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Intercept Config</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Saves rules & state</span>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.limits} onChange={() => togglePref('limits')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Memory Limits</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Saves max history size</span>
+              </div>
+            </label>
           </div>
         </div>
 

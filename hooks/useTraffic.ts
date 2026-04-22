@@ -1,102 +1,119 @@
 import { useState, useEffect, useRef } from 'react';
 import { Traffic } from '@/types/traffic';
+import { RepeaterRequest } from '@/components/Repeater/RepeaterView';
 
 export function useTraffic() {
   const [traffic, setTraffic] = useState<Traffic[]>([]);
+  const [repeaterRequests, setRepeaterRequests] = useState<RepeaterRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Settings State
+  const [prefs, setPrefs] = useState({
+    history: true, repeater: true, bindings: true, limits: true, intercept: true
+  });
+
   const [isIntercepting, setIsIntercepting] = useState(false);
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);
 
-  // History Limit State
-  const [isLimitEnabled, setIsLimitEnabled] = useState(false);
+  const [isLimitEnabled, setIsLimitEnabled] = useState(true);
   const [historyLimit, setHistoryLimit] = useState(100);
 
-  // We use a ref so the SSE listener can access the latest limits without re-binding
+  // === NEW: Boot Sequence Lock ===
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
+
   const limitRef = useRef({ enabled: isLimitEnabled, value: historyLimit });
+  const prefsRef = useRef(prefs);
+
+  // 1. LIMITS AUTO-SAVE (Now protected by isStateLoaded)
   useEffect(() => {
     limitRef.current = { enabled: isLimitEnabled, value: historyLimit };
+    prefsRef.current = prefs;
 
-    // If the user turns the limit ON, instantly trim the existing array
-    if (isLimitEnabled) {
-      setTraffic(prev => prev.slice(0, historyLimit));
+    // ABORT: Do not save if we haven't finished loading from the DB yet!
+    if (!isStateLoaded) return;
+
+    if (prefs.limits) {
+      fetch('/api/state', { method: 'POST', body: JSON.stringify({ limits: { enabled: isLimitEnabled, value: historyLimit } }) });
     }
-  }, [isLimitEnabled, historyLimit]);
+    if (isLimitEnabled) setTraffic(prev => prev.slice(0, historyLimit));
+  }, [isLimitEnabled, historyLimit, isStateLoaded]); // Add isStateLoaded to dependencies
 
+  // 2. MASTER DATA LOADER
   useEffect(() => {
-    const syncInitialConfig = async () => {
-      try {
-        const res = await fetch('/api/intercept');
-        const config = await res.json();
+    fetch('/api/state').then(r => r.json()).then(state => {
+      if (state.preferences) setPrefs(state.preferences);
 
-        setIsIntercepting(config.enabled);
-        setInterceptMode(config.mode);
-        setIgnoredMethods(config.ignored_methods);
-
-        if (config.queue && config.queue.length > 0) {
-          setTraffic((prev) => [...config.queue, ...prev]);
-        }
-      } catch (e) {
-        console.error("Failed to sync intercept config", e);
+      if (state.limits && state.preferences?.limits !== false) {
+        setIsLimitEnabled(state.limits.enabled);
+        setHistoryLimit(state.limits.value);
       }
-    };
+      if (state.intercept && state.preferences?.intercept !== false) {
+        setIsIntercepting(state.intercept.enabled);
+        setInterceptMode(state.intercept.mode);
+        setIgnoredMethods(state.intercept.ignored);
+      }
+      if (state.queue && state.queue.length > 0) {
+        setTraffic(prev => [...state.queue, ...prev]);
+      }
 
-    syncInitialConfig();
+      // UNLOCK: The DB has loaded, auto-saves are now permitted.
+      setIsStateLoaded(true);
+    });
+
+    fetch('/api/history').then(r => r.json()).then(hist => {
+      if (hist && hist.length > 0) setTraffic(prev => [...prev, ...hist.reverse()]);
+    });
+
+    fetch('/api/repeater-db').then(r => r.json()).then(rep => {
+      if (rep && rep.length > 0) setRepeaterRequests(rep);
+    });
 
     const eventSource = new EventSource('/api/traffic');
     eventSource.onmessage = (e) => {
       const data: Traffic = JSON.parse(e.data);
-
       setTraffic((prev) => {
         const filtered = prev.filter(t => t.id !== data.id);
         const next = [data, ...filtered];
-
-        // NEW: Apply the Memory Limit logic
-        if (limitRef.current.enabled) {
-          return next.slice(0, limitRef.current.value);
-        }
+        if (limitRef.current.enabled) return next.slice(0, limitRef.current.value);
         return next;
       });
     };
-
     return () => eventSource.close();
   }, []);
 
-  const updateConfig = async (enabled: boolean, mode: string, methods: string[]) => {
+  const updateConfig = async (enabled: boolean, mode: string, ignored: string[]) => {
     setIsIntercepting(enabled);
     setInterceptMode(mode as any);
-    setIgnoredMethods(methods);
+    setIgnoredMethods(ignored);
+    if (prefsRef.current.intercept) {
+      fetch('/api/state', { method: 'POST', body: JSON.stringify({ intercept: { enabled, mode, ignored } }) });
+    }
+  };
 
-    await fetch('/api/intercept', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'config', data: { enabled, mode, ignored_methods: methods } }),
-    });
+  const updatePrefs = async (newPrefs: typeof prefs) => {
+    setPrefs(newPrefs);
+    await fetch('/api/state', { method: 'POST', body: JSON.stringify({ preferences: newPrefs }) });
+  };
+
+  const updateRepeater = (requests: RepeaterRequest[]) => {
+    setRepeaterRequests(requests);
+    if (prefsRef.current.repeater) {
+      fetch('/api/repeater-db', { method: 'POST', body: JSON.stringify(requests) });
+    }
   };
 
   const resumeRequest = async (id: string, modifiedData: any) => {
-    await fetch('/api/intercept', {
-      method: 'POST',
-      body: JSON.stringify({ action: 'resume', id, data: modifiedData }),
-    });
-    setTraffic((prev) => prev.map((t) => (t.id === id ? { ...t, is_intercepted: false } : t)));
+    await fetch(`http://127.0.0.1:3001/resume/${id}`, { method: 'POST', body: JSON.stringify(modifiedData) });
+    setTraffic(prev => prev.map((t) => (t.id === id ? { ...t, is_intercepted: false } : t)));
   };
 
   return {
-    traffic,
-    setTraffic,
+    traffic, setTraffic,
+    repeaterRequests, setRepeaterRequests: updateRepeater,
     selectedReq: traffic.find((r) => r.id === selectedId) || null,
-    selectedId,
-    setSelectedId,
-    isIntercepting,
-    interceptMode,
-    ignoredMethods,
-    updateConfig,
-    resumeRequest,
-    isLimitEnabled,
-    setIsLimitEnabled,
-    historyLimit,
-    setHistoryLimit
+    selectedId, setSelectedId,
+    prefs, updatePrefs,
+    isIntercepting, interceptMode, ignoredMethods, updateConfig, resumeRequest,
+    isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Traffic } from '@/types/traffic';
 import { TrafficList } from '../Sidebar/TrafficList';
 import { TrafficDetail } from '../Inspector/TrafficDetail';
@@ -18,31 +18,35 @@ interface Props {
 }
 
 export function HistoryView({
-  traffic,
-  selectedReq,
-  selectedId,
-  setSelectedId,
-  isLimitEnabled,
-  setIsLimitEnabled,
-  historyLimit,
-  setHistoryLimit,
-  onSendToRepeater,
-  onDeleteRequest,
-  onClearHistory
+  traffic, selectedReq, selectedId, setSelectedId,
+  isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit,
+  onSendToRepeater, onDeleteRequest, onClearHistory
 }: Props) {
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(true);
+
+  // === NEW: Local Input State ===
+  const [localLimit, setLocalLimit] = useState(historyLimit.toString());
+
+  // Keep local state synced if the DB changes the limit in the background
+  useEffect(() => {
+    setLocalLimit(historyLimit.toString());
+  }, [historyLimit]);
+
+  // Only apply the limit when the user is done typing
+  const handleLimitCommit = () => {
+    const val = Number(localLimit);
+    if (!isNaN(val) && val > 0) {
+      setHistoryLimit(val);
+    } else {
+      setLocalLimit(historyLimit.toString()); // Revert to safe value if they typed garbage
+    }
+  };
 
   return (
     <>
       <div className={`${isHistorySidebarOpen ? 'w-1/3 border-r' : 'w-0 border-r-0'} border-zinc-800 transition-all duration-300 flex flex-col overflow-hidden bg-zinc-950`}>
         <div className="min-w-[300px] flex-1 flex flex-col h-full">
-          {/* === PASS onDelete HERE === */}
-          <TrafficList
-            items={traffic}
-            activeId={selectedId}
-            onSelect={setSelectedId}
-            onDelete={onDeleteRequest}
-          />
+          <TrafficList items={traffic} activeId={selectedId} onSelect={setSelectedId} onDelete={onDeleteRequest} />
         </div>
       </div>
 
@@ -64,10 +68,14 @@ export function HistoryView({
             {isLimitEnabled && (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Max:</span>
+
+                {/* === UPGRADED: Isolated Input with Commit Triggers === */}
                 <input
                   type="number"
-                  value={historyLimit}
-                  onChange={(e) => setHistoryLimit(Number(e.target.value) || 100)}
+                  value={localLimit}
+                  onChange={(e) => setLocalLimit(e.target.value)}
+                  onBlur={handleLimitCommit}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLimitCommit()}
                   className="w-16 bg-zinc-950 border border-zinc-700 text-emerald-400 text-[10px] font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 text-center"
                 />
               </div>
@@ -77,7 +85,6 @@ export function HistoryView({
               Total: {traffic.length}
             </span>
 
-            {/* === WIRE THE CLEAR ALL BUTTON HERE === */}
             <button
               onClick={() => {
                 if (confirm('Clear all history? This cannot be undone.')) {

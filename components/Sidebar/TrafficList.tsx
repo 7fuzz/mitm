@@ -6,6 +6,7 @@ import { TrafficItem } from './TrafficItem';
 interface Props {
   items: Traffic[];
   activeId: string | null;
+  activeColor?: 'emerald' | 'purple' | 'sky';
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
 }
@@ -22,11 +23,11 @@ function getStatusCategory(status: number): string {
   return '5XX';
 }
 
-export function TrafficList({ items, activeId, onSelect, onDelete }: Props) {
+export function TrafficList({ items, activeId, activeColor, onSelect, onDelete }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState<Record<string, FilterState>>({});
   const [statusFilter, setStatusFilter] = useState<Record<string, FilterState>>({});
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   const toggleMethod = (method: string) => {
     setMethodFilter(prev => {
@@ -157,7 +158,7 @@ export function TrafficList({ items, activeId, onSelect, onDelete }: Props) {
                 title={req.url}
                 isIntercepted={req.is_intercepted}
                 isActive={activeId === req.id}
-                activeColor="emerald"
+                activeColor={activeColor || 'emerald'}
                 onClick={onSelect}
                 onDelete={onDelete}
               />
