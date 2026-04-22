@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Traffic } from '@/types/traffic';
-import { RepeaterRequest } from '@/components/Repeater/RepeaterView';
+import { RepeaterRequest } from '@/components/View/RepeaterView';
 
 export function useTraffic() {
   const [traffic, setTraffic] = useState<Traffic[]>([]);

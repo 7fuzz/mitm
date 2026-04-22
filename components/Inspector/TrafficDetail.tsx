@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from './HttpResponseViewer';
-import { SaveModal } from '../Saved/SaveModal';
+import { SaveModal } from '../ui/SaveModal';
 
 interface Props {
   req: Traffic;

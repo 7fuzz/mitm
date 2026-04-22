@@ -24,7 +24,7 @@ export function HistoryView({
 }: Props) {
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(true);
 
-  // === NEW: Local Input State ===
+  // === Local Input State ===
   const [localLimit, setLocalLimit] = useState(historyLimit.toString());
 
   // Keep local state synced if the DB changes the limit in the background

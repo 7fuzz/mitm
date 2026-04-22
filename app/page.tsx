@@ -1,11 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { useTraffic } from '@/hooks/useTraffic';
-import { InterceptView } from '@/components/Intercept/InterceptView';
-import { SavedView } from '@/components/Saved/SavedView';
-import { RepeaterView, type RepeaterRequest } from '@/components/Repeater/RepeaterView';
-import { HistoryView } from '@/components/History/HistoryView';
-import { OptionsView } from '@/components/Options/OptionsView';
+import { InterceptView } from '@/components/View/InterceptView';
+import { SavedView } from '@/components/View/SavedView';
+import { RepeaterView, type RepeaterRequest } from '@/components/View/RepeaterView';
+import { HistoryView } from '@/components/View/HistoryView';
+import { OptionsView } from '@/components/View/OptionsView';
 
 export default function Page() {
   const {

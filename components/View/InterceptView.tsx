@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Traffic } from '@/types/traffic';
 import { TrafficList } from '../Sidebar/TrafficList';
-import { HeaderEditor } from './HeaderEditor';
-import { BodyEditor } from './BodyEditor';
-import { UrlEditor } from '../ui/UrlEditor';
+import { HeaderEditor } from '../Editor/HeaderEditor';
+import { BodyEditor } from '../Editor/BodyEditor';
+import { UrlEditor } from '../Editor/UrlEditor';
 import { InterceptTimer } from '../ui/InterceptTimer';
 
 interface Props {
@@ -139,8 +139,8 @@ export function InterceptView({ traffic, isIntercepting, interceptMode, ignoredM
                   key={m}
                   onClick={() => toggleMethodIgnore(m)}
                   className={`text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded transition-all ${ignoredMethods.includes(m)
-                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                      : 'bg-transparent text-zinc-600 hover:text-zinc-400 border border-transparent'
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    : 'bg-transparent text-zinc-600 hover:text-zinc-400 border border-transparent'
                     }`}
                 >
                   {m}

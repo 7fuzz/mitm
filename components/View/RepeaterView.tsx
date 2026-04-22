@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { HeaderEditor } from '../Intercept/HeaderEditor';
-import { BodyEditor } from '../Intercept/BodyEditor';
-import { UrlEditor } from '../ui/UrlEditor';
+import { HeaderEditor } from '../Editor/HeaderEditor';
+import { BodyEditor } from '../Editor/BodyEditor';
+import { UrlEditor } from '../Editor/UrlEditor';
 import { TrafficList } from '../Sidebar/TrafficList';
 import { Traffic } from '@/types/traffic';
+import HttpResponseViewer from '../Inspector/HttpResponseViewer';
 
 export interface RepeaterRequest {
   id: string;
@@ -40,11 +41,10 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
 
   const currentReq = requests.find(r => r.id === selectedId) || requests[0];
 
-  // Map Repeater format to Traffic format so the generic TrafficList can read it
   const trafficMapped: Traffic[] = requests.map(req => ({
     id: req.id,
     method: req.method,
-    url: req.name, // TrafficList uses `url` for the search text and title, so we pass the name here!
+    url: req.name,
     status_code: req.response?.status ?? 0,
     host: '',
     phase: 'history',
@@ -52,7 +52,6 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
     is_intercepted: false
   }));
 
-  // Sync state when request changes
   useEffect(() => {
     if (currentReq) {
       setEditMethod(currentReq.method);
@@ -103,10 +102,19 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
     alert('Saved to Proxy Vault!');
   };
 
+  // 2. Helper to stitch the response back together for your Viewer
+  const getRawResponseText = () => {
+    if (!currentReq?.response) return '';
+    const headerText = Object.entries(currentReq.response.headers)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n');
+    return `${headerText}\n\n${currentReq.response.body}`;
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden bg-zinc-950">
 
-      {/* === UPGRADED SIDEBAR === */}
+      {/* Sidebar */}
       <div className={`${isSidebarOpen ? 'w-1/3 border-r' : 'w-0 border-r-0'} border-zinc-800 transition-all duration-300 flex flex-col overflow-hidden bg-zinc-950`}>
         <div className="min-w-[300px] flex-1 flex flex-col h-full bg-zinc-950">
           <div className="p-4 border-b border-zinc-800 bg-zinc-900/20 text-[10px] text-zinc-500 uppercase font-black tracking-[0.2em] shrink-0">
@@ -149,6 +157,7 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
         {/* Editor Area */}
         {currentReq ? (
           <div className="flex-1 overflow-y-auto p-6 space-y-8 animate-in fade-in pb-24">
+
             {/* 1. Request Line */}
             <div className="space-y-3">
               <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 1. Request_Line</h3>
@@ -174,7 +183,7 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
               </div>
             </div>
 
-            {/* Response Section */}
+            {/* 3. Replaced the Response Section with your new Viewer! */}
             {currentReq.response && (
               <div className="mt-8 pt-8 border-t border-zinc-800 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between mb-6">
@@ -184,26 +193,12 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-8 h-[600px]">
-                  {/* 4. Response Headers */}
-                  <div className="flex flex-col h-1/2 space-y-3">
-                    <h3 className="text-amber-500/70 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 4. Response_Headers</h3>
-                    <div className="flex-1 bg-zinc-900/30 border border-zinc-800/50 p-4 rounded overflow-hidden">
-                      <HeaderEditor initialHeaders={currentReq.response.headers} onChange={() => { }} />
-                    </div>
-                  </div>
-
-                  {/* 5. Response Body */}
-                  <div className="flex flex-col h-1/2 space-y-3">
-                    <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 5. Response_Body</h3>
-                    <div className="flex-1 min-h-0 relative">
-                      <BodyEditor body={currentReq.response.body} headers={currentReq.response.headers} onChange={() => { }} />
-                      <div className="absolute inset-0 pointer-events-none border border-transparent peer-focus-within:border-amber-500/30 rounded transition-colors" />
-                    </div>
-                  </div>
+                <div className="h-[600px] flex flex-col">
+                  <HttpResponseViewer text={getRawResponseText()} />
                 </div>
               </div>
             )}
+
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center opacity-30 grayscale pointer-events-none select-none">

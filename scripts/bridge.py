@@ -5,6 +5,7 @@ import time
 import sqlite3
 import uuid
 import os
+import base64
 from aiohttp import web
 from mitmproxy import ctx
 
@@ -273,14 +274,37 @@ class InterceptBridge:
 
     async def response(self, flow):
         intercepted = self.should_intercept(flow, "response")
+        
+        # --- NEW: Safe Binary Extraction ---
+        content_type = flow.response.headers.get("Content-Type", "").lower()
+        is_binary = any(t in content_type for t in ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/octet-stream'])
+        
+        # If it's an image/file, encode the raw bytes into base64. Otherwise, grab the standard text.
+        try:
+            if is_binary and flow.response.content:
+                res_body = base64.b64encode(flow.response.content).decode('utf-8')
+            else:
+                res_body = flow.response.get_text() or ""
+        except:
+            res_body = "<Binary data could not be decoded>"
+
         payload = {
-            "id": flow.id, "phase": "response" if intercepted else "history", "method": flow.request.method,
-            "url": flow.request.url, "host": flow.request.host, "status_code": flow.response.status_code,
-            "request_headers": dict(flow.request.headers), "response_headers": dict(flow.response.headers),
-            "request_body": (flow.request.get_text() or "")[:500000], "response_body": (flow.response.get_text() or "")[:500000],
-            "is_intercepted": intercepted, "intercepted_at": int(time.time() * 1000)
+            "id": flow.id, 
+            "phase": "response" if intercepted else "history", 
+            "method": flow.request.method,
+            "url": flow.request.url, 
+            "host": flow.request.host, 
+            "status_code": flow.response.status_code,
+            "request_headers": dict(flow.request.headers), 
+            "response_headers": dict(flow.response.headers),
+            "request_body": (flow.request.get_text() or "")[:500000], 
+            "response_body": res_body[:5000000], # Allow up to 5MB for base64 media
+            "is_intercepted": intercepted, 
+            "intercepted_at": int(time.time() * 1000)
         }
+        
         await self.send_to_dashboard(payload)
+        
         if intercepted:
             event = asyncio.Event()
             self.waiting_flows[flow.id] = {"flow": flow, "event": event, "phase": "response", "payload": payload}
