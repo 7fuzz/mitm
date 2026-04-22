@@ -2,8 +2,9 @@ import json
 import asyncio
 import aiohttp
 import time
-import sqlite3 # NEW
-import uuid    # NEW
+import sqlite3
+import uuid
+import os
 from aiohttp import web
 from mitmproxy import ctx
 
@@ -62,13 +63,18 @@ class InterceptBridge:
         # Repeater
         app.router.add_post('/repeat', self.handle_repeat)
 
+        # Cert
+        app.router.add_get('/cert', self.handle_get_cert)
+        app.router.add_get('/proxy-settings', self.handle_get_proxy_settings)
+        app.router.add_post('/proxy-settings', self.handle_set_proxy_settings)
+
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '127.0.0.1', 3001)
         await site.start()
         ctx.log.info("Command Server started on http://127.0.0.1:3001")
 
-    # === NEW: Database Handlers ===
+    # === Database Handlers ===
     async def handle_save(self, request):
         data = await request.json()
         item_id = str(uuid.uuid4())
@@ -100,6 +106,53 @@ class InterceptBridge:
         self.db.execute("DELETE FROM saved_traffic WHERE id=?", (item_id,))
         self.db.commit()
         return web.Response(text="OK")
+
+    # === Options & Config Handlers ===
+    async def handle_get_cert(self, request):
+        # Locate the default mitmproxy cert directory
+        cert_path = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
+        if os.path.exists(cert_path):
+            return web.FileResponse(cert_path, headers={
+                'Content-Disposition': 'attachment; filename="mitmproxy-ca-cert.pem"'
+            })
+        return web.Response(text="Certificate not found. Ensure mitmproxy has run at least once.", status=404)
+
+    async def handle_get_proxy_settings(self, request):
+        modes = ctx.options.mode
+        bindings = []
+
+        for m in modes:
+            if m.startswith("regular@"):
+                # Extract whatever comes after the @ (e.g., '8080' or '127.0.0.1:8080')
+                bind = m.split("@", 1)[1]
+                bindings.append(bind)
+            elif m == "regular":
+                bindings.append(str(ctx.options.listen_port))
+
+        return web.json_response({
+            "bindings": bindings if bindings else ["8080"]
+        })
+
+    async def handle_set_proxy_settings(self, request):
+        data = await request.json()
+        try:
+            raw_bindings = data.get("bindings", ["8080"])
+            modes = []
+
+            for b in raw_bindings:
+                val = str(b).strip()
+                if val:
+                    modes.append(f"regular@{val}")
+
+            if not modes:
+                return web.json_response({"success": False, "error": "No valid bindings provided"}, status=400)
+
+            # mitmproxy handles the IP:PORT or PORT parsing natively!
+            ctx.options.mode = modes
+            return web.json_response({"success": True})
+            
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=400)
 
     async def handle_repeat(self, request):
         """Handle repeater requests - execute them through the proxy"""

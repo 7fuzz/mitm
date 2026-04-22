@@ -10,8 +10,8 @@ export function useTraffic() {
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);
 
-  // NEW: History Limit State
-  const [isLimitEnabled, setIsLimitEnabled] = useState(true);
+  // History Limit State
+  const [isLimitEnabled, setIsLimitEnabled] = useState(false);
   const [historyLimit, setHistoryLimit] = useState(100);
 
   // We use a ref so the SSE listener can access the latest limits without re-binding
@@ -85,6 +85,7 @@ export function useTraffic() {
 
   return {
     traffic,
+    setTraffic,
     selectedReq: traffic.find((r) => r.id === selectedId) || null,
     selectedId,
     setSelectedId,
@@ -93,7 +94,6 @@ export function useTraffic() {
     ignoredMethods,
     updateConfig,
     resumeRequest,
-    // Export Limit controls
     isLimitEnabled,
     setIsLimitEnabled,
     historyLimit,

@@ -1,21 +1,88 @@
 import { useState } from 'react';
 import { Traffic } from '@/types/traffic';
+import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
+import { TrafficItem } from './TrafficItem';
 
 interface Props {
   items: Traffic[];
   activeId: string | null;
   onSelect: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function TrafficList({ items, activeId, onSelect }: Props) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [methodFilter, setMethodFilter] = useState('ALL');
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'];
+const STATUS_FILTERS = ['1XX', '2XX', '3XX', '4XX', '5XX', 'PENDING'];
 
-  // Filter the items dynamically based on search and method selection
+function getStatusCategory(status: number): string {
+  if (status === 0) return 'PENDING';
+  if (status < 200) return '1XX';
+  if (status < 300) return '2XX';
+  if (status < 400) return '3XX';
+  if (status < 500) return '4XX';
+  return '5XX';
+}
+
+export function TrafficList({ items, activeId, onSelect, onDelete }: Props) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [methodFilter, setMethodFilter] = useState<Record<string, FilterState>>({});
+  const [statusFilter, setStatusFilter] = useState<Record<string, FilterState>>({});
+  const [showFilters, setShowFilters] = useState(true);
+
+  const toggleMethod = (method: string) => {
+    setMethodFilter(prev => {
+      const current = prev[method];
+      const next = current === undefined ? 'include' : current === 'include' ? 'exclude' : undefined;
+      return { ...prev, [method]: next };
+    });
+  };
+
+  const toggleStatus = (status: string) => {
+    setStatusFilter(prev => {
+      const current = prev[status];
+      const next = current === undefined ? 'include' : current === 'include' ? 'exclude' : undefined;
+      return { ...prev, [status]: next };
+    });
+  };
+
+
+  // Filter the items dynamically based on search and filters
   const filteredItems = items.filter(t => {
     const matchesSearch = t.url.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMethod = methodFilter === 'ALL' || t.method.toUpperCase() === methodFilter;
-    return matchesSearch && matchesMethod;
+
+    // Method filtering logic
+    const methodIncludes = Object.entries(methodFilter)
+      .filter(([_, state]) => state === 'include')
+      .map(([method, _]) => method);
+    const methodExcludes = Object.entries(methodFilter)
+      .filter(([_, state]) => state === 'exclude')
+      .map(([method, _]) => method);
+
+    let matchesMethod = true;
+    if (methodIncludes.length > 0) {
+      matchesMethod = methodIncludes.includes(t.method.toUpperCase());
+    }
+    if (matchesMethod && methodExcludes.length > 0) {
+      matchesMethod = !methodExcludes.includes(t.method.toUpperCase());
+    }
+
+    // Status filtering logic
+    const statusCat = getStatusCategory(t.status_code);
+    const statusIncludes = Object.entries(statusFilter)
+      .filter(([_, state]) => state === 'include')
+      .map(([status, _]) => status);
+    const statusExcludes = Object.entries(statusFilter)
+      .filter(([_, state]) => state === 'exclude')
+      .map(([status, _]) => status);
+
+    let matchesStatus = true;
+    if (statusIncludes.length > 0) {
+      matchesStatus = statusIncludes.includes(statusCat);
+    }
+    if (matchesStatus && statusExcludes.length > 0) {
+      matchesStatus = !statusExcludes.includes(statusCat);
+    }
+
+    return matchesSearch && matchesMethod && matchesStatus;
   });
 
   return (
@@ -23,35 +90,54 @@ export function TrafficList({ items, activeId, onSelect }: Props) {
 
       {/* Search & Filter Header */}
       <div className="p-3 border-b border-zinc-800 space-y-3 bg-zinc-900/30 shrink-0">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search URLs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono"
-          />
-          <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <div className="flex items-center justify-between gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search URLs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono"
+            />
+            <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
 
-          {searchTerm && (
-            <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>
-          )}
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>
+            )}
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-2 py-1.5 text-[9px] uppercase font-bold tracking-widest rounded bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200 hover:border-zinc-600 transition-all whitespace-nowrap"
+          >
+            {showFilters ? 'Hide' : 'Show'} Filter
+          </button>
         </div>
 
-        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-          {['ALL', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'].map((method) => (
-            <button
-              key={method}
-              onClick={() => setMethodFilter(method)}
-              className={`px-2 py-1 text-[9px] uppercase font-bold tracking-widest rounded transition-all whitespace-nowrap ${methodFilter === method
-                ? 'bg-zinc-700 text-white'
-                : 'bg-zinc-950 text-zinc-500 border border-zinc-800 hover:text-zinc-300 hover:border-zinc-700'
-                }`}
-            >
-              {method}
-            </button>
-          ))}
-        </div>
+        {showFilters && (
+          <>
+            {/* Method Filter */}
+            <div>
+              <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Methods</div>
+              <MultiSelectFilter
+                options={METHODS}
+                filterStates={methodFilter}
+                onToggle={toggleMethod}
+                onClear={() => setMethodFilter({})}
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Response Status</div>
+              <MultiSelectFilter
+                options={STATUS_FILTERS}
+                filterStates={statusFilter}
+                onToggle={toggleStatus}
+                onClear={() => setStatusFilter({})}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* The List */}
@@ -63,29 +149,18 @@ export function TrafficList({ items, activeId, onSelect }: Props) {
         ) : (
           <div className="divide-y divide-zinc-800/50">
             {filteredItems.map((req) => (
-              <div
+              <TrafficItem
                 key={req.id}
-                onClick={() => onSelect(req.id)}
-                className={`cursor-pointer hover:bg-zinc-800/50 transition-colors border-l-2 ${activeId === req.id ? 'bg-zinc-800/50 border-emerald-500' : 'border-transparent'
-                  } ${req.is_intercepted ? 'border-rose-500 bg-rose-500/5' : ''}`}
-              >
-                <div className="p-3 space-y-1.5 flex flex-col min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-wider shrink-0">
-                    <span className={req.method === 'GET' ? 'text-sky-400' : req.method === 'POST' ? 'text-emerald-400' : 'text-amber-400'}>
-                      {req.method}
-                    </span>
-                    <span className={`${req.status_code >= 400 ? 'text-rose-400' : req.status_code >= 300 ? 'text-amber-400' : req.status_code === 0 ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                      {req.status_code === 0 ? 'PENDING' : req.status_code}
-                    </span>
-                    {req.is_intercepted && (
-                      <span className="ml-auto text-[8px] bg-rose-500/20 text-rose-500 px-1 rounded animate-pulse">Paused</span>
-                    )}
-                  </div>
-                  <div className="text-zinc-300 text-xs truncate w-full" title={req.url}>
-                    {req.url}
-                  </div>
-                </div>
-              </div>
+                id={req.id}
+                method={req.method}
+                status={req.status_code}
+                title={req.url}
+                isIntercepted={req.is_intercepted}
+                isActive={activeId === req.id}
+                activeColor="emerald"
+                onClick={onSelect}
+                onDelete={onDelete}
+              />
             ))}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HttpResponseViewer from '../Inspector/HttpResponseViewer';
+import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
 
 interface SavedItem {
   id: string;
@@ -10,11 +11,25 @@ interface SavedItem {
   timestamp: number;
 }
 
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
+const STATUS_FILTERS = ['1XX', '2XX', '3XX', '4XX', '5XX', 'NO_RES'];
+
+function getStatusCategory(status?: number): string {
+  if (!status) return 'NO_RES';
+  if (status < 200) return '1XX';
+  if (status < 300) return '2XX';
+  if (status < 400) return '3XX';
+  if (status < 500) return '4XX';
+  return '5XX';
+}
+
 export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: SavedItem) => void }) {
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [responseFilter, setResponseFilter] = useState<'all' | 'success' | 'redirect' | 'error'>('all');
+  const [methodFilter, setMethodFilter] = useState<Record<string, FilterState>>({});
+  const [statusFilter, setStatusFilter] = useState<Record<string, FilterState>>({});
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetch('/api/saved').then(r => r.json()).then(setSavedItems);
@@ -26,11 +41,20 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
     if (selectedId === id) setSelectedId(null);
   };
 
-  const getStatusCategory = (status?: number): 'success' | 'redirect' | 'error' => {
-    if (!status) return 'error';
-    if (status < 300) return 'success';
-    if (status < 400) return 'redirect';
-    return 'error';
+  const toggleMethod = (method: string) => {
+    setMethodFilter(prev => {
+      const current = prev[method];
+      const next = current === undefined ? 'include' : current === 'include' ? 'exclude' : undefined;
+      return { ...prev, [method]: next };
+    });
+  };
+
+  const toggleStatus = (status: string) => {
+    setStatusFilter(prev => {
+      const current = prev[status];
+      const next = current === undefined ? 'include' : current === 'include' ? 'exclude' : undefined;
+      return { ...prev, [status]: next };
+    });
   };
 
   const selected = savedItems.find(i => i.id === selectedId);
@@ -39,10 +63,41 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.request?.url?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter =
-      responseFilter === 'all' ||
-      getStatusCategory(item.response?.status_code) === responseFilter;
-    return matchesSearch && matchesFilter;
+
+    // Method filtering logic
+    const methodIncludes = Object.entries(methodFilter)
+      .filter(([_, state]) => state === 'include')
+      .map(([method, _]) => method);
+    const methodExcludes = Object.entries(methodFilter)
+      .filter(([_, state]) => state === 'exclude')
+      .map(([method, _]) => method);
+
+    let matchesMethod = true;
+    if (methodIncludes.length > 0) {
+      matchesMethod = methodIncludes.includes((item.request?.method || 'GET').toUpperCase());
+    }
+    if (matchesMethod && methodExcludes.length > 0) {
+      matchesMethod = !methodExcludes.includes((item.request?.method || 'GET').toUpperCase());
+    }
+
+    // Status filtering logic
+    const statusCat = getStatusCategory(item.response?.status_code);
+    const statusIncludes = Object.entries(statusFilter)
+      .filter(([_, state]) => state === 'include')
+      .map(([status, _]) => status);
+    const statusExcludes = Object.entries(statusFilter)
+      .filter(([_, state]) => state === 'exclude')
+      .map(([status, _]) => status);
+
+    let matchesStatus = true;
+    if (statusIncludes.length > 0) {
+      matchesStatus = statusIncludes.includes(statusCat);
+    }
+    if (matchesStatus && statusExcludes.length > 0) {
+      matchesStatus = !statusExcludes.includes(statusCat);
+    }
+
+    return matchesSearch && matchesMethod && matchesStatus;
   });
 
   const buildRawHttpMessage = (headers: Record<string, string>, body: string) => {
@@ -63,32 +118,55 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
 
         {/* Search & Filter */}
         <div className="p-3 border-b border-zinc-800 space-y-3 bg-zinc-900/30 shrink-0">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-sky-500 transition-colors text-[11px] font-mono"
-            />
-            <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>
-            )}
+          <div className="flex items-center justify-between gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-sky-500 transition-colors text-[11px] font-mono"
+              />
+              <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              {searchTerm && (
+                <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-2 py-1.5 text-[9px] uppercase font-bold tracking-widest rounded bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200 hover:border-zinc-600 transition-all whitespace-nowrap"
+            >
+              {showFilters ? 'Hide' : 'Show'} Filter
+            </button>
           </div>
-          <div className="flex gap-1 overflow-x-auto pb-1">
-            {(['all', 'success', 'redirect', 'error'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setResponseFilter(filter)}
-                className={`px-2 py-1 text-[9px] uppercase font-bold tracking-widest rounded transition-all whitespace-nowrap ${responseFilter === filter ? 'bg-sky-600 text-white' : 'bg-zinc-950 text-zinc-500 border border-zinc-800 hover:text-zinc-300'}`}
-              >
-                {filter}
-              </button>
-            ))}
-          </div>
+
+          {showFilters && (
+            <>
+              {/* Method Filter */}
+              <div>
+                <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Methods</div>
+                <MultiSelectFilter
+                  options={METHODS}
+                  filterStates={methodFilter}
+                  onToggle={toggleMethod}
+                  onClear={() => setMethodFilter({})}
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Response Status</div>
+                <MultiSelectFilter
+                  options={STATUS_FILTERS}
+                  filterStates={statusFilter}
+                  onToggle={toggleStatus}
+                  onClear={() => setStatusFilter({})}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Items List */}
@@ -138,14 +216,14 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
                   <div className="text-emerald-100 break-all bg-zinc-900/50 p-2 rounded border border-zinc-800/50">{selected.request?.url || 'N/A'}</div>
                 </div>
                 <div className="flex gap-2 items-start">
-                  <button 
-                    onClick={() => onSendToRepeater?.(selected)} 
+                  <button
+                    onClick={() => onSendToRepeater?.(selected)}
                     className="px-3 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-black whitespace-nowrap"
                   >
                     Send_to_Repeater
                   </button>
-                  <button 
-                    onClick={() => handleDelete(selected.id)} 
+                  <button
+                    onClick={() => handleDelete(selected.id)}
                     className="px-3 py-1.5 bg-rose-900/30 hover:bg-rose-600 text-rose-400 hover:text-white text-[10px] rounded border border-rose-800 transition-all uppercase font-black whitespace-nowrap"
                   >
                     Delete

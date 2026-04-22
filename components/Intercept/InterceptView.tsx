@@ -100,7 +100,8 @@ export function InterceptView({ traffic, isIntercepting, interceptMode, ignoredM
 
         {/* Toolbar */}
         <div className="flex flex-col border-b border-zinc-800 bg-zinc-900/20 shrink-0">
-          <div className="flex items-center gap-4 p-4">
+          {/* Row 1 */}
+          <div className="flex items-center gap-4 p-4 border-b border-zinc-800">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
             </button>
@@ -109,34 +110,15 @@ export function InterceptView({ traffic, isIntercepting, interceptMode, ignoredM
               {isIntercepting ? 'Intercept_On' : 'Intercept_Off'}
             </button>
 
-            <div className="flex items-center gap-3 border-l border-zinc-800 pl-4 ml-2">
-              <select
-                value={interceptMode}
-                onChange={(e) => updateConfig(isIntercepting, e.target.value, ignoredMethods)}
-                className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500"
-              >
-                <option value="both">Req & Res</option>
-                <option value="request">Request Only</option>
-                <option value="response">Response Only</option>
-              </select>
-
-              {/* === UPGRADED IGNORE MULTI-SELECT === */}
-              <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded border border-zinc-800">
-                <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest px-2">Ignore:</span>
-                {HTTP_METHODS.map(m => (
-                  <button
-                    key={m}
-                    onClick={() => toggleMethodIgnore(m)}
-                    className={`text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded transition-all ${ignoredMethods.includes(m)
-                        ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                        : 'bg-transparent text-zinc-600 hover:text-zinc-400 border border-transparent'
-                      }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <select
+              value={interceptMode}
+              onChange={(e) => updateConfig(isIntercepting, e.target.value, ignoredMethods)}
+              className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500"
+            >
+              <option value="both">Req & Res</option>
+              <option value="request">Request Only</option>
+              <option value="response">Response Only</option>
+            </select>
 
             <div className="ml-auto flex gap-3">
               <button onClick={handleDrop} disabled={!currentReq} className="px-6 py-1.5 bg-rose-900/50 hover:bg-rose-600 border border-rose-700 disabled:opacity-30 text-rose-100 text-[10px] rounded transition-all uppercase font-black">
@@ -148,20 +130,39 @@ export function InterceptView({ traffic, isIntercepting, interceptMode, ignoredM
             </div>
           </div>
 
-          {/* Phase Indicator & Live Timer */}
-          {currentReq && (
-            <div className="flex border-t border-zinc-800">
-              <div className={`flex-1 px-4 py-1.5 text-[9px] uppercase font-black tracking-[0.3em] flex items-center ${isRes ? 'bg-amber-500/10 text-amber-500' : 'bg-sky-500/10 text-sky-500'}`}>
-                Currently Modifying: {currentReq.phase} Phase
-              </div>
-              {currentReq.intercepted_at && (
-                <div className="border-l border-zinc-800">
-                  <InterceptTimer startTime={currentReq.intercepted_at} />
-                </div>
-              )}
+          {/* Row 2 - Ignore Methods */}
+          <div className="flex items-center gap-4 p-4">
+            <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded border border-zinc-800 w-full">
+              <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest px-2">Ignore:</span>
+              {HTTP_METHODS.map(m => (
+                <button
+                  key={m}
+                  onClick={() => toggleMethodIgnore(m)}
+                  className={`text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded transition-all ${ignoredMethods.includes(m)
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      : 'bg-transparent text-zinc-600 hover:text-zinc-400 border border-transparent'
+                    }`}
+                >
+                  {m}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Phase Indicator & Live Timer */}
+        {currentReq && (
+          <div className="flex border-t border-zinc-800">
+            <div className={`flex-1 px-4 py-1.5 text-[9px] uppercase font-black tracking-[0.3em] flex items-center ${isRes ? 'bg-amber-500/10 text-amber-500' : 'bg-sky-500/10 text-sky-500'}`}>
+              Currently Modifying: {currentReq.phase} Phase
+            </div>
+            {currentReq.intercepted_at && (
+              <div className="border-l border-zinc-800">
+                <InterceptTimer startTime={currentReq.intercepted_at} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Editor Area */}
         {currentReq ? (
