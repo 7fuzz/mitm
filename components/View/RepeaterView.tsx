@@ -4,7 +4,7 @@ import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
 import { TrafficList } from '../Sidebar/TrafficList';
 import { Traffic } from '@/types/traffic';
-import HttpResponseViewer from '../Inspector/HttpResponseViewer';
+import HttpResponseViewer from '../ui/HttpResponseViewer';
 
 export interface RepeaterRequest {
   id: string;
@@ -24,11 +24,12 @@ export interface RepeaterRequest {
 
 interface Props {
   requests: RepeaterRequest[];
+  onAddRequest: (req: RepeaterRequest) => void; // <--- ADDED PROP
   onUpdateRequest: (id: string, req: Partial<RepeaterRequest>) => void;
   onDeleteRequest: (id: string) => void;
 }
 
-export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Props) {
+export function RepeaterView({ requests, onAddRequest, onUpdateRequest, onDeleteRequest }: Props) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +61,34 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
       setEditBody(currentReq.body || '');
     }
   }, [currentReq]);
+
+  // === NEW: Add Empty Request ===
+  const handleAddEmpty = () => {
+    const newId = crypto.randomUUID();
+    onAddRequest({
+      id: newId,
+      name: "New Request",
+      method: "GET",
+      url: "https://",
+      headers: {},
+      body: "",
+      timestamp: Date.now()
+    });
+    setSelectedId(newId);
+  };
+
+  // === NEW: Duplicate Existing Request ===
+  const handleDuplicate = () => {
+    if (!currentReq) return;
+    const newId = crypto.randomUUID();
+    onAddRequest({
+      ...currentReq,
+      id: newId,
+      name: `${currentReq.name} (Copy)`,
+      timestamp: Date.now()
+    });
+    setSelectedId(newId);
+  };
 
   const handleSend = async () => {
     if (!currentReq) return;
@@ -102,7 +131,6 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
     alert('Saved to Proxy Vault!');
   };
 
-  // 2. Helper to stitch the response back together for your Viewer
   const getRawResponseText = () => {
     if (!currentReq?.response) return '';
     const headerText = Object.entries(currentReq.response.headers)
@@ -117,8 +145,19 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
       {/* Sidebar */}
       <div className={`${isSidebarOpen ? 'w-1/3 border-r' : 'w-0 border-r-0'} border-zinc-800 transition-all duration-300 flex flex-col overflow-hidden bg-zinc-950`}>
         <div className="min-w-[300px] flex-1 flex flex-col h-full bg-zinc-950">
-          <div className="p-4 border-b border-zinc-800 bg-zinc-900/20 text-[10px] text-zinc-500 uppercase font-black tracking-[0.2em] shrink-0">
-            Saved_Requests
+
+          {/* UPGRADED: Added the "+" button to the sidebar header */}
+          <div className="p-3 border-b border-zinc-800 bg-zinc-900/20 flex items-center justify-between shrink-0">
+            <span className="text-[10px] text-zinc-500 uppercase font-black tracking-[0.2em] ml-1">
+              Saved_Requests
+            </span>
+            <button
+              onClick={handleAddEmpty}
+              className="p-1.5 bg-zinc-800 hover:bg-purple-600 text-zinc-300 hover:text-white rounded transition-colors"
+              title="New Blank Request"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
           </div>
 
           <TrafficList
@@ -144,6 +183,12 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
               <button onClick={handleClear} disabled={!currentReq?.response} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">
                 Clear
               </button>
+
+              {/* UPGRADED: Added Duplicate Button */}
+              <button onClick={handleDuplicate} disabled={!currentReq} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">
+                Duplicate
+              </button>
+
               <button onClick={handleSaveToVault} disabled={!currentReq} className="px-4 py-1.5 bg-sky-900/30 hover:bg-sky-600 text-sky-400 hover:text-white border border-sky-800 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-black">
                 Save_to_Vault
               </button>
@@ -183,7 +228,7 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
               </div>
             </div>
 
-            {/* 3. Replaced the Response Section with your new Viewer! */}
+            {/* Response Section */}
             {currentReq.response && (
               <div className="mt-8 pt-8 border-t border-zinc-800 animate-in fade-in duration-500">
                 <div className="flex items-center justify-between mb-6">
@@ -201,9 +246,16 @@ export function RepeaterView({ requests, onUpdateRequest, onDeleteRequest }: Pro
 
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center opacity-30 grayscale pointer-events-none select-none">
-            <div className="text-[60px] font-black tracking-tighter text-zinc-700">REPEATER_EMPTY</div>
-            <div className="text-[10px] uppercase tracking-[0.3em] mt-2">Add a request to get started...</div>
+          <div className="flex-1 flex flex-col items-center justify-center opacity-50">
+            <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">REPEATER_EMPTY</div>
+
+            {/* UPGRADED: Clickable button in the empty state */}
+            <button
+              onClick={handleAddEmpty}
+              className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20"
+            >
+              + Create New Request
+            </button>
           </div>
         )}
       </div>

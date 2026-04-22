@@ -217,21 +217,29 @@ class InterceptBridge:
         if flow_id in self.waiting_flows:
             stored = self.waiting_flows[flow_id]
             flow, event, phase = stored["flow"], stored["event"], stored["phase"]
-            if data.get("drop"): flow.kill()
+            
+            if data.get("drop"): 
+                flow.kill()
             else:
                 if phase == "request":
                     if "method" in data: flow.request.method = data["method"]
                     if "url" in data: flow.request.url = data["url"]
-                    if "body" in data: flow.request.text = data["body"]
+                    if "body" in data: 
+                        flow.request.text = data["body"]
+                        flow.request.headers.pop("Content-Length", None)
                     if "headers" in data:
                         flow.request.headers.clear()
                         for k, v in data["headers"].items(): flow.request.headers[k] = str(v)
+                        
                 elif phase == "response":
                     if "status_code" in data: flow.response.status_code = int(data["status_code"])
-                    if "body" in data: flow.response.text = data["body"]
+                    if "body" in data: 
+                        flow.response.text = data["body"]
+                        flow.response.headers.pop("Content-Length", None)
                     if "headers" in data:
                         flow.response.headers.clear()
                         for k, v in data["headers"].items(): flow.response.headers[k] = str(v)
+            
             event.set()
             return web.Response(text="Resumed")
         return web.Response(text="Not Found", status=404)
@@ -240,12 +248,23 @@ class InterceptBridge:
         data = await request.json()
         try:
             method, url, headers, body = data.get('method', 'GET').upper(), data.get('url', ''), data.get('headers', {}), data.get('body', '')
+            
+            headers = {k: v for k, v in headers.items() if k.lower() != 'content-length'}
+
             async with aiohttp.ClientSession() as session:
                 kwargs = {'headers': headers, 'ssl': False}
-                if body and method != 'GET': kwargs['data'] = body
+                if body and method != 'GET': 
+                    kwargs['data'] = body
+                
                 async with session.request(method, url, **kwargs) as resp:
-                    return web.json_response({"success": True, "status": resp.status, "headers": dict(resp.headers), "body": await resp.text()})
-        except Exception as e: return web.json_response({"success": False, "error": str(e)}, status=500)
+                    return web.json_response({
+                        "success": True, 
+                        "status": resp.status, 
+                        "headers": dict(resp.headers), 
+                        "body": await resp.text()
+                    })
+        except Exception as e: 
+            return web.json_response({"success": False, "error": str(e)}, status=500)
 
     async def handle_get_cert(self, request):
         cert_path = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")

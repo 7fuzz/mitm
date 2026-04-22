@@ -48,7 +48,6 @@ export default function Page() {
     setSelectedId(null);
 
     // 2. Tell the SQLite Master DB to drop the whole table
-    // (Make sure this points to /api/history and NOT /api/traffic!)
     fetch('/api/history', { method: 'DELETE' }).catch(err =>
       console.error('Failed to clear history:', err)
     );
@@ -181,11 +180,13 @@ export default function Page() {
         {activeTab === 'repeater' && (
           <RepeaterView
             requests={repeaterRequests}
+            onAddRequest={(req) => setRepeaterRequests([...repeaterRequests, req])} // <--- ADDED THIS LINE
             onUpdateRequest={handleUpdateRepeaterRequest}
             onDeleteRequest={handleDeleteRepeaterRequest}
           />
         )}
 
+        {/* --- TAB: OPTIONS --- */}
         {activeTab === 'options' && (
           <OptionsView prefs={prefs} updatePrefs={updatePrefs} />
         )}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import HttpResponseViewer from '../Inspector/HttpResponseViewer';
+import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
 
 interface SavedItem {
