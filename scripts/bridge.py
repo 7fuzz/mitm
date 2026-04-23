@@ -5,8 +5,9 @@ import time
 import sqlite3
 import uuid
 import os
-import re
 import base64
+import re
+from urllib.parse import unquote
 from aiohttp import web
 from mitmproxy import ctx
 
@@ -18,28 +19,30 @@ class InterceptBridge:
     def init_db(self):
         self.db = sqlite3.connect('master_database.sqlite', check_same_thread=False)
         
-        # Vault Table
         self.db.execute('''CREATE TABLE IF NOT EXISTS proxy_vault (
             id TEXT PRIMARY KEY, name TEXT, group_name TEXT, 
             request TEXT, response TEXT, timestamp INTEGER
         )''')
         
-        # History Table
         self.db.execute('''CREATE TABLE IF NOT EXISTS history_log (
             id TEXT PRIMARY KEY, method TEXT, url TEXT, status_code INTEGER, 
             request TEXT, response TEXT, timestamp INTEGER
         )''')
         
-        # Repeater Workspace Table
         self.db.execute('''CREATE TABLE IF NOT EXISTS repeater_workspace (
             id TEXT PRIMARY KEY, name TEXT, method TEXT, url TEXT, 
             request TEXT, response TEXT, timestamp INTEGER
         )''')
         
-        # State Key-Value Table (For limits, bindings, etc)
         self.db.execute('''CREATE TABLE IF NOT EXISTS app_state (
             key TEXT PRIMARY KEY, value TEXT
         )''')
+
+        # === NEW: Global Environment Variables Table ===
+        self.db.execute('''CREATE TABLE IF NOT EXISTS env_variables (
+            id TEXT PRIMARY KEY, project TEXT, key TEXT, values_json TEXT, active_index INTEGER
+        )''')
+        
         self.db.commit()
         self.load_state()
 
@@ -81,7 +84,6 @@ class InterceptBridge:
         
         app.middlewares.append(cors_middleware)
         
-        # Intercept / Options / Vault
         app.router.add_post('/resume/{id}', self.handle_resume)
         app.router.add_post('/repeat', self.handle_repeat)
         app.router.add_get('/cert', self.handle_get_cert)
@@ -90,15 +92,15 @@ class InterceptBridge:
         app.router.add_post('/save', self.handle_save)
         app.router.add_get('/saved', self.handle_get_saved)
         app.router.add_delete('/saved/{id}', self.handle_delete_saved)
-        
-        # History
         app.router.add_get('/history', self.handle_history_get)
         app.router.add_delete('/history', self.handle_history_delete)
         app.router.add_delete('/history/{id}', self.handle_history_delete_single)
-        
-        # Repeater Database
         app.router.add_get('/repeater-db', self.handle_repeater_get)
         app.router.add_post('/repeater-db', self.handle_repeater_post)
+        
+        # === NEW: Env Variable Endpoints ===
+        app.router.add_get('/variables', self.handle_vars_get)
+        app.router.add_post('/variables', self.handle_vars_post)
 
         runner = web.AppRunner(app)
         await runner.setup()
@@ -106,7 +108,22 @@ class InterceptBridge:
         await site.start()
         ctx.log.info("Command Server started on http://127.0.0.1:3001")
 
-    # === Repeater DB Handlers ===
+    # === NEW: Global Variable DB Handlers ===
+    async def handle_vars_get(self, request):
+        rows = self.db.execute("SELECT id, project, key, values_json, active_index FROM env_variables").fetchall()
+        result = [{"id": r[0], "project": r[1], "key": r[2], "values": json.loads(r[3]), "activeIndex": r[4]} for r in rows]
+        return web.json_response(result)
+
+    async def handle_vars_post(self, request):
+        data = await request.json()
+        self.db.execute("DELETE FROM env_variables") # Wipe and sync
+        for item in data:
+            self.db.execute("INSERT INTO env_variables VALUES (?, ?, ?, ?, ?)", 
+                (item["id"], item["project"], item["key"], json.dumps(item["values"]), item["activeIndex"]))
+        self.db.commit()
+        return web.json_response({"success": True})
+
+    # ... [Keep handle_repeater_get/post, history handlers, state handlers, vault handlers EXACTLY the same] ...
     async def handle_repeater_get(self, request):
         rows = self.db.execute("SELECT id, name, method, url, request, response, timestamp FROM repeater_workspace ORDER BY timestamp ASC").fetchall()
         result = []
@@ -120,7 +137,7 @@ class InterceptBridge:
 
     async def handle_repeater_post(self, request):
         data = await request.json()
-        self.db.execute("DELETE FROM repeater_workspace") # Wipe and replace for bulk sync
+        self.db.execute("DELETE FROM repeater_workspace")
         for item in data:
             req_data = {"headers": item.get("headers", {}), "body": item.get("body", "")}
             res_data = None
@@ -131,7 +148,6 @@ class InterceptBridge:
         self.db.commit()
         return web.json_response({"success": True})
 
-    # === History DB Handlers ===
     async def handle_history_get(self, request):
         rows = self.db.execute("SELECT id, method, url, status_code, request, response, timestamp FROM history_log ORDER BY timestamp ASC").fetchall()
         result = []
@@ -140,13 +156,7 @@ class InterceptBridge:
             res = json.loads(r[5]) if r[5] else {}
             host = req.get("headers", {}).get("Host", req.get("headers", {}).get("host", ""))
             if not host and "://" in r[2]: host = r[2].split("://")[1].split("/")[0]
-
-            result.append({
-                "id": r[0], "phase": "history", "method": r[1], "url": r[2], "host": host, "status_code": r[3],
-                "request_headers": req.get("headers", {}), "request_body": req.get("body", ""),
-                "response_headers": res.get("headers", {}), "response_body": res.get("body", ""),
-                "is_intercepted": False, "intercepted_at": r[6]
-            })
+            result.append({"id": r[0], "phase": "history", "method": r[1], "url": r[2], "host": host, "status_code": r[3], "request_headers": req.get("headers", {}), "request_body": req.get("body", ""), "response_headers": res.get("headers", {}), "response_body": res.get("body", ""), "is_intercepted": False, "intercepted_at": r[6]})
         return web.json_response(result)
 
     async def handle_history_delete(self, request):
@@ -159,7 +169,6 @@ class InterceptBridge:
         self.db.commit()
         return web.Response(text="OK")
 
-    # === State Handlers ===
     async def handle_state_get(self, request):
         rows = self.db.execute("SELECT key, value FROM app_state").fetchall()
         state = {r[0]: json.loads(r[1]) for r in rows}
@@ -175,7 +184,6 @@ class InterceptBridge:
         self.load_state() 
         return web.json_response({"success": True})
 
-    # === Vault Handlers ===
     async def handle_save(self, request):
         data = await request.json()
         item_id = str(uuid.uuid4())
@@ -196,18 +204,13 @@ class InterceptBridge:
         self.db.commit()
         return web.Response(text="OK")
 
-    # === Core Intercept Logic ===
     async def send_to_dashboard(self, payload):
         try:
-            async with aiohttp.ClientSession() as session:
-                await session.post('http://127.0.0.1:3000/api/traffic', json=payload)
+            async with aiohttp.ClientSession() as session: await session.post('http://127.0.0.1:3000/api/traffic', json=payload)
         except Exception: pass
-        
-        # Save to History DB by breaking down the Payload
         if self.prefs.get("history") and payload.get("phase") != "request": 
             req_data = {"headers": payload.get("request_headers", {}), "body": payload.get("request_body", "")}
             res_data = {"headers": payload.get("response_headers", {}), "body": payload.get("response_body", "")}
-            
             self.db.execute('''INSERT OR REPLACE INTO history_log (id, method, url, status_code, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)''', 
                 (payload["id"], payload.get("method"), payload.get("url"), payload.get("status_code", 0), json.dumps(req_data), json.dumps(res_data), payload.get("intercepted_at", int(time.time() * 1000))))
             self.db.commit()
@@ -231,7 +234,6 @@ class InterceptBridge:
                     if "headers" in data:
                         flow.request.headers.clear()
                         for k, v in data["headers"].items(): flow.request.headers[k] = str(v)
-                        
                 elif phase == "response":
                     if "status_code" in data: flow.response.status_code = int(data["status_code"])
                     if "body" in data: 
@@ -240,7 +242,6 @@ class InterceptBridge:
                     if "headers" in data:
                         flow.response.headers.clear()
                         for k, v in data["headers"].items(): flow.response.headers[k] = str(v)
-            
             event.set()
             return web.Response(text="Resumed")
         return web.Response(text="Not Found", status=404)
@@ -248,54 +249,29 @@ class InterceptBridge:
     async def handle_repeat(self, request):
         data = await request.json()
         try:
-            raw_method = data.get('method', 'GET').upper()
-            raw_url = data.get('url', '')
-            raw_headers = data.get('headers', {})
-            raw_body = data.get('body', '')
-            variables = data.get('variables', {})
+            raw_method, raw_url, raw_headers, raw_body, variables = data.get('method', 'GET').upper(), data.get('url', ''), data.get('headers', {}), data.get('body', ''), data.get('variables', {})
 
-            # --- UPGRADED: Python Interpolation Engine ---
             def interpolate(text):
-                if not text or not isinstance(text, str): 
-                    return text
-                
-                # 1. Match Raw: {{var}}
-                text = re.sub(r'\{\{([^}]+)\}\}', 
-                              lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
-                
-                # 2. Match URL-Encoded: %7B%7Bvar%7D%7D
-                text = re.sub(r'%7B%7B(.*?)%7D%7D', 
-                              lambda m: str(variables.get(unquote(m.group(1)).strip(), m.group(0))), text, flags=re.IGNORECASE)
-                
+                if not text or not isinstance(text, str): return text
+                text = re.sub(r'\{\{([^}]+)\}\}', lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
+                text = re.sub(r'%7B%7B(.*?)%7D%7D', lambda m: str(variables.get(unquote(m.group(1)).strip(), m.group(0))), text, flags=re.IGNORECASE)
                 return text
-            # 3. Apply interpolation to everything
+
             method = raw_method
             url = interpolate(raw_url)
             body = interpolate(raw_body)
-            
-            # Interpolate header keys and values, and safely strip out Content-Length
             headers = {}
             for k, v in raw_headers.items():
                 interp_k = interpolate(k)
-                if interp_k.lower() != 'content-length':
-                    headers[interp_k] = interpolate(v)
+                if interp_k.lower() != 'content-length': headers[interp_k] = interpolate(v)
 
-            # 4. Send the compiled request
             async with aiohttp.ClientSession() as session:
                 kwargs = {'headers': headers, 'ssl': False}
-                if body and method != 'GET': 
-                    kwargs['data'] = body
-                
+                if body and method != 'GET': kwargs['data'] = body
                 async with session.request(method, url, **kwargs) as resp:
-                    return web.json_response({
-                        "success": True, 
-                        "status": resp.status, 
-                        "headers": dict(resp.headers), 
-                        "body": await resp.text()
-                    })
-        except Exception as e: 
-            return web.json_response({"success": False, "error": str(e)}, status=500)
-    
+                    return web.json_response({"success": True, "status": resp.status, "headers": dict(resp.headers), "body": await resp.text()})
+        except Exception as e: return web.json_response({"success": False, "error": str(e)}, status=500)
+
     async def handle_get_cert(self, request):
         cert_path = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
         if os.path.exists(cert_path): return web.FileResponse(cert_path, headers={'Content-Disposition': 'attachment; filename="mitmproxy-ca-cert.pem"'})
@@ -309,12 +285,7 @@ class InterceptBridge:
 
     async def request(self, flow):
         if self.should_intercept(flow, "request"):
-            payload = {
-                "id": flow.id, "phase": "request", "method": flow.request.method, "url": flow.request.url,
-                "host": flow.request.host, "status_code": 0, "request_headers": dict(flow.request.headers),
-                "response_headers": {}, "request_body": (flow.request.get_text() or "")[:500000], "response_body": "",
-                "is_intercepted": True, "intercepted_at": int(time.time() * 1000)
-            }
+            payload = {"id": flow.id, "phase": "request", "method": flow.request.method, "url": flow.request.url, "host": flow.request.host, "status_code": 0, "request_headers": dict(flow.request.headers), "response_headers": {}, "request_body": (flow.request.get_text() or "")[:500000], "response_body": "", "is_intercepted": True, "intercepted_at": int(time.time() * 1000)}
             await self.send_to_dashboard(payload)
             event = asyncio.Event()
             self.waiting_flows[flow.id] = {"flow": flow, "event": event, "phase": "request", "payload": payload}
@@ -323,37 +294,15 @@ class InterceptBridge:
 
     async def response(self, flow):
         intercepted = self.should_intercept(flow, "response")
-        
-        # --- NEW: Safe Binary Extraction ---
         content_type = flow.response.headers.get("Content-Type", "").lower()
         is_binary = any(t in content_type for t in ['image/', 'video/', 'audio/', 'application/pdf', 'application/zip', 'application/octet-stream'])
-        
-        # If it's an image/file, encode the raw bytes into base64. Otherwise, grab the standard text.
         try:
-            if is_binary and flow.response.content:
-                res_body = base64.b64encode(flow.response.content).decode('utf-8')
-            else:
-                res_body = flow.response.get_text() or ""
-        except:
-            res_body = "<Binary data could not be decoded>"
+            if is_binary and flow.response.content: res_body = base64.b64encode(flow.response.content).decode('utf-8')
+            else: res_body = flow.response.get_text() or ""
+        except: res_body = "<Binary data could not be decoded>"
 
-        payload = {
-            "id": flow.id, 
-            "phase": "response" if intercepted else "history", 
-            "method": flow.request.method,
-            "url": flow.request.url, 
-            "host": flow.request.host, 
-            "status_code": flow.response.status_code,
-            "request_headers": dict(flow.request.headers), 
-            "response_headers": dict(flow.response.headers),
-            "request_body": (flow.request.get_text() or "")[:500000], 
-            "response_body": res_body[:5000000], # Allow up to 5MB for base64 media
-            "is_intercepted": intercepted, 
-            "intercepted_at": int(time.time() * 1000)
-        }
-        
+        payload = {"id": flow.id, "phase": "response" if intercepted else "history", "method": flow.request.method, "url": flow.request.url, "host": flow.request.host, "status_code": flow.response.status_code, "request_headers": dict(flow.request.headers), "response_headers": dict(flow.response.headers), "request_body": (flow.request.get_text() or "")[:500000], "response_body": res_body[:5000000], "is_intercepted": intercepted, "intercepted_at": int(time.time() * 1000)}
         await self.send_to_dashboard(payload)
-        
         if intercepted:
             event = asyncio.Event()
             self.waiting_flows[flow.id] = {"flow": flow, "event": event, "phase": "response", "payload": payload}
