@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Props {
   initialHeaders: Record<string, string>;
@@ -10,8 +10,17 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
   const [rawText, setRawText] = useState('');
   const [entries, setEntries] = useState<{ id: string; k: string; v: string }[]>([]);
 
+  // === NEW: Echo Cancellation Lock ===
+  const isInternalUpdate = useRef(false);
+
   // Sync when a new request is selected
   useEffect(() => {
+    // If the change came from our own typing, ignore it to keep focus!
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+
     const arr = Object.entries(initialHeaders || {}).map(([k, v]) => ({
       id: crypto.randomUUID(),
       k,
@@ -27,6 +36,9 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
     newEntries.forEach((e) => {
       if (e.k.trim() !== '') obj[e.k] = e.v;
     });
+
+    // Flag this update as internal so the useEffect doesn't destroy our inputs
+    isInternalUpdate.current = true;
     onChange(obj);
   };
 
@@ -67,6 +79,7 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
   const handleRawChange = (text: string) => {
     setRawText(text);
     const newEntries = parseRawToEntries(text);
+    setEntries(newEntries); // Keep internal state in sync
     notifyParent(newEntries); // Update parent live as they type
   };
 
@@ -103,8 +116,8 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
           <button
             onClick={() => handleModeSwitch('structured')}
             className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-300'
+              ? 'bg-zinc-800 text-white shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'
               }`}
           >
             Structured
@@ -112,8 +125,8 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
           <button
             onClick={() => handleModeSwitch('raw')}
             className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-300'
+              ? 'bg-zinc-800 text-white shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'
               }`}
           >
             Raw

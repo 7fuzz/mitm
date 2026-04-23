@@ -5,6 +5,7 @@ import time
 import sqlite3
 import uuid
 import os
+import re
 import base64
 from aiohttp import web
 from mitmproxy import ctx
@@ -247,10 +248,39 @@ class InterceptBridge:
     async def handle_repeat(self, request):
         data = await request.json()
         try:
-            method, url, headers, body = data.get('method', 'GET').upper(), data.get('url', ''), data.get('headers', {}), data.get('body', '')
-            
-            headers = {k: v for k, v in headers.items() if k.lower() != 'content-length'}
+            raw_method = data.get('method', 'GET').upper()
+            raw_url = data.get('url', '')
+            raw_headers = data.get('headers', {})
+            raw_body = data.get('body', '')
+            variables = data.get('variables', {})
 
+            # --- UPGRADED: Python Interpolation Engine ---
+            def interpolate(text):
+                if not text or not isinstance(text, str): 
+                    return text
+                
+                # 1. Match Raw: {{var}}
+                text = re.sub(r'\{\{([^}]+)\}\}', 
+                              lambda m: str(variables.get(m.group(1).strip(), m.group(0))), text)
+                
+                # 2. Match URL-Encoded: %7B%7Bvar%7D%7D
+                text = re.sub(r'%7B%7B(.*?)%7D%7D', 
+                              lambda m: str(variables.get(unquote(m.group(1)).strip(), m.group(0))), text, flags=re.IGNORECASE)
+                
+                return text
+            # 3. Apply interpolation to everything
+            method = raw_method
+            url = interpolate(raw_url)
+            body = interpolate(raw_body)
+            
+            # Interpolate header keys and values, and safely strip out Content-Length
+            headers = {}
+            for k, v in raw_headers.items():
+                interp_k = interpolate(k)
+                if interp_k.lower() != 'content-length':
+                    headers[interp_k] = interpolate(v)
+
+            # 4. Send the compiled request
             async with aiohttp.ClientSession() as session:
                 kwargs = {'headers': headers, 'ssl': False}
                 if body and method != 'GET': 
@@ -265,7 +295,7 @@ class InterceptBridge:
                     })
         except Exception as e: 
             return web.json_response({"success": False, "error": str(e)}, status=500)
-
+    
     async def handle_get_cert(self, request):
         cert_path = os.path.expanduser("~/.mitmproxy/mitmproxy-ca-cert.pem")
         if os.path.exists(cert_path): return web.FileResponse(cert_path, headers={'Content-Disposition': 'attachment; filename="mitmproxy-ca-cert.pem"'})

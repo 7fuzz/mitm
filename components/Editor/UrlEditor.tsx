@@ -69,9 +69,16 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
       reconstructed += '/';
     }
 
+    // === NEW: Safe Encoding for Variables ===
+    const safeEncode = (val: string) => {
+      return encodeURIComponent(val)
+        .replace(/%7B/gi, '{')
+        .replace(/%7D/gi, '}');
+    };
+
     const query = newParams
       .filter((p) => p.k.trim() !== '')
-      .map((p) => `${encodeURIComponent(p.k)}=${encodeURIComponent(p.v)}`)
+      .map((p) => `${safeEncode(p.k)}=${safeEncode(p.v)}`) // <-- Apply Safe Encode here
       .join('&');
 
     if (query) reconstructed += `?${query}`;
@@ -80,7 +87,6 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
     setRawUrl(reconstructed);
     if (onChange) onChange(reconstructed);
   };
-
   const addPath = () => updateStructuredUrl(domain, [...paths, { id: crypto.randomUUID(), v: '' }], params, fragment);
   const updatePath = (id: string, v: string) => updateStructuredUrl(domain, paths.map(p => p.id === id ? { ...p, v } : p), params, fragment);
   const deletePath = (id: string) => updateStructuredUrl(domain, paths.filter(p => p.id !== id), params, fragment);

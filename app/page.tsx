@@ -10,7 +10,7 @@ import { OptionsView } from '@/components/View/OptionsView';
 export default function Page() {
   const {
     traffic, setTraffic, selectedReq, selectedId, setSelectedId, isIntercepting, interceptMode, ignoredMethods, updateConfig, resumeRequest,
-    isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit, repeaterRequests, setRepeaterRequests, prefs, updatePrefs,
+    isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit, repeaterRequests, setRepeaterRequests, prefs, updatePrefs, repeaterVars, setRepeaterVars
   } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options'>('history');
@@ -180,7 +180,9 @@ export default function Page() {
         {activeTab === 'repeater' && (
           <RepeaterView
             requests={repeaterRequests}
-            onAddRequest={(req) => setRepeaterRequests([...repeaterRequests, req])} // <--- ADDED THIS LINE
+            onAddRequest={(req) => setRepeaterRequests([...repeaterRequests, req])}
+            variables={repeaterVars}
+            onUpdateVariables={setRepeaterVars}
             onUpdateRequest={handleUpdateRepeaterRequest}
             onDeleteRequest={handleDeleteRepeaterRequest}
           />

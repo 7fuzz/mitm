@@ -5,7 +5,14 @@ import { RepeaterRequest } from '@/components/View/RepeaterView';
 export function useTraffic() {
   const [traffic, setTraffic] = useState<Traffic[]>([]);
   const [repeaterRequests, setRepeaterRequests] = useState<RepeaterRequest[]>([]);
+
+  // === NEW: Global Variables State ===
+  const [repeaterVars, setRepeaterVars] = useState<{ id: string; k: string; v: string }[]>([
+    { id: crypto.randomUUID(), k: 'base_url', v: 'http://127.0.0.1:8080' }
+  ]);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
 
   const [prefs, setPrefs] = useState({
     history: true, repeater: true, bindings: true, limits: true, intercept: true
@@ -18,27 +25,21 @@ export function useTraffic() {
   const [isLimitEnabled, setIsLimitEnabled] = useState(true);
   const [historyLimit, setHistoryLimit] = useState(100);
 
-  // === NEW: Boot Sequence Lock ===
-  const [isStateLoaded, setIsStateLoaded] = useState(false);
-
   const limitRef = useRef({ enabled: isLimitEnabled, value: historyLimit });
   const prefsRef = useRef(prefs);
 
-  // 1. LIMITS AUTO-SAVE (Now protected by isStateLoaded)
   useEffect(() => {
     limitRef.current = { enabled: isLimitEnabled, value: historyLimit };
     prefsRef.current = prefs;
 
-    // ABORT: Do not save if we haven't finished loading from the DB yet!
     if (!isStateLoaded) return;
 
     if (prefs.limits) {
       fetch('/api/state', { method: 'POST', body: JSON.stringify({ limits: { enabled: isLimitEnabled, value: historyLimit } }) });
     }
     if (isLimitEnabled) setTraffic(prev => prev.slice(0, historyLimit));
-  }, [isLimitEnabled, historyLimit, isStateLoaded]); // Add isStateLoaded to dependencies
+  }, [isLimitEnabled, historyLimit, isStateLoaded]);
 
-  // 2. MASTER DATA LOADER
   useEffect(() => {
     fetch('/api/state').then(r => r.json()).then(state => {
       if (state.preferences) setPrefs(state.preferences);
@@ -52,11 +53,13 @@ export function useTraffic() {
         setInterceptMode(state.intercept.mode);
         setIgnoredMethods(state.intercept.ignored);
       }
+      // === NEW: Load Variables from DB ===
+      if (state.repeater_vars && state.preferences?.repeater !== false) {
+        setRepeaterVars(state.repeater_vars);
+      }
       if (state.queue && state.queue.length > 0) {
         setTraffic(prev => [...state.queue, ...prev]);
       }
-
-      // UNLOCK: The DB has loaded, auto-saves are now permitted.
       setIsStateLoaded(true);
     });
 
@@ -102,6 +105,14 @@ export function useTraffic() {
     }
   };
 
+  // === NEW: Sync Variables to DB ===
+  const updateRepeaterVars = (newVars: { id: string; k: string; v: string }[]) => {
+    setRepeaterVars(newVars);
+    if (prefsRef.current.repeater) {
+      fetch('/api/state', { method: 'POST', body: JSON.stringify({ repeater_vars: newVars }) });
+    }
+  };
+
   const resumeRequest = async (id: string, modifiedData: any) => {
     await fetch(`http://127.0.0.1:3001/resume/${id}`, { method: 'POST', body: JSON.stringify(modifiedData) });
     setTraffic(prev => prev.map((t) => (t.id === id ? { ...t, is_intercepted: false } : t)));
@@ -110,6 +121,7 @@ export function useTraffic() {
   return {
     traffic, setTraffic,
     repeaterRequests, setRepeaterRequests: updateRepeater,
+    repeaterVars, setRepeaterVars: updateRepeaterVars, // <--- Exported!
     selectedReq: traffic.find((r) => r.id === selectedId) || null,
     selectedId, setSelectedId,
     prefs, updatePrefs,
