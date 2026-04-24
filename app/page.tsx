@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { TrafficProvider, useTraffic } from '@/hooks/useTraffic';
+import { TrafficProvider, useTraffic } from '@/hooks/traffic';
 import { InterceptView } from '@/components/View/InterceptView';
 import { SavedView } from '@/components/View/SavedView';
 import { RepeaterView } from '@/components/View/RepeaterView';

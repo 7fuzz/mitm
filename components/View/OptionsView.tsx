@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTraffic } from '@/hooks/useTraffic'; // <--- 1. Import Context
+import { useTraffic } from '@/hooks/traffic'; // <--- 1. Import Context
 
 // 2. Delete the Props interface!
 

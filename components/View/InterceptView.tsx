@@ -5,7 +5,7 @@ import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
 import { InterceptTimer } from '../ui/InterceptTimer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
-import { useTraffic } from '@/hooks/useTraffic'; // <--- Import Hook
+import { useTraffic } from '@/hooks/traffic'; // <--- Import Hook
 
 // NO MORE PROPS!
 export function InterceptView() {

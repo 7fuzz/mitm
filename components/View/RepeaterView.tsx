@@ -6,26 +6,25 @@ import { TrafficList } from '../Sidebar/TrafficList';
 import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
-import { useTraffic } from '@/hooks/useTraffic'; // <--- Import Hook
+import { useTraffic } from '@/hooks/traffic';
 
 export interface RepeaterRequest {
   id: string; name: string; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
   response?: { status: number; headers: Record<string, string>; body: string; time?: number; };
 }
 
-// NO MORE PROPS!
 export function RepeaterView() {
   const {
     repeaterRequests, setRepeaterRequests,
-    envVars, setEnvVars,
-    activeProject, setActiveProject,
+    variables,
+    activeProject,
     uiLayout, updateUILayout,
     repeaterSelectedId: selectedId,
     setRepeaterSelectedId: setSelectedId
-  } = useTraffic(); // <--- Grab everything from context
+  } = useTraffic();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showVariables, setShowVariables] = useState(false);
+  const [showPreview, setShowPreview] = useState(false); // <--- NEW: Toggle State
 
   const [editMethod, setEditMethod] = useState('GET');
   const [editUrl, setEditUrl] = useState('');
@@ -42,7 +41,6 @@ export function RepeaterView() {
     if (currentReq) { setEditMethod(currentReq.method); setEditUrl(currentReq.url); setEditHeaders(currentReq.headers || {}); setEditBody(currentReq.body || ''); }
   }, [currentReq]);
 
-  // Local Recreations of the array handlers
   const handleAddEmpty = () => {
     const newId = crypto.randomUUID();
     const newReq: RepeaterRequest = { id: newId, name: "New Request", method: "GET", url: "{{base_url}}/api/", headers: {}, body: "", timestamp: Date.now() };
@@ -57,21 +55,19 @@ export function RepeaterView() {
     setSelectedId(newId);
   };
 
-  const handleDeleteRequest = (id: string) => {
-    setRepeaterRequests(repeaterRequests.filter(r => r.id !== id));
-  };
-
-  const handleUpdateRequest = (id: string, updates: Partial<RepeaterRequest>) => {
-    setRepeaterRequests(repeaterRequests.map(r => r.id === id ? { ...r, ...updates } : r));
-  };
+  const handleDeleteRequest = (id: string) => setRepeaterRequests(repeaterRequests.filter(r => r.id !== id));
+  const handleUpdateRequest = (id: string, updates: Partial<RepeaterRequest>) => setRepeaterRequests(repeaterRequests.map(r => r.id === id ? { ...r, ...updates } : r));
 
   const handleSend = async () => {
     if (!currentReq) return;
     setIsLoading(true);
     try {
       const varDict: Record<string, string> = {};
-      envVars.filter(v => v.project === activeProject).forEach(v => {
-        if (v.key.trim()) { const val = v.values[v.activeIndex]; varDict[v.key.trim()] = typeof val === 'string' ? val : (val?.value || ''); }
+      variables.filter(v => v.project === activeProject).forEach(v => {
+        if (v.name.trim()) {
+          const activeVal = v.values[v.activeIndex] || v.values[0];
+          varDict[v.name.trim()] = activeVal ? activeVal.value : '';
+        }
       });
 
       const response = await fetch('/api/repeater', {
@@ -88,12 +84,45 @@ export function RepeaterView() {
     } catch (error) { alert('Error: ' + error); } finally { setIsLoading(false); }
   };
 
-  const currentVars = envVars.filter(v => v.project === activeProject);
-  const projects = Array.from(new Set(envVars.map(v => v.project)));
-  if (!projects.includes(activeProject)) projects.push(activeProject);
+  // --- NEW: Interpolation Logic for the Preview ---
+  const getPreviewRequestText = () => {
+    const varDict: Record<string, string> = {};
+    variables.filter(v => v.project === activeProject).forEach(v => {
+      if (v.name.trim()) {
+        const activeVal = v.values[v.activeIndex] || v.values[0];
+        varDict[v.name.trim()] = activeVal ? activeVal.value : '';
+      }
+    });
 
-  const addVariable = () => setEnvVars([...envVars, { id: crypto.randomUUID(), project: activeProject, key: '', values: [{ name: 'Default', value: '' }], activeIndex: 0 }]);
-  const updateVariable = (id: string, updates: Partial<any>) => setEnvVars(envVars.map(v => v.id === id ? { ...v, ...updates } : v));
+    const interpolate = (text: string) => {
+      if (!text) return '';
+      let result = text.replace(/\{\{([^}]+)\}\}/g, (match, key) => varDict[key.trim()] ?? match);
+      result = result.replace(/%7B%7B(.*?)%7D%7D/gi, (match, key) => varDict[decodeURIComponent(key).trim()] ?? match);
+      return result;
+    };
+
+    const reqUrl = interpolate(editUrl);
+    let path = reqUrl;
+    let host = '';
+    try {
+      const parsed = new URL(reqUrl);
+      path = parsed.pathname + parsed.search + parsed.hash;
+      host = parsed.host;
+    } catch { /* Ignore malformed URLs */ }
+
+    let headerStr = `${editMethod} ${path} HTTP/1.1\n`;
+    let hasHost = false;
+
+    Object.entries(editHeaders).forEach(([k, v]) => {
+      if (k.toLowerCase() === 'host') hasHost = true;
+      headerStr += `${interpolate(k)}: ${interpolate(v)}\n`;
+    });
+
+    if (host && !hasHost) headerStr += `Host: ${host}\n`;
+
+    const reqBody = interpolate(editBody);
+    return `${headerStr}\n${reqBody}`;
+  };
 
   const getRawResponseText = () => {
     if (!currentReq?.response) return '';
@@ -108,11 +137,6 @@ export function RepeaterView() {
       listComponent={(layout) => (
         <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={handleDeleteRequest} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
       )}
-      toolbarLeft={
-        <button onClick={() => setShowVariables(!showVariables)} className={`px-3 py-1.5 border flex items-center gap-2 text-[10px] rounded transition-all uppercase font-black tracking-widest ${showVariables ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
-          <span className="opacity-50">&#123;&#123;</span> {activeProject} Env <span className="opacity-50">&#125;&#125;</span>
-        </button>
-      }
       toolbarRight={
         <>
           <button onClick={handleAddEmpty} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-emerald-400 text-[10px] rounded transition-all uppercase font-black">+ New</button>
@@ -121,83 +145,56 @@ export function RepeaterView() {
           <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black">{isLoading ? 'Sending...' : 'Send'}</button>
         </>
       }
-      extraHeader={
-        showVariables && (
-          <div className="absolute top-full left-0 right-0 bg-zinc-900 border-b border-zinc-800 p-4 shadow-xl shadow-black/50 z-30 flex flex-col gap-4">
-            <div className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Project:</span>
-              <select value={activeProject} onChange={e => setActiveProject(e.target.value)} className="bg-zinc-900 text-amber-400 text-xs font-bold px-2 py-1 outline-none border border-zinc-700 rounded cursor-pointer">
-                {projects.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <button onClick={() => { const p = prompt('New Project Name:'); if (p) setActiveProject(p); }} className="text-[10px] uppercase font-bold text-sky-400 hover:text-sky-300 ml-auto">+ New Project</button>
-              <div className="w-px h-4 bg-zinc-800 mx-2"></div>
-              <button onClick={addVariable} className="text-[10px] uppercase font-bold text-emerald-400 hover:text-emerald-300">+ Add Key</button>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
-              {currentVars.map(v => {
-                const safeValues = v.values.map((val, i) => typeof val === 'string' ? { name: `Variant ${i + 1}`, value: val } : val);
-                const activeVal = safeValues[v.activeIndex] || { name: 'Default', value: '' };
-                return (
-                  <div key={v.id} className="flex flex-col gap-2 p-3 bg-zinc-950 border border-zinc-800/50 rounded group">
-                    <div className="flex items-center justify-between">
-                      <input value={v.key} onChange={(e) => updateVariable(v.id, { key: e.target.value })} placeholder="Key (e.g. target_id)" className="w-1/2 bg-transparent text-amber-400 outline-none focus:border-b focus:border-amber-500 transition-colors text-xs font-mono font-bold" />
-                      <div className="flex items-center gap-1">
-                        <select value={v.activeIndex} onChange={(e) => updateVariable(v.id, { activeIndex: Number(e.target.value) })} className="w-28 bg-zinc-900 text-zinc-400 text-[10px] font-bold p-1 outline-none border border-zinc-700 rounded cursor-pointer truncate">
-                          {safeValues.map((val, i) => <option key={i} value={i}>{val.name || `Variant ${i + 1}`}</option>)}
-                        </select>
-                        <button onClick={() => { const newVals = [...safeValues, { name: `Variant ${safeValues.length + 1}`, value: '' }]; updateVariable(v.id, { values: newVals, activeIndex: newVals.length - 1 }); }} className="p-1.5 bg-zinc-900 hover:bg-emerald-900/30 text-emerald-500 border border-zinc-700 rounded transition-colors" title="Add New Variant"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
-                        <button onClick={() => setEnvVars(envVars.filter(item => item.id !== v.id))} className="p-1.5 text-zinc-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100" title="Delete Variable">✕</button>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <input value={activeVal.name} onChange={(e) => { const newVals = [...safeValues]; newVals[v.activeIndex].name = e.target.value; updateVariable(v.id, { values: newVals }); }} placeholder="Name (Admin)" className="w-1/3 bg-zinc-900 border border-zinc-700 p-2 rounded text-sky-400 outline-none focus:border-amber-500 transition-colors text-[11px] font-mono" />
-                      <input value={activeVal.value} onChange={(e) => { const newVals = [...safeValues]; newVals[v.activeIndex].value = e.target.value; updateVariable(v.id, { values: newVals }); }} placeholder="Value..." className="flex-1 bg-zinc-900 border border-zinc-700 p-2 rounded text-zinc-300 outline-none focus:border-amber-500 transition-colors text-[11px] font-mono break-all" />
-                      <button onClick={() => { if (safeValues.length <= 1) return; const newVals = safeValues.filter((_, i) => i !== v.activeIndex); const newIdx = Math.max(0, v.activeIndex - 1); updateVariable(v.id, { values: newVals, activeIndex: newIdx }); }} disabled={safeValues.length <= 1} className="p-2 text-zinc-600 hover:text-rose-500 disabled:opacity-30 disabled:hover:text-zinc-600 transition-colors" title="Delete Active Variant"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )
-      }
       mainContent={(splitMode) => (
         currentReq ? (
           <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-[90rem]' : 'max-w-5xl'}`}>
 
-            {/* Request Line spanning full width */}
             <div className="space-y-3">
               <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 1. Request_Line</h3>
               <div className="flex gap-4 items-start">
                 <div className="w-full">
-                  {/* Method and URL are now handled by one component! */}
-                  <UrlEditor
-                    method={editMethod} onMethodChange={setEditMethod}
-                    url={editUrl} onChange={setEditUrl}
-                  />
+                  <UrlEditor method={editMethod} onMethodChange={setEditMethod} url={editUrl} onChange={setEditUrl} />
                 </div>
               </div>
             </div>
 
-            {/* Native CSS Grid Layout */}
             <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
 
-              {/* Left Column: Request Headers + Body */}
-              <div className="flex flex-col gap-8">
-                <div className="flex flex-col space-y-3">
-                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 2. Request_Headers</h3>
-                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[300px]">
-                    <HeaderEditor initialHeaders={editHeaders} onChange={setEditHeaders} />
+              {/* Left Column: Editor vs Preview Toggle */}
+              <div className="flex flex-col gap-4">
+
+                {/* NEW: Toolbar Toggle */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
+                    <span className="opacity-50">#</span> Outbound_Payload
+                  </h3>
+                  <div className="flex bg-zinc-950 p-0.5 rounded border border-zinc-800">
+                    <button onClick={() => setShowPreview(false)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${!showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Builder</button>
+                    <button onClick={() => setShowPreview(true)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Interpolated Preview</button>
                   </div>
                 </div>
 
-                <div className="flex flex-col space-y-3">
-                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 3. Request_Body</h3>
-                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[350px]">
-                    <BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} />
+                {!showPreview ? (
+                  <div className="flex flex-col gap-8 flex-1">
+                    <div className="flex flex-col space-y-3">
+                      <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 2. Request_Headers</h3>
+                      <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[300px]">
+                        <HeaderEditor initialHeaders={editHeaders} onChange={setEditHeaders} />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col space-y-3">
+                      <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 3. Request_Body</h3>
+                      <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[350px]">
+                        <BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[600px] flex flex-col shadow-inner shadow-black/50">
+                    <HttpResponseViewer text={getPreviewRequestText()} />
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Response */}
@@ -221,7 +218,6 @@ export function RepeaterView() {
                   )}
                 </div>
               </div>
-
             </div>
           </div>
         ) : (

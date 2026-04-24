@@ -9,7 +9,7 @@ interface Props {
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
   activeColor?: 'emerald' | 'purple' | 'sky';
-  layout?: 'sidebar' | 'table'; // <--- NEW PROP
+  layout?: 'sidebar' | 'table';
 }
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
@@ -28,7 +28,7 @@ const getSafeHostname = (url: string, host: string) => {
   try {
     return new URL(url).hostname;
   } catch {
-    return ''; // Fails gracefully if the string isn't a valid URL
+    return '';
   }
 };
 
@@ -97,9 +97,15 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
         </div>
 
         {showFilters && (
-          <div className="flex gap-6">
-            <div className="flex-1"><div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Methods</div><MultiSelectFilter options={METHODS} filterStates={methodFilter} onToggle={toggleMethod} onClear={() => setMethodFilter({})} /></div>
-            <div className="flex-1"><div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Response Status</div><MultiSelectFilter options={STATUS_FILTERS} filterStates={statusFilter} onToggle={toggleStatus} onClear={() => setStatusFilter({})} /></div>
+          <div className={`flex ${layout === 'sidebar' ? 'flex-col gap-4' : 'gap-6'}`}>
+            <div className="flex-1">
+              <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Methods</div>
+              <MultiSelectFilter options={METHODS} filterStates={methodFilter} onToggle={toggleMethod} onClear={() => setMethodFilter({})} />
+            </div>
+            <div className="flex-1">
+              <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Response Status</div>
+              <MultiSelectFilter options={STATUS_FILTERS} filterStates={statusFilter} onToggle={toggleStatus} onClear={() => setStatusFilter({})} />
+            </div>
           </div>
         )}
       </div>
@@ -147,7 +153,6 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
             </tbody>
           </table>
         ) : (
-
           /* === STANDARD SIDEBAR LIST === */
           <div className="absolute inset-0 overflow-y-auto divide-y divide-zinc-800/50">
             {filteredItems.map(req => (
@@ -156,9 +161,8 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
               />
             ))}
           </div>
-
         )}
       </div>
-    </div>
+    </div >
   );
 }

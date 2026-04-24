@@ -5,7 +5,7 @@ import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { SaveModal } from '../ui/SaveModal';
 import { UrlEditor } from '../Editor/UrlEditor';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
-import { useTraffic } from '@/hooks/useTraffic';
+import { useTraffic } from '@/hooks/traffic';
 
 const buildRawHttpMessage = (headers: Record<string, string>, body: string) => {
   const headerText = Object.entries(headers || {}).map(([key, value]) => `${key}: ${value}`).join('\n');
