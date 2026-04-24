@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useTraffic } from '@/hooks/useTraffic'; // <--- 1. Import Context
 
-interface Props {
-  prefs: { history: boolean, repeater: boolean, bindings: boolean, limits: boolean, intercept: boolean };
-  updatePrefs: (p: any) => void;
-}
+// 2. Delete the Props interface!
 
-export function OptionsView({ prefs, updatePrefs }: Props) {
+export function OptionsView() {
+  // 3. Grab prefs directly from the global state bubble
+  const { prefs, updatePrefs } = useTraffic();
+
   const [bindings, setBindings] = useState<string[]>(['8080']);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // 1. Fetch from the new Master DB endpoint
+  // Fetch from the Master DB endpoint
   useEffect(() => {
     fetch('/api/state')
       .then(res => res.json())
@@ -42,7 +43,7 @@ export function OptionsView({ prefs, updatePrefs }: Props) {
     try {
       const cleanBindings = bindings.filter(b => b.trim() !== '');
 
-      // 2. Save directly into the SQLite state table!
+      // Save directly into the SQLite state table!
       const res = await fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

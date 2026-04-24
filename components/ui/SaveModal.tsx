@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Traffic } from '@/types/traffic';
 
 interface Props {
-  req: Traffic;
+  req: Traffic | null; // <-- 1. Allow null here
   onClose: () => void;
   onSave: (data: any) => void;
 }
@@ -12,6 +12,9 @@ export function SaveModal({ req, onClose, onSave }: Props) {
   const [group, setGroup] = useState('Uncategorized');
   const [saveReq, setSaveReq] = useState(true);
   const [saveRes, setSaveRes] = useState(true);
+
+  // <-- 2. Safely catch the null before rendering hooks try to read it
+  if (!req) return null;
 
   const handleSave = () => {
     if (!name) return;
@@ -33,7 +36,7 @@ export function SaveModal({ req, onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg w-full max-w-md p-6 space-y-6 shadow-2xl">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-lg w-full max-w-md p-6 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         <h2 className="text-sky-500 font-bold uppercase tracking-widest text-sm flex items-center gap-2">
           <span className="opacity-50">#</span> Save_To_Vault
         </h2>
@@ -60,7 +63,7 @@ export function SaveModal({ req, onClose, onSave }: Props) {
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
-          <button onClick={onClose} className="px-4 py-2 text-zinc-500 hover:text-white text-xs uppercase font-bold tracking-widest">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-zinc-500 hover:text-white text-xs uppercase font-bold tracking-widest transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={!name || (!saveReq && !saveRes)} className="px-6 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-30 text-white text-xs uppercase font-bold tracking-widest rounded transition-colors">Save Entry</button>
         </div>
       </div>

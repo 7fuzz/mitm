@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 
 interface Props {
+  method?: string;
+  onMethodChange?: (m: string) => void;
   url: string;
   onChange?: (newUrl: string) => void;
   readOnly?: boolean;
 }
 
-export function UrlEditor({ url, onChange, readOnly = false }: Props) {
+export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readOnly = false }: Props) {
   const [mode, setMode] = useState<'raw' | 'structured'>('raw');
   const [rawUrl, setRawUrl] = useState(url);
 
@@ -15,7 +17,6 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
   const [params, setParams] = useState<{ id: string; k: string; v: string }[]>([]);
   const [fragment, setFragment] = useState('');
 
-  // Sync state if the parent passes a completely new URL
   useEffect(() => {
     if (url === rawUrl) return;
     setRawUrl(url);
@@ -27,7 +28,6 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
       const parsed = new URL(targetUrl);
       setDomain(parsed.origin);
 
-      // Split paths and ignore empty strings caused by leading/trailing slashes
       const pathSegments = parsed.pathname
         .split('/')
         .filter(p => p !== '')
@@ -37,56 +37,34 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
       const p: { id: string; k: string; v: string }[] = [];
       parsed.searchParams.forEach((v, k) => p.push({ id: crypto.randomUUID(), k, v }));
       setParams(p);
-
       setFragment(parsed.hash.replace('#', ''));
     } catch {
-      // Fallback if the URL is malformed
-      setDomain(targetUrl);
-      setPaths([]);
-      setParams([]);
-      setFragment('');
+      setDomain(targetUrl); setPaths([]); setParams([]); setFragment('');
     }
   };
 
   const handleModeSwitch = (newMode: 'raw' | 'structured') => {
-    if (newMode === 'structured' && mode === 'raw') {
-      parseUrlToStructured(rawUrl);
-    }
+    if (newMode === 'structured' && mode === 'raw') parseUrlToStructured(rawUrl);
     setMode(newMode);
   };
 
   const updateStructuredUrl = (newDomain: string, newPaths: typeof paths, newParams: typeof params, newFrag: string) => {
-    setDomain(newDomain);
-    setPaths(newPaths);
-    setParams(newParams);
-    setFragment(newFrag);
+    setDomain(newDomain); setPaths(newPaths); setParams(newParams); setFragment(newFrag);
 
-    let reconstructed = newDomain.replace(/\/$/, ''); // ensure no trailing slash on domain
+    let reconstructed = newDomain.replace(/\/$/, '');
+    if (newPaths.length > 0) reconstructed += '/' + newPaths.map(p => p.v).join('/');
+    else reconstructed += '/';
 
-    if (newPaths.length > 0) {
-      reconstructed += '/' + newPaths.map(p => p.v).join('/');
-    } else {
-      reconstructed += '/';
-    }
+    const safeEncode = (val: string) => encodeURIComponent(val).replace(/%7B/gi, '{').replace(/%7D/gi, '}');
 
-    // === NEW: Safe Encoding for Variables ===
-    const safeEncode = (val: string) => {
-      return encodeURIComponent(val)
-        .replace(/%7B/gi, '{')
-        .replace(/%7D/gi, '}');
-    };
-
-    const query = newParams
-      .filter((p) => p.k.trim() !== '')
-      .map((p) => `${safeEncode(p.k)}=${safeEncode(p.v)}`) // <-- Apply Safe Encode here
-      .join('&');
-
+    const query = newParams.filter((p) => p.k.trim() !== '').map((p) => `${safeEncode(p.k)}=${safeEncode(p.v)}`).join('&');
     if (query) reconstructed += `?${query}`;
     if (newFrag) reconstructed += `#${newFrag}`;
 
     setRawUrl(reconstructed);
     if (onChange) onChange(reconstructed);
   };
+
   const addPath = () => updateStructuredUrl(domain, [...paths, { id: crypto.randomUUID(), v: '' }], params, fragment);
   const updatePath = (id: string, v: string) => updateStructuredUrl(domain, paths.map(p => p.id === id ? { ...p, v } : p), params, fragment);
   const deletePath = (id: string) => updateStructuredUrl(domain, paths.filter(p => p.id !== id), params, fragment);
@@ -96,129 +74,84 @@ export function UrlEditor({ url, onChange, readOnly = false }: Props) {
   const deleteParam = (id: string) => updateStructuredUrl(domain, paths, params.filter(p => p.id !== id), fragment);
 
   return (
-    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded overflow-hidden">
+    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-[100px]">
 
-      {/* Toggle Bar */}
-      <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800">
-        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Target_URL</span>
+      {/* UPGRADED TOOLBAR: Now contains the HTTP Method Selector! */}
+      <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800 shrink-0">
+
+        <div className="flex items-center gap-3">
+          <select
+            value={method}
+            disabled={readOnly}
+            onChange={(e) => onMethodChange && onMethodChange(e.target.value)}
+            className={`bg-zinc-950 border border-zinc-700 px-2 py-0.5 rounded font-black outline-none transition-colors text-[10px] text-center uppercase tracking-widest
+              ${readOnly ? 'text-zinc-500 appearance-none' : 'text-amber-500 focus:border-amber-500 cursor-pointer'}
+            `}
+          >
+            <option value="GET">GET</option><option value="POST">POST</option><option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option><option value="PATCH">PATCH</option><option value="HEAD">HEAD</option>
+            <option value="OPTIONS">OPTIONS</option>
+          </select>
+          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest hidden sm:block">Target_URL</span>
+        </div>
+
         <div className="flex bg-zinc-950 p-0.5 rounded items-center">
-          <button
-            onClick={() => handleModeSwitch('raw')}
-            className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-          >
-            Raw
-          </button>
-          <button
-            onClick={() => handleModeSwitch('structured')}
-            className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-          >
-            Structured
-          </button>
+          <button onClick={() => handleModeSwitch('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw</button>
+          <button onClick={() => handleModeSwitch('structured')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Structured</button>
         </div>
       </div>
 
-      {/* Editor Content */}
-      <div className="p-3">
+      <div className="p-3 flex-1 overflow-y-auto min-h-0">
         {mode === 'raw' ? (
-          <input
+          <textarea
             value={rawUrl}
             readOnly={readOnly}
-            onChange={(e) => {
-              setRawUrl(e.target.value);
-              if (onChange) onChange(e.target.value);
-            }}
-            className={`w-full bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : 'text-emerald-100'}`}
+            onChange={(e) => { setRawUrl(e.target.value); if (onChange) onChange(e.target.value); }}
+            className={`w-full h-full min-h-[60px] bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono resize-y ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : 'text-emerald-100'}`}
           />
         ) : (
           <div className="space-y-6">
-
-            {/* Domain */}
             <div className="space-y-1">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Base Domain</label>
-              <input
-                value={domain}
-                readOnly={readOnly}
-                onChange={(e) => updateStructuredUrl(e.target.value, paths, params, fragment)}
-                className={`w-full bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`}
-              />
+              <input value={domain} readOnly={readOnly} onChange={(e) => updateStructuredUrl(e.target.value, paths, params, fragment)} className={`w-full bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`} />
             </div>
 
-            {/* Path Segments */}
             <div className="space-y-1">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Path Segments</label>
               {paths.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-2 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">/ (Root)</div>}
-
               <div className="flex flex-wrap gap-2 items-center">
-                {paths.map((p, idx) => (
+                {paths.map((p) => (
                   <div key={p.id} className="flex gap-2 items-center group">
                     <span className="text-zinc-600 font-black text-sm">/</span>
-                    <input
-                      value={p.v}
-                      readOnly={readOnly}
-                      onChange={(e) => updatePath(p.id, e.target.value)}
-                      className={`w-32 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-400' : 'text-fuchsia-400'}`}
-                      placeholder="path"
-                    />
-                    {!readOnly && (
-                      <button onClick={() => deletePath(p.id)} className="text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded px-1">✕</button>
-                    )}
+                    <input value={p.v} readOnly={readOnly} onChange={(e) => updatePath(p.id, e.target.value)} className={`w-32 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-400' : 'text-fuchsia-400'}`} placeholder="path" />
+                    {!readOnly && <button onClick={() => deletePath(p.id)} className="text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded px-1">✕</button>}
                   </div>
                 ))}
               </div>
-              {!readOnly && (
-                <button onClick={addPath} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-fuchsia-400 hover:border-fuchsia-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">
-                  + Add Path
-                </button>
-              )}
+              {!readOnly && <button onClick={addPath} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-fuchsia-400 hover:border-fuchsia-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Path</button>}
             </div>
 
-            {/* Parameters */}
             <div className="space-y-1">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Query Parameters</label>
               {params.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-2 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">No parameters found.</div>}
-
               <div className="space-y-2">
                 {params.map(p => (
                   <div key={p.id} className="flex gap-2 group">
-                    <input
-                      value={p.k}
-                      readOnly={readOnly}
-                      onChange={(e) => updateParam(p.id, e.target.value, p.v)}
-                      className={`w-1/3 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-500' : 'text-sky-400'}`}
-                      placeholder="Key"
-                    />
-                    <input
-                      value={p.v}
-                      readOnly={readOnly}
-                      onChange={(e) => updateParam(p.id, p.k, e.target.value)}
-                      className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono break-all ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`}
-                      placeholder="Value"
-                    />
-                    {!readOnly && (
-                      <button onClick={() => deleteParam(p.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>
-                    )}
+                    <input value={p.k} readOnly={readOnly} onChange={(e) => updateParam(p.id, e.target.value, p.v)} className={`w-1/3 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-500' : 'text-sky-400'}`} placeholder="Key" />
+                    <input value={p.v} readOnly={readOnly} onChange={(e) => updateParam(p.id, p.k, e.target.value)} className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono break-all ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`} placeholder="Value" />
+                    {!readOnly && <button onClick={() => deleteParam(p.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>}
                   </div>
                 ))}
               </div>
-              {!readOnly && (
-                <button onClick={addParam} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-400 hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">
-                  + Add Parameter
-                </button>
-              )}
+              {!readOnly && <button onClick={addParam} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-400 hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Parameter</button>}
             </div>
 
-            {/* Fragment */}
             {(fragment || !readOnly) && (
               <div className="space-y-1">
                 <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Fragment (Hash)</label>
                 <div className="flex gap-2 items-center">
                   <span className="text-zinc-600 font-black">#</span>
-                  <input
-                    value={fragment}
-                    readOnly={readOnly}
-                    onChange={(e) => updateStructuredUrl(domain, paths, params, e.target.value)}
-                    className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-amber-400'}`}
-                  />
+                  <input value={fragment} readOnly={readOnly} onChange={(e) => updateStructuredUrl(domain, paths, params, e.target.value)} className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-amber-400'}`} />
                 </div>
               </div>
             )}

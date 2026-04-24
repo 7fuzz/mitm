@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from 'react';
 import { Traffic } from '@/types/traffic';
 import { RepeaterRequest } from '@/components/View/RepeaterView';
 
@@ -15,10 +15,19 @@ export interface EnvVariable {
   activeIndex: number;
 }
 
-export function useTraffic() {
+export interface UILayout {
+  isListOpen: boolean;
+  listLayout: 'sidebar' | 'bottom';
+  splitMode: 'vertical' | 'horizontal';
+}
+
+export function useTrafficState() {
   const [traffic, setTraffic] = useState<Traffic[]>([]);
   const [repeaterRequests, setRepeaterRequests] = useState<RepeaterRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const [repeaterSelectedId, setRepeaterSelectedId] = useState<string | null>(null);
+  const [interceptSelectedId, setInterceptSelectedId] = useState<string | null>(null);
 
   // === UPGRADED: Variables State ===
   const [envVars, setEnvVars] = useState<EnvVariable[]>([]);
@@ -31,6 +40,11 @@ export function useTraffic() {
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);
   const [isLimitEnabled, setIsLimitEnabled] = useState(true);
   const [historyLimit, setHistoryLimit] = useState(100);
+  const [uiLayout, setUiLayout] = useState<UILayout>({
+    isListOpen: true,
+    listLayout: 'sidebar',
+    splitMode: 'vertical'
+  });
 
   const limitRef = useRef({ enabled: isLimitEnabled, value: historyLimit });
   const prefsRef = useRef(prefs);
@@ -49,6 +63,7 @@ export function useTraffic() {
       if (state.limits && state.preferences?.limits !== false) { setIsLimitEnabled(state.limits.enabled); setHistoryLimit(state.limits.value); }
       if (state.intercept && state.preferences?.intercept !== false) { setIsIntercepting(state.intercept.enabled); setInterceptMode(state.intercept.mode); setIgnoredMethods(state.intercept.ignored); }
       if (state.queue && state.queue.length > 0) setTraffic(prev => [...state.queue, ...prev]);
+      if (state.ui_layout) setUiLayout(state.ui_layout);
       setIsStateLoaded(true);
     });
 
@@ -97,13 +112,46 @@ export function useTraffic() {
     setTraffic(prev => prev.map((t) => (t.id === id ? { ...t, is_intercepted: false } : t)));
   };
 
+  const updateUILayout = (updates: Partial<UILayout>) => {
+    const next = { ...uiLayout, ...updates };
+    setUiLayout(next);
+    fetch('/api/state', { method: 'POST', body: JSON.stringify({ ui_layout: next }) });
+  };
+
   return {
     traffic, setTraffic,
     repeaterRequests, setRepeaterRequests: updateRepeater,
     envVars, setEnvVars: updateEnvVars, activeProject, setActiveProject, // <--- EXPORTED
+    uiLayout, updateUILayout,
     selectedReq: traffic.find((r) => r.id === selectedId) || null,
     selectedId, setSelectedId,
+    repeaterSelectedId, setRepeaterSelectedId,   // <--- EXPORT NEW
+    interceptSelectedId, setInterceptSelectedId, // <--- EXPORT NEW
     prefs, updatePrefs, isIntercepting, interceptMode, ignoredMethods, updateConfig, resumeRequest,
     isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit
   };
+}
+
+// 2. CREATE THE CONTEXT MAGIC (Perfectly typed)
+type TrafficContextType = ReturnType<typeof useTrafficState>;
+const TrafficContext = createContext<TrafficContextType | null>(null);
+
+// 3. CREATE THE PROVIDER WRAPPER
+export function TrafficProvider({ children }: { children: ReactNode }) {
+  const state = useTrafficState();
+
+  return (
+    <TrafficContext.Provider value={state}>
+      {children}
+    </TrafficContext.Provider>
+  );
+}
+
+// 4. EXPORT YOUR NEW SUPER-HOOK
+export function useTraffic() {
+  const context = useContext(TrafficContext);
+  if (!context) {
+    throw new Error("useTraffic must be used within a TrafficProvider");
+  }
+  return context;
 }
