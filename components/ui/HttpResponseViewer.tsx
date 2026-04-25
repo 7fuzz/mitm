@@ -168,7 +168,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
       {/* === UPDATED: Render First Line & Headers === */}
       {(parsed.headerList.length > 0 || parsed.firstLine) && (
-        <div className="border-b border-zinc-800 bg-zinc-950 resize-y overflow-auto min-h-[80px] max-h-[60%] z-10" style={{ height: '160px' }}>
+        <div className="border-b border-zinc-800 bg-zinc-950 resize-y overflow-auto min-h-20 max-h-[60%] z-10" style={{ height: '160px' }}>
           <div className="p-4 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[11px] font-mono">
             {parsed.firstLine && (
               <div className="col-span-2 text-sky-400 font-black text-[12px] mb-2 pb-2 border-b border-zinc-800/50 break-all">
@@ -232,7 +232,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
           {/* Expand/Collapse Icons */}
           {parsed.json && viewMode === "pretty" && (
             <div className="flex items-center gap-1 shrink-0">
-              <div className="w-[1px] h-4 bg-zinc-700 mx-1 hidden sm:block"></div>
+              <div className="w-px h-4 bg-zinc-700 mx-1 hidden sm:block"></div>
               <button onClick={() => setExpandSignal((s) => s + 1)} title="Expand All" className="p-1.5 rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="7 13 12 18 17 13"></polyline>
@@ -254,17 +254,17 @@ export default function HttpResponseViewer({ text }: { text: string }) {
       {/* Body Section */}
       <div className="p-4 overflow-auto flex-1 bg-zinc-950/50 relative" ref={containerRef}>
         {viewMode === "raw" ? (
-          <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap break-words">{formattedBody || "No Response Body"}</pre>
+          <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">{formattedBody || "No Response Body"}</pre>
         ) : viewMode === "render" && isHtml ? (
           <iframe srcDoc={parsed.rawBody} className="w-full h-full bg-white rounded" title="HTML Preview" sandbox="allow-same-origin" />
         ) : isImage && mediaUrl ? (
           <div className="flex flex-col items-center justify-center gap-4 h-full">
-            <img src={mediaUrl} alt="Preview" className="max-w-full max-h-[400px] rounded border border-zinc-800 shadow-xl" />
+            <img src={mediaUrl} alt="Preview" className="max-w-full max-h-100 rounded border border-zinc-800 shadow-xl" />
             <a href={mediaUrl} download="image.png" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-black uppercase text-[10px] tracking-widest rounded">Download</a>
           </div>
         ) : isVideo && mediaUrl ? (
           <div className="flex flex-col items-center justify-center gap-4 h-full">
-            <video controls src={mediaUrl} className="max-w-full max-h-[400px] rounded border border-zinc-800 shadow-xl" />
+            <video controls src={mediaUrl} className="max-w-full max-h-100 rounded border border-zinc-800 shadow-xl" />
             <a href={mediaUrl} download="video.mp4" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-black uppercase text-[10px] tracking-widest rounded">Download</a>
           </div>
         ) : isMediaOrFile && mediaUrl ? (
@@ -282,11 +282,11 @@ export default function HttpResponseViewer({ text }: { text: string }) {
             filterMode={filterMode}
           />
         ) : (isXml || isHtml) && viewMode === "pretty" ? (
-          <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap break-words">
+          <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap wrap-break-words">
             {formatMarkup(parsed.rawBody)}
           </pre>
         ) : (
-          <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap break-words">
+          <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">
             {parsed.rawBody || "No Response Body"}
           </pre>
         )}

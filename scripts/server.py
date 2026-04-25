@@ -71,8 +71,22 @@ class APIServer:
         app.router.add_post("/save", repeater.handle_save)
         app.router.add_get("/saved", repeater.handle_get_saved)
         app.router.add_delete("/saved/{id}", repeater.handle_delete_saved)
+
+        # Repeater CRUD (individual operations)
         app.router.add_get("/repeater-db", repeater.handle_repeater_get)
         app.router.add_post("/repeater-db", repeater.handle_repeater_post)
+        app.router.add_post("/repeater", repeater.handle_repeater_create)
+        app.router.add_put("/repeater/{id}", repeater.handle_repeater_update)
+        app.router.add_delete("/repeater/{id}", repeater.handle_repeater_delete)
+
+        # Repeater Groups
+        app.router.add_get("/repeater-groups", repeater.handle_group_get_all)
+        app.router.add_post("/repeater-groups", repeater.handle_group_create)
+        app.router.add_put("/repeater-groups/{id}", repeater.handle_group_put)
+        app.router.add_delete("/repeater-groups/{id}", repeater.handle_group_delete)
+
+        # Import
+        app.router.add_post("/repeater-import", repeater.handle_postman_import)
 
         runner = web.AppRunner(app)
         await runner.setup()

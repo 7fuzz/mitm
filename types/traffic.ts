@@ -13,4 +13,5 @@ export interface Traffic {
   // Add this line (the '?' makes it optional for backwards compatibility)
   is_intercepted?: boolean;
   intercepted_at?: number;
+  group?: string;
 }

@@ -3,7 +3,7 @@ import { Traffic } from '@/types/traffic';
 import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
 import { TrafficItem } from './TrafficItem';
 
-interface Props {
+interface TrafficListProps {
   items: Traffic[];
   activeId: string | null;
   onSelect: (id: string) => void;
@@ -47,7 +47,7 @@ const getStatusColor = (s: number) => {
   return 'text-rose-500';
 };
 
-export function TrafficList({ items, activeId, onSelect, onDelete, activeColor = 'emerald', layout = 'sidebar' }: Props) {
+export function TrafficList({ items, activeId, onSelect, onDelete, activeColor = 'emerald', layout = 'sidebar' }: TrafficListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState<Record<string, FilterState>>({});
   const [statusFilter, setStatusFilter] = useState<Record<string, FilterState>>({});
@@ -98,11 +98,11 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
 
         {showFilters && (
           <div className={`flex ${layout === 'sidebar' ? 'flex-col gap-4' : 'gap-6'}`}>
-            <div className="flex-1">
+            <div className="flex-1 w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-800">
               <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Methods</div>
               <MultiSelectFilter options={METHODS} filterStates={methodFilter} onToggle={toggleMethod} onClear={() => setMethodFilter({})} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-zinc-800">
               <div className="text-[8px] uppercase text-zinc-600 font-black tracking-widest mb-1.5">Response Status</div>
               <MultiSelectFilter options={STATUS_FILTERS} filterStates={statusFilter} onToggle={toggleStatus} onClear={() => setStatusFilter({})} />
             </div>
@@ -153,16 +153,15 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
             </tbody>
           </table>
         ) : (
-          /* === STANDARD SIDEBAR LIST === */
           <div className="absolute inset-0 overflow-y-auto divide-y divide-zinc-800/50">
             {filteredItems.map(req => (
               <TrafficItem
-                key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
+                key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
               />
             ))}
           </div>
         )}
       </div>
-    </div >
+    </div>
   );
 }

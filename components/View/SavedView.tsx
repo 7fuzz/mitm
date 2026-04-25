@@ -239,7 +239,7 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
                   {selected.request ? (
                     <HttpResponseViewer text={buildRawHttpMessage(selected.request.headers || {}, selected.request.body || '')} />
                   ) : (
-                    <div className="h-[200px] flex items-center justify-center border border-zinc-800 border-dashed rounded bg-zinc-900/20 text-zinc-600 text-[10px] uppercase tracking-widest">
+                    <div className="h-50 flex items-center justify-center border border-zinc-800 border-dashed rounded bg-zinc-900/20 text-zinc-600 text-[10px] uppercase tracking-widest">
                       Not Saved
                     </div>
                   )}
@@ -252,7 +252,7 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
                   {selected.response ? (
                     <HttpResponseViewer text={buildRawHttpMessage(selected.response.headers || {}, selected.response.body || '')} />
                   ) : (
-                    <div className="h-[200px] flex items-center justify-center border border-zinc-800 border-dashed rounded bg-zinc-900/20 text-zinc-600 text-[10px] uppercase tracking-widest">
+                    <div className="h-50 flex items-center justify-center border border-zinc-800 border-dashed rounded bg-zinc-900/20 text-zinc-600 text-[10px] uppercase tracking-widest">
                       Not Saved
                     </div>
                   )}

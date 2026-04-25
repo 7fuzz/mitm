@@ -7,63 +7,83 @@ import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
+import { PromptModal } from '../ui/PromptModal';
 
 export interface RepeaterRequest {
-  id: string; name: string; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
+  id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
   response?: { status: number; headers: Record<string, string>; body: string; time?: number; };
 }
 
 export function RepeaterView() {
   const {
-    repeaterRequests, setRepeaterRequests,
-    variables,
-    activeProject,
+    repeaterRequests, repeaterGroups, activeGroupId, switchGroup,
+    addEmptyRequest, duplicateRequest, updateRequest, deleteRequest, importPostman,
+    createGroup, renameGroup, deleteGroup,
+    variables, activeEnvId,
     uiLayout, updateUILayout,
-    repeaterSelectedId: selectedId,
-    setRepeaterSelectedId: setSelectedId
+    repeaterSelectedId: selectedId, setRepeaterSelectedId: setSelectedId
   } = useTraffic();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false); // <--- NEW: Toggle State
-
+  const [showPreview, setShowPreview] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editGroupId, setEditGroupId] = useState<string | null>(null);
   const [editMethod, setEditMethod] = useState('GET');
   const [editUrl, setEditUrl] = useState('');
   const [editHeaders, setEditHeaders] = useState<Record<string, string>>({});
   const [editBody, setEditBody] = useState('');
 
+  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
+  const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => setPromptConfig({ isOpen: true, title, initialValue, action });
+  const closePrompt = () => setPromptConfig(prev => ({ ...prev, isOpen: false }));
+
+  // === FIXED: Ensure selectedId is still valid in the current filter ===
   const currentReq = repeaterRequests.find(r => r.id === selectedId) || repeaterRequests[0];
 
-  const trafficMapped: Traffic[] = repeaterRequests.map(req => ({
-    id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0, host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '', is_intercepted: false
-  }));
+  // === FIXED: Properly map groupId to the human-readable group name for the sidebar ===
+  const trafficMapped: Traffic[] = repeaterRequests.map(req => {
+    const groupName = req.groupId ? repeaterGroups.find(g => g.id === req.groupId)?.name : 'Default';
+    return {
+      id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0,
+      host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '',
+      is_intercepted: false, group: groupName || 'Default'
+    };
+  });
 
   useEffect(() => {
-    if (currentReq) { setEditMethod(currentReq.method); setEditUrl(currentReq.url); setEditHeaders(currentReq.headers || {}); setEditBody(currentReq.body || ''); }
+    if (currentReq) {
+      setEditName(currentReq.name);
+      setEditGroupId(currentReq.groupId || null);
+      setEditMethod(currentReq.method);
+      setEditUrl(currentReq.url);
+      setEditHeaders(currentReq.headers || {});
+      setEditBody(currentReq.body || '');
+
+      // Keep selection in sync if the filter changed it
+      if (currentReq.id !== selectedId) setSelectedId(currentReq.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentReq]);
 
-  const handleAddEmpty = () => {
-    const newId = crypto.randomUUID();
-    const newReq: RepeaterRequest = { id: newId, name: "New Request", method: "GET", url: "{{base_url}}/api/", headers: {}, body: "", timestamp: Date.now() };
-    setRepeaterRequests([...repeaterRequests, newReq]);
-    setSelectedId(newId);
+  const handleAdd = async () => {
+    // Auto-assign to current collection filter if not "All"
+    const targetGroup = (activeGroupId !== 'All' && activeGroupId !== 'null') ? activeGroupId : null;
+    const newId = await addEmptyRequest(targetGroup);
+    if (newId) setSelectedId(newId);
   };
 
-  const handleDuplicate = () => {
+  const handleDuplicate = async () => {
     if (!currentReq) return;
-    const newId = crypto.randomUUID();
-    setRepeaterRequests([...repeaterRequests, { ...currentReq, id: newId, name: `${currentReq.name} (Copy)`, timestamp: Date.now() }]);
-    setSelectedId(newId);
+    const newId = await duplicateRequest(currentReq);
+    if (newId) setSelectedId(newId);
   };
-
-  const handleDeleteRequest = (id: string) => setRepeaterRequests(repeaterRequests.filter(r => r.id !== id));
-  const handleUpdateRequest = (id: string, updates: Partial<RepeaterRequest>) => setRepeaterRequests(repeaterRequests.map(r => r.id === id ? { ...r, ...updates } : r));
 
   const handleSend = async () => {
     if (!currentReq) return;
     setIsLoading(true);
     try {
       const varDict: Record<string, string> = {};
-      variables.filter(v => v.project === activeProject).forEach(v => {
+      variables.filter(v => v.environmentId === activeEnvId).forEach(v => {
         if (v.name.trim()) {
           const activeVal = v.values[v.activeIndex] || v.values[0];
           varDict[v.name.trim()] = activeVal ? activeVal.value : '';
@@ -77,17 +97,16 @@ export function RepeaterView() {
       const data = await response.json();
       if (!data.success) return alert('Error: ' + (data.error || 'Unknown error'));
 
-      handleUpdateRequest(currentReq.id, {
+      await updateRequest(currentReq.id, {
         method: editMethod, url: editUrl, headers: editHeaders, body: editBody,
         response: { status: data.status ?? 0, headers: data.headers || {}, body: data.body || '', time: Date.now() },
       });
     } catch (error) { alert('Error: ' + error); } finally { setIsLoading(false); }
   };
 
-  // --- NEW: Interpolation Logic for the Preview ---
   const getPreviewRequestText = () => {
     const varDict: Record<string, string> = {};
-    variables.filter(v => v.project === activeProject).forEach(v => {
+    variables.filter(v => v.environmentId === activeEnvId).forEach(v => {
       if (v.name.trim()) {
         const activeVal = v.values[v.activeIndex] || v.values[0];
         varDict[v.name.trim()] = activeVal ? activeVal.value : '';
@@ -108,7 +127,7 @@ export function RepeaterView() {
       const parsed = new URL(reqUrl);
       path = parsed.pathname + parsed.search + parsed.hash;
       host = parsed.host;
-    } catch { /* Ignore malformed URLs */ }
+    } catch { /* Ignore */ }
 
     let headerStr = `${editMethod} ${path} HTTP/1.1\n`;
     let hasHost = false;
@@ -119,9 +138,7 @@ export function RepeaterView() {
     });
 
     if (host && !hasHost) headerStr += `Host: ${host}\n`;
-
-    const reqBody = interpolate(editBody);
-    return `${headerStr}\n${reqBody}`;
+    return `${headerStr}\n${interpolate(editBody)}`;
   };
 
   const getRawResponseText = () => {
@@ -130,103 +147,158 @@ export function RepeaterView() {
     return `${headerText}\n\n${currentReq.response.body}`;
   };
 
+  // Grab the currently active group object for the Rename/Delete buttons
+  const activeGroupObj = repeaterGroups.find(g => g.id === activeGroupId);
+
   return (
-    <WorkspaceLayout
-      uiLayout={uiLayout}
-      onUpdateLayout={updateUILayout}
-      listComponent={(layout) => (
-        <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={handleDeleteRequest} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
-      )}
-      toolbarRight={
-        <>
-          <button onClick={handleAddEmpty} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-emerald-400 text-[10px] rounded transition-all uppercase font-black">+ New</button>
-          <button onClick={handleDuplicate} disabled={!currentReq} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Duplicate</button>
-          <button onClick={() => currentReq && handleUpdateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Clear</button>
-          <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black">{isLoading ? 'Sending...' : 'Send'}</button>
-        </>
-      }
-      mainContent={(splitMode) => (
-        currentReq ? (
-          <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-[90rem]' : 'max-w-5xl'}`}>
+    <>
+      <PromptModal isOpen={promptConfig.isOpen} title={promptConfig.title} initialValue={promptConfig.initialValue} onClose={closePrompt} onSubmit={promptConfig.action} />
 
-            <div className="space-y-3">
-              <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 1. Request_Line</h3>
-              <div className="flex gap-4 items-start">
-                <div className="w-full">
-                  <UrlEditor method={editMethod} onMethodChange={setEditMethod} url={editUrl} onChange={setEditUrl} />
-                </div>
-              </div>
+      <WorkspaceLayout
+        uiLayout={uiLayout}
+        onUpdateLayout={updateUILayout}
+        listComponent={(layout) => (
+          <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
+        )}
+        toolbarLeft={
+          <div className="flex items-center gap-2 bg-zinc-950 p-0.5 rounded border border-zinc-800">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest pl-2">Collection:</span>
+            <select
+              value={activeGroupId}
+              onChange={(e) => switchGroup(e.target.value)}
+              className="bg-zinc-900 text-purple-400 text-[10px] uppercase font-bold px-2 py-1 outline-none border border-zinc-700 rounded cursor-pointer max-w-37.5 truncate"
+            >
+              <option value="All">All Groups</option>
+              <option value="null">Default (Uncategorized)</option>
+              <option disabled>──────────</option>
+              {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+
+            <div className="flex items-center gap-1 px-1">
+              <button
+                onClick={() => activeGroupObj && openPrompt('Rename Collection', activeGroupObj.name, (newName) => renameGroup(activeGroupObj.id, newName))}
+                disabled={activeGroupId === 'All' || activeGroupId === 'null'}
+                className="p-1.5 text-zinc-500 hover:text-purple-400 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
+                title="Rename Collection"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              </button>
+              <button
+                onClick={() => { if (activeGroupObj && confirm(`Delete collection "${activeGroupObj.name}"? Requests inside will be moved to Default.`)) deleteGroup(activeGroupObj.id); }}
+                disabled={activeGroupId === 'All' || activeGroupId === 'null'}
+                className="p-1.5 text-zinc-500 hover:text-rose-500 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
+                title="Delete Collection"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
             </div>
-
-            <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
-
-              {/* Left Column: Editor vs Preview Toggle */}
-              <div className="flex flex-col gap-4">
-
-                {/* NEW: Toolbar Toggle */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
-                    <span className="opacity-50">#</span> Outbound_Payload
-                  </h3>
-                  <div className="flex bg-zinc-950 p-0.5 rounded border border-zinc-800">
-                    <button onClick={() => setShowPreview(false)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${!showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Builder</button>
-                    <button onClick={() => setShowPreview(true)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Interpolated Preview</button>
+          </div>
+        }
+        toolbarRight={
+          <>
+            <button onClick={handleAdd} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-emerald-400 text-[10px] rounded transition-all uppercase font-black">+ New</button>
+            <button onClick={importPostman} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sky-400 text-[10px] rounded transition-all uppercase font-black">Import</button>
+            <button onClick={handleDuplicate} disabled={!currentReq} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Duplicate</button>
+            <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Clear</button>
+            <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black">{isLoading ? 'Executing...' : 'Run'}</button>
+          </>
+        }
+        mainContent={(splitMode) => (
+          currentReq ? (
+            <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
+              <div className="space-y-3">
+                <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Metadata</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
+                    <input
+                      value={editName}
+                      onChange={(e) => { setEditName(e.target.value); updateRequest(currentReq.id, { name: e.target.value }); }}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Collection Assignment</label>
+                    <div className="flex gap-2">
+                      {/* === FIXED: Uses pure <select> and our real repeaterGroups state! === */}
+                      <select
+                        value={editGroupId || 'null'}
+                        onChange={(e) => {
+                          const newGroupId = e.target.value === 'null' ? null : e.target.value;
+                          setEditGroupId(newGroupId);
+                          updateRequest(currentReq.id, { groupId: newGroupId });
+                        }}
+                        className="flex-1 bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors cursor-pointer"
+                      >
+                        <option value="null">Default (Uncategorized)</option>
+                        {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                      <button
+                        onClick={() => openPrompt('New Collection Name', '', async (name) => {
+                          const newId = await createGroup(name);
+                          if (newId) { setEditGroupId(newId); updateRequest(currentReq.id, { groupId: newId }); }
+                        })}
+                        className="px-3 border border-zinc-700 bg-zinc-900 hover:bg-purple-900/30 text-purple-400 rounded transition-colors text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        + New
+                      </button>
+                    </div>
                   </div>
                 </div>
-
-                {!showPreview ? (
-                  <div className="flex flex-col gap-8 flex-1">
-                    <div className="flex flex-col space-y-3">
-                      <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 2. Request_Headers</h3>
-                      <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[300px]">
-                        <HeaderEditor initialHeaders={editHeaders} onChange={setEditHeaders} />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col space-y-3">
-                      <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> 3. Request_Body</h3>
-                      <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[350px]">
-                        <BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[600px] flex flex-col shadow-inner shadow-black/50">
-                    <HttpResponseViewer text={getPreviewRequestText()} />
-                  </div>
-                )}
               </div>
 
-              {/* Right Column: Response */}
-              <div className="flex flex-col space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Response_Received</h3>
-                  {currentReq.response && (
-                    <div className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest ${currentReq.response.status >= 400 ? 'bg-rose-500/10 border border-rose-500/30 text-rose-500' : currentReq.response.status >= 300 ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'}`}>
-                      Status: {currentReq.response.status}
-                    </div>
-                  )}
-                </div>
+              <div className="space-y-3">
+                <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Line</h3>
+                <UrlEditor method={editMethod} onMethodChange={setEditMethod} url={editUrl} onChange={setEditUrl} />
+              </div>
 
-                <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[400px]">
-                  {currentReq.response ? (
-                    <HttpResponseViewer text={getRawResponseText()} />
+              <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Outbound_Payload</h3>
+                    <div className="flex bg-zinc-950 p-0.5 rounded border border-zinc-800">
+                      <button onClick={() => setShowPreview(false)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${!showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Builder</button>
+                      <button onClick={() => setShowPreview(true)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${showPreview ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Interpolated</button>
+                    </div>
+                  </div>
+
+                  {!showPreview ? (
+                    <div className="flex flex-col gap-8 flex-1">
+                      <div className="flex flex-col space-y-3">
+                        <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Headers</h3>
+                        <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-75"><HeaderEditor initialHeaders={editHeaders} onChange={setEditHeaders} /></div>
+                      </div>
+                      <div className="flex flex-col space-y-3">
+                        <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Body</h3>
+                        <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-87.5"><BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} /></div>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="flex items-center justify-center h-full text-zinc-600 text-[10px] uppercase tracking-widest border border-zinc-800 border-dashed rounded">
-                      Hit Send to get a response...
-                    </div>
+                    <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-150 flex flex-col shadow-inner shadow-black/50"><HttpResponseViewer text={getPreviewRequestText()} /></div>
                   )}
+                </div>
+
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Response_Received</h3>
+                    {currentReq.response && (
+                      <div className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest ${currentReq.response.status >= 400 ? 'bg-rose-500/10 border border-rose-500/30 text-rose-500' : currentReq.response.status >= 300 ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'}`}>Status: {currentReq.response.status}</div>
+                    )}
+                  </div>
+                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">
+                    {currentReq.response ? <HttpResponseViewer text={getRawResponseText()} /> : <div className="flex items-center justify-center h-full text-zinc-600 text-[10px] uppercase tracking-widest border border-zinc-800 border-dashed rounded">Hit Send to get a response...</div>}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center opacity-50 relative z-10 min-h-[60vh]">
-            <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">REPEATER_EMPTY</div>
-            <button onClick={handleAddEmpty} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Request</button>
-          </div>
-        )
-      )}
-    />
+          ) : (
+            <div className="flex flex-col items-center justify-center opacity-50 relative z-10 min-h-[60vh]">
+              <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">NOTHING_TO_SEE</div>
+              <button onClick={handleAdd} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Request</button>
+            </div>
+          )
+        )}
+      />
+    </>
   );
 }

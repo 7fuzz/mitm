@@ -24,7 +24,7 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <span key={i} className="bg-amber-500/50 text-white rounded-sm px-[1px]">{part}</span>
+          <span key={i} className="bg-amber-500/50 text-white rounded-sm px-px">{part}</span>
         ) : (
           part
         )
@@ -134,7 +134,7 @@ export default function JsonViewer({
   return (
     <div className="font-mono text-[13px] leading-relaxed" data-path={path} data-state={nodeState}>
       <div className="flex items-start group">
-        <button onClick={() => setExpanded(!expanded)} className="w-5 shrink-0 flex justify-center items-center cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors mt-[2px]" disabled={isEmpty}>
+        <button onClick={() => setExpanded(!expanded)} className="w-5 shrink-0 flex justify-center items-center cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors mt-0.5" disabled={isEmpty}>
           {!isEmpty && (expanded ? "▼" : "▶")}
         </button>
         <div className="flex-1 min-w-0 flex items-center flex-wrap">
@@ -157,7 +157,7 @@ export default function JsonViewer({
       </div>
 
       {expanded && !isEmpty && (
-        <div className="ml-[9px] pl-[14px] border-l border-zinc-700 hover:border-zinc-500 transition-colors">
+        <div className="ml-2.25 pl-3.5 border-l border-zinc-700 hover:border-zinc-500 transition-colors">
           {isArray
             ? visibleItems.map((item: any, index: number) => (
               <JsonViewer key={index} value={item} isLast={index === visibleItems.length - 1} expandSignal={expandSignal} collapseSignal={collapseSignal} path={`${path}-${index}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} />

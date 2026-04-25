@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { Traffic } from '@/types/traffic';
 
 // Import our segmented hooks
@@ -8,7 +8,7 @@ import { useConfig } from './useConfig';
 import { useRepeater } from './useRepeater';
 import { useTrafficLog } from './useTrafficLog';
 
-// Re-export types so other components can still import them from '@/hooks/useTraffic'
+// Re-export types so other components can still import them from '@/hooks/traffic'
 export * from './types';
 
 // ============================================================================
@@ -18,8 +18,9 @@ function useTrafficState() {
   const selections = useSelection();
   const variables = useVariables();
   const config = useConfig();
-  const repeater = useRepeater(config.prefsRef);
+  const repeater = useRepeater();
   const trafficData = useTrafficLog();
+  const isFirstSync = useRef(true);
 
   const [isStateLoaded, setIsStateLoaded] = useState(false);
 
@@ -29,9 +30,16 @@ function useTrafficState() {
 
     if (!isStateLoaded) return;
 
+    // === NEW: Skip the POST request on the very first render after loading ===
+    if (isFirstSync.current) {
+      isFirstSync.current = false;
+      return;
+    }
+
     if (config.prefs.limits) {
       fetch('/api/state', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limits: { enabled: config.isLimitEnabled, value: config.historyLimit } })
       }).catch(() => { }); // Fail silently if network drops
     }
@@ -47,6 +55,7 @@ function useTrafficState() {
   }, [config.isLimitEnabled, config.historyLimit, isStateLoaded]);
 
   useEffect(() => {
+    // === 1. CORE STATE LOAD ===
     fetch('/api/state').then(r => r.json()).then(state => {
       if (state.preferences) config.initConfig.setPrefs(state.preferences);
       if (state.limits && state.preferences?.limits !== false) {
@@ -60,21 +69,34 @@ function useTrafficState() {
       }
       if (state.ui_layout) config.initConfig.setUiLayout(state.ui_layout);
       if (state.queue && state.queue.length > 0) trafficData.setTraffic(prev => [...state.queue, ...prev]);
+
+      // === FIXED: Dynamic Initial Repeater Load based on Saved State! ===
+      const savedGroupId = state.active_repeater_group || 'All';
+      repeater.initActiveGroup(savedGroupId);
+
+      fetch(`/api/repeater-db?groupId=${savedGroupId}`).then(r => r.json()).then(rep => {
+        if (rep && rep.length > 0) repeater._setRawRepeater(rep);
+      });
+
       setIsStateLoaded(true);
     });
 
+    // === 2. PARALLEL BACKGROUND LOADS ===
     fetch('/api/history').then(r => r.json()).then(hist => {
       if (hist && hist.length > 0) trafficData.setTraffic(prev => [...prev, ...hist.reverse()]);
     });
 
-    fetch('/api/repeater-db').then(r => r.json()).then(rep => {
-      if (rep && rep.length > 0) repeater._setRawRepeater(rep);
+    fetch('/api/repeater-groups').then(r => r.json()).then(groups => {
+      if (groups && groups.length > 0) repeater._setRawGroups(groups);
     });
 
     fetch('/api/variables').then(r => r.json()).then(data => {
-      if (data.variables) variables.setVariables(data.variables, data.activeProject);
+      if (data.variables) {
+        variables.loadVariables(data.variables, data.environments, data.activeEnvironmentId);
+      }
     });
 
+    // === 3. SSE CONNECTION ===
     const eventSource = new EventSource('/api/traffic');
     eventSource.onmessage = (e) => {
       const data: Traffic = JSON.parse(e.data);
@@ -93,8 +115,10 @@ function useTrafficState() {
   return {
     ...selections,
     ...variables,
+    // Strip out internal config tools
     ...(({ initConfig, prefsRef, limitRef, ...rest }) => rest)(config),
-    ...(({ _setRawRepeater, ...rest }) => rest)(repeater),
+    // Strip out internal repeater boot tools so the UI component can't mess them up!
+    ...(({ _setRawRepeater, _setRawGroups, initActiveGroup, ...rest }) => rest)(repeater),
     ...trafficData,
     selectedReq: trafficData.traffic.find((r) => r.id === selections.selectedId) || null,
   };

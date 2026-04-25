@@ -74,7 +74,7 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
   const deleteParam = (id: string) => updateStructuredUrl(domain, paths, params.filter(p => p.id !== id), fragment);
 
   return (
-    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-[100px]">
+    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-25">
 
       {/* UPGRADED TOOLBAR: Now contains the HTTP Method Selector! */}
       <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800 shrink-0">
@@ -107,7 +107,7 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
             value={rawUrl}
             readOnly={readOnly}
             onChange={(e) => { setRawUrl(e.target.value); if (onChange) onChange(e.target.value); }}
-            className={`w-full h-full min-h-[60px] bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono resize-y ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : 'text-emerald-100'}`}
+            className={`w-full h-full min-h-15 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono resize-y ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : 'text-emerald-100'}`}
           />
         ) : (
           <div className="space-y-6">

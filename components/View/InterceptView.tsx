@@ -5,18 +5,17 @@ import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
 import { InterceptTimer } from '../ui/InterceptTimer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
-import { useTraffic } from '@/hooks/traffic'; // <--- Import Hook
+import { useTraffic } from '@/hooks/traffic';
 
-// NO MORE PROPS!
 export function InterceptView() {
   const {
     traffic, isIntercepting, interceptMode, ignoredMethods,
-    updateConfig, resumeRequest, uiLayout, updateUILayout
-  } = useTraffic(); // <--- Grab everything from context
+    updateConfig, resumeRequest, uiLayout, updateUILayout,
+    refreshRepeater, setRepeaterSelectedId
+  } = useTraffic();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Editable State
   const [editMethod, setEditMethod] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editStatusCode, setEditStatusCode] = useState(200);
@@ -45,12 +44,45 @@ export function InterceptView() {
           const parsed = JSON.parse(formattedBody);
           formattedBody = JSON.stringify(parsed, null, 2);
         }
-      } catch (e) {
-        // Fallback to raw
-      }
+      } catch (e) { /* ignore */ }
       setEditBody(formattedBody);
     }
   }, [currentReq]);
+
+  const handleStageToWorkbench = async () => {
+    if (!currentReq) return;
+    try {
+      let path = currentReq.url;
+      try { path = new URL(currentReq.url).pathname; } catch { }
+
+      const response = await fetch('/api/repeater-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${currentReq.method} ${path} (Intercept)`,
+          groupId: 'Intercepted',
+          method: editMethod || currentReq.method,
+          url: editUrl || currentReq.url,
+          headers: editHeaders,
+          body: editBody,
+          response: isRes ? {
+            status: editStatusCode,
+            headers: editHeaders,
+            body: editBody
+          } : undefined
+        })
+      });
+
+      const data = await response.json();
+      if (data.success || data.id) {
+        if (refreshRepeater) await refreshRepeater();
+        if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
+        alert('✓ Staged in Workbench!');
+      }
+    } catch (error) {
+      alert('Error staging to workbench: ' + error);
+    }
+  };
 
   const handleForward = () => {
     if (currentReq) {
@@ -90,15 +122,23 @@ export function InterceptView() {
       )}
       toolbarRight={
         <>
+          <button
+            onClick={handleStageToWorkbench}
+            disabled={!currentReq}
+            className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold mr-2"
+          >
+            Stage_to_Workbench
+          </button>
+
           <button onClick={toggleIntercept} className={`px-4 py-1.5 rounded font-black text-[10px] uppercase tracking-widest transition-all border ${isIntercepting ? 'bg-rose-500/20 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}>
             {isIntercepting ? 'Intercept_On' : 'Intercept_Off'}
           </button>
-          <select value={interceptMode} onChange={(e) => updateConfig(isIntercepting, e.target.value, ignoredMethods)} className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500">
+          <select value={interceptMode} onChange={(e) => updateConfig(isIntercepting, e.target.value, ignoredMethods)} className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 ml-2">
             <option value="both">Req & Res</option><option value="request">Request Only</option><option value="response">Response Only</option>
           </select>
           <div className="w-px h-4 bg-zinc-800 mx-2"></div>
           <button onClick={handleDrop} disabled={!currentReq} className="px-6 py-1.5 bg-rose-900/50 hover:bg-rose-600 border border-rose-700 disabled:opacity-30 text-rose-100 text-[10px] rounded transition-all uppercase font-black">Drop</button>
-          <button onClick={handleForward} disabled={!currentReq} className="px-6 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black">Forward</button>
+          <button onClick={handleForward} disabled={!currentReq} className="px-6 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black ml-2">Forward</button>
         </>
       }
       extraHeader={
@@ -132,7 +172,7 @@ export function InterceptView() {
       }
       mainContent={(splitMode) => (
         currentReq ? (
-          <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-[90rem]' : 'max-w-5xl'}`}>
+          <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
 
             {isRes && (
               <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex gap-3 items-center">
@@ -165,13 +205,12 @@ export function InterceptView() {
               )}
             </div>
 
-            {/* NATIVE GRID: Side-by-Side or Stacked */}
             <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
               <div className="flex flex-col space-y-3">
                 <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
                   <span className="opacity-50">#</span> 2. {isRes ? 'Response_Headers' : 'Request_Headers'}
                 </h3>
-                <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[300px]">
+                <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-75">
                   <HeaderEditor initialHeaders={isRes ? (currentReq.response_headers || {}) : (currentReq.request_headers || {})} onChange={setEditHeaders} />
                 </div>
               </div>
@@ -180,7 +219,7 @@ export function InterceptView() {
                 <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
                   <span className="opacity-50">#</span> 3. {isRes ? 'Response_Body' : 'Request_Body'}
                 </h3>
-                <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[350px]">
+                <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-87.5">
                   <BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} />
                 </div>
               </div>

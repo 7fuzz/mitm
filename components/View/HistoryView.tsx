@@ -1,15 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Traffic } from '@/types/traffic';
 import { TrafficList } from '../Sidebar/TrafficList';
-import HttpResponseViewer from '../ui/HttpResponseViewer';
-import { SaveModal } from '../ui/SaveModal';
-import { UrlEditor } from '../Editor/UrlEditor';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
+import { UrlEditor } from '../Editor/UrlEditor';
+import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { useTraffic } from '@/hooks/traffic';
+import { SaveModal } from '../ui/SaveModal'; // Assuming you have this
 
-const buildRawHttpMessage = (headers: Record<string, string>, body: string) => {
-  const headerText = Object.entries(headers || {}).map(([key, value]) => `${key}: ${value}`).join('\n');
-  return `${headerText}\n\n${body || ''}`;
+// === NEW: HTTP Formatters for the Viewer ===
+const buildRawRequestMessage = (req: Traffic) => {
+  let path = req.url;
+  try {
+    const parsed = new URL(req.url);
+    path = parsed.pathname + parsed.search + parsed.hash;
+  } catch { }
+  const firstLine = `${req.method} ${path} HTTP/1.1`;
+  const headerText = Object.entries(req.request_headers || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+  return `${firstLine}\n${headerText}\n\n${req.request_body || ''}`;
+};
+
+const buildRawResponseMessage = (req: Traffic) => {
+  const firstLine = `HTTP/1.1 ${req.status_code}`;
+  const headerText = Object.entries(req.response_headers || {}).map(([k, v]) => `${k}: ${v}`).join('\n');
+  return `${firstLine}\n${headerText}\n\n${req.response_body || ''}`;
 };
 
 export function HistoryView() {
@@ -17,7 +30,8 @@ export function HistoryView() {
     traffic, setTraffic, selectedReq, selectedId, setSelectedId,
     historyLimit, setHistoryLimit, isLimitEnabled, setIsLimitEnabled,
     uiLayout, updateUILayout,
-    repeaterRequests, setRepeaterRequests, setRepeaterSelectedId
+    // NEW: Destructure the safe repeater functions instead of raw setters
+    refreshRepeater, setRepeaterSelectedId
   } = useTraffic();
 
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -47,20 +61,34 @@ export function HistoryView() {
     fetch('/api/history', { method: 'DELETE' }).catch(console.error);
   };
 
-  const handleAddToRepeater = (req: Traffic) => {
-    const newId = crypto.randomUUID();
-    const newReq = {
-      id: newId,
-      name: `${req.method} ${new URL(req.url).pathname}`,
-      method: req.method,
-      url: req.url,
-      headers: req.request_headers || {},
-      body: req.request_body || '',
-      timestamp: Date.now(),
-    };
-    setRepeaterRequests([...repeaterRequests, newReq]);
-    if (setRepeaterSelectedId) setRepeaterSelectedId(newId);
-    alert('Sent to Repeater!');
+  // === UPGRADED: Network-safe Repeater Injection ===
+  const handleAddToRepeater = async (req: Traffic) => {
+    try {
+      let path = req.url;
+      try { path = new URL(req.url).pathname; } catch { }
+
+      const response = await fetch('/api/repeater-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${req.method} ${path}`,
+          group: 'History Imports', // Groups it cleanly!
+          method: req.method,
+          url: req.url,
+          headers: req.request_headers || {},
+          body: req.request_body || '',
+        })
+      });
+
+      const data = await response.json();
+      if (data.success || data.id) {
+        if (refreshRepeater) await refreshRepeater();
+        if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
+        alert('✓ Sent to Repeater!');
+      }
+    } catch (error) {
+      alert('Error sending to repeater: ' + error);
+    }
   };
 
   const copyAsCurl = () => {
@@ -80,7 +108,6 @@ export function HistoryView() {
 
         toolbarRight={
           <>
-            {/* RESTORED: Your preferred Limiter UI */}
             <button
               onClick={() => setIsLimitEnabled(!isLimitEnabled)}
               className={`text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded transition-all border ${isLimitEnabled ? 'bg-zinc-800 border-zinc-600 text-zinc-300' : 'bg-transparent border-dashed border-zinc-700 text-zinc-600 hover:text-zinc-400'}`}
@@ -121,15 +148,15 @@ export function HistoryView() {
 
         mainContent={(splitMode) => (
           selectedReq ? (
-            <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-[90rem]' : 'max-w-5xl'}`}>
+            <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <header className="flex flex-col items-start border-b border-zinc-800 pb-6">
                 <div className="ml-auto flex gap-3 mb-4">
                   <button onClick={() => setShowSaveModal(true)} className="px-4 py-2 bg-sky-900/30 hover:bg-sky-600 text-sky-400 hover:text-white text-[10px] rounded border border-sky-800 transition-all uppercase font-bold">Save_to_Vault</button>
-                  <button onClick={() => handleAddToRepeater(selectedReq)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_Repeater</button>
+                  <button onClick={() => handleAddToRepeater(selectedReq)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_Workbench</button>
                   <button onClick={copyAsCurl} className="px-3 py-1 bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Copy_as_cURL</button>
                 </div>
                 <div className="w-full">
-                  <UrlEditor method={selectedReq.method} url={selectedReq.url} readOnly={true} />
+                  <UrlEditor method={selectedReq.method} onMethodChange={() => { }} url={selectedReq.url} onChange={() => { }} readOnly={true} />
                 </div>
               </header>
 
@@ -137,7 +164,7 @@ export function HistoryView() {
                 <div className="flex flex-col space-y-3">
                   <h3 className="text-sky-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Payload</h3>
                   <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[400px]">
-                    <HttpResponseViewer text={buildRawHttpMessage(selectedReq.request_headers, selectedReq.request_body)} />
+                    <HttpResponseViewer text={buildRawRequestMessage(selectedReq)} />
                   </div>
                 </div>
 
@@ -147,7 +174,7 @@ export function HistoryView() {
                     {selectedReq.status_code === 0 ? (
                       <div className="h-full flex items-center justify-center text-zinc-600 text-[10px] uppercase tracking-widest">Awaiting Response...</div>
                     ) : (
-                      <HttpResponseViewer text={buildRawHttpMessage(selectedReq.response_headers, selectedReq.response_body)} />
+                      <HttpResponseViewer text={buildRawResponseMessage(selectedReq)} />
                     )}
                   </div>
                 </div>

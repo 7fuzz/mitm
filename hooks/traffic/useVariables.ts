@@ -1,18 +1,25 @@
 import { useState } from 'react';
-import { GlobalVariable } from './types';
+import { GlobalVariable, Environment } from './types';
 
 export function useVariables() {
   const [variables, setVariables] = useState<GlobalVariable[]>([]);
-  const [activeProject, setActiveProject] = useState('Default');
+  const [environments, setEnvironments] = useState<Environment[]>([{ id: 'default-env-id', name: 'Default' }]);
+  const [activeEnvId, setActiveEnvId] = useState('default-env-id');
+
+  const loadVariables = (vars: GlobalVariable[], envs: Environment[], activeId: string) => {
+    setVariables(vars);
+    setEnvironments(envs);
+    setActiveEnvId(activeId);
+  };
 
   const addVariable = (v: GlobalVariable) => {
     setVariables(prev => [...prev, v]);
-    fetch('/api/variables', { method: 'POST', body: JSON.stringify(v) }).catch(console.error);
+    fetch('/api/variables', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) }).catch(console.error);
   };
 
   const updateVariable = (id: string, updates: Partial<GlobalVariable>) => {
     setVariables(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
-    fetch(`/api/variables/${id}`, { method: 'PUT', body: JSON.stringify(updates) }).catch(console.error);
+    fetch(`/api/variables/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) }).catch(console.error);
   };
 
   const deleteVariable = (id: string) => {
@@ -20,41 +27,49 @@ export function useVariables() {
     fetch(`/api/variables/${id}`, { method: 'DELETE' }).catch(console.error);
   };
 
-  const updateActiveProject = (projectName: string, isNew = false) => {
-    setActiveProject(projectName);
+  const setActiveEnvironment = async (id: string) => {
+    setActiveEnvId(id);
+
     fetch('/api/environments', {
-      method: 'POST',
-      body: JSON.stringify({ activeProject: projectName, newEnvironment: isNew ? projectName : undefined })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activeId: id })
     }).catch(console.error);
+
+    try {
+      const res = await fetch(`/api/variables?envId=${id}`);
+      const data = await res.json();
+      if (data.variables) {
+        setVariables(data.variables);
+      }
+    } catch (error) {
+      console.error("Failed to lazy-load environment variables:", error);
+    }
   };
 
-  const renameProject = (oldName: string, newName: string) => {
-    if (oldName === 'Default' || !newName.trim()) return;
-    setVariables(prev => prev.map(v => v.project === oldName ? { ...v, project: newName } : v));
-    if (activeProject === oldName) setActiveProject(newName);
-    fetch(`/api/environments/${encodeURIComponent(oldName)}`, { method: 'PUT', body: JSON.stringify({ newName }) }).catch(console.error);
+  const createEnvironment = (name: string) => {
+    const newId = crypto.randomUUID();
+    setEnvironments(prev => [...prev, { id: newId, name }]);
+    setActiveEnvId(newId);
+    fetch('/api/environments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: newId, name, activeId: newId }) });
   };
 
-  const deleteProject = (name: string) => {
-    if (name === 'Default') return;
-    setVariables(prev => prev.filter(v => v.project !== name));
-    if (activeProject === name) setActiveProject('Default');
-    fetch(`/api/environments/${encodeURIComponent(name)}`, { method: 'DELETE' }).catch(console.error);
+  const renameEnvironment = (id: string, name: string) => {
+    if (id === 'default-env-id' || !name.trim()) return;
+    setEnvironments(prev => prev.map(e => e.id === id ? { ...e, name } : e));
+    fetch(`/api/environments/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
   };
 
-  const updateVariablesState = (newVars: GlobalVariable[], newActiveProj?: string) => {
-    const targetProject = newActiveProj || activeProject;
-    setVariables(newVars);
-    if (newActiveProj) setActiveProject(newActiveProj);
-    const envs = Array.from(new Set(newVars.map(v => v.project)));
-    if (!envs.includes(targetProject)) envs.push(targetProject);
-    fetch('/api/variables', { method: 'POST', body: JSON.stringify({ activeProject: targetProject, environments: envs, variables: newVars }) });
+  const deleteEnvironment = (id: string) => {
+    if (id === 'default-env-id') return;
+    setEnvironments(prev => prev.filter(e => e.id !== id));
+    setVariables(prev => prev.filter(v => v.environmentId !== id)); // Local cascade
+    if (activeEnvId === id) setActiveEnvironment('default-env-id');
+    fetch(`/api/environments/${id}`, { method: 'DELETE' });
   };
 
   return {
-    variables, setVariables: updateVariablesState,
-    activeProject, setActiveProject,
+    variables, environments, activeEnvId,
+    loadVariables,
     addVariable, updateVariable, deleteVariable,
-    updateActiveProject, renameProject, deleteProject
+    setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment
   };
 }

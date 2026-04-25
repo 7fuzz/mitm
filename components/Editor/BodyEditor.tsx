@@ -22,7 +22,7 @@ export function BodyEditor({ body, headers, onChange }: Props) {
 
   return (
     // UPGRADED: Added resize-y to root container
-    <div className="flex flex-col h-full bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-[150px]">
+    <div className="flex flex-col h-full bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-37.5">
 
       <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ export function BodyEditor({ body, headers, onChange }: Props) {
             ))}
           </div>
         </div>
-        {contentType && <span className="text-[9px] text-emerald-500/70 font-mono italic truncate max-w-[200px]">Detected: {contentType.split(';')[0]}</span>}
+        {contentType && <span className="text-[9px] text-emerald-500/70 font-mono italic truncate max-w-50">Detected: {contentType.split(';')[0]}</span>}
       </div>
 
       {/* UPGRADED: Added min-h-0 to trap flex scrolling */}
@@ -46,7 +46,7 @@ export function BodyEditor({ body, headers, onChange }: Props) {
             onChange={(e) => onChange(e.target.value)}
             spellCheck="false"
             // UPGRADED: Removed resize-none, added resize-y and lower min-h
-            className="w-full h-full min-h-[100px] bg-transparent text-zinc-300 outline-none focus:border-amber-500 transition-colors text-[11px] font-mono leading-relaxed resize-y"
+            className="w-full h-full min-h-25 bg-transparent text-zinc-300 outline-none focus:border-amber-500 transition-colors text-[11px] font-mono leading-relaxed resize-y"
           />
         )}
         {mode === 'json' && <JsonEditor initialBody={body} onChange={onChange} />}

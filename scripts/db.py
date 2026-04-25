@@ -1,47 +1,53 @@
 import sqlite3
 import json
 
+
 class Database:
-    def __init__(self, db_path='master_database.sqlite'):
+    def __init__(self, db_path="master_database.sqlite"):
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         # Enable foreign keys for cascading deletes
-        self.conn.execute("PRAGMA foreign_keys = ON") 
+        self.conn.execute("PRAGMA foreign_keys = ON")
         self.init_db()
 
     def init_db(self):
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS proxy_vault (
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS proxy_vault (
             id TEXT PRIMARY KEY, name TEXT, group_name TEXT, 
             request TEXT, response TEXT, timestamp INTEGER
-        )''')
-        
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS history_log (
+        )""")
+
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS history_log (
             id TEXT PRIMARY KEY, method TEXT, url TEXT, status_code INTEGER, 
             request TEXT, response TEXT, timestamp INTEGER
-        )''')
-        
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS repeater_workspace (
-            id TEXT PRIMARY KEY, name TEXT, method TEXT, url TEXT, 
-            request TEXT, response TEXT, timestamp INTEGER
-        )''')
-        
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS app_state (
+        )""")
+
+        # Repeater groups table
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS repeater_groups (
+            id TEXT PRIMARY KEY, name TEXT UNIQUE, order_index INTEGER DEFAULT 0, timestamp INTEGER
+        )""")
+
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS repeater_workspace (
+            id TEXT PRIMARY KEY, name TEXT, group_id TEXT, method TEXT, url TEXT, 
+            request TEXT, response TEXT, timestamp INTEGER,
+            FOREIGN KEY(group_id) REFERENCES repeater_groups(id) ON DELETE SET NULL
+        )""")
+
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS app_state (
             key TEXT PRIMARY KEY, value TEXT
-        )''')
+        )""")
 
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS environments (
-            name TEXT PRIMARY KEY, is_active INTEGER
-        )''')
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS environments (
+            id TEXT PRIMARY KEY, name TEXT, is_active INTEGER
+        )""")
 
-        # === NEW: 1-to-Many Relational Schema ===
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS variables (
-            id TEXT PRIMARY KEY, environment TEXT, name TEXT, active_index INTEGER
-        )''')
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS variables (
+            id TEXT PRIMARY KEY, environment_id TEXT, name TEXT, active_index INTEGER,
+            FOREIGN KEY(environment_id) REFERENCES environments(id) ON DELETE CASCADE
+        )""")
 
-        self.conn.execute('''CREATE TABLE IF NOT EXISTS variable_values (
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS variable_values (
             id TEXT PRIMARY KEY, variable_id TEXT, name TEXT, value TEXT,
             FOREIGN KEY(variable_id) REFERENCES variables(id) ON DELETE CASCADE
-        )''')
-        
+        )""")
         self.conn.commit()
 
     def execute(self, query, params=()):

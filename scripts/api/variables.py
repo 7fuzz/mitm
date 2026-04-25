@@ -1,32 +1,47 @@
 import uuid
 from aiohttp import web
-from urllib.parse import unquote
 
 
 class VariableHandlers:
     def __init__(self, bridge, db):
         self.bridge = bridge
         self.db = db
+        self.ensure_default_env()
+
+    def ensure_default_env(self):
+        # Guarantee a default environment exists on boot
+        row = self.db.execute("SELECT id FROM environments").fetchone()
+        if not row:
+            self.db.execute(
+                "INSERT INTO environments VALUES (?, ?, ?)",
+                ("default-env-id", "Default", 1),
+            )
+            self.db.commit()
 
     async def handle_vars_get(self, request):
         env_rows = self.db.execute(
-            "SELECT name, is_active FROM environments"
-        ).fetchall()
-        var_rows = self.db.execute(
-            "SELECT id, environment, name, active_index FROM variables"
-        ).fetchall()
-        val_rows = self.db.execute(
-            "SELECT id, variable_id, name, value FROM variable_values"
+            "SELECT id, name, is_active FROM environments"
         ).fetchall()
 
-        active_proj = "Default"
-        environments = ["Default"]
-
+        active_env_id = "default-env-id"
+        environments = []
         for e in env_rows:
-            if e[0] not in environments:
-                environments.append(e[0])
-            if e[1] == 1:
-                active_proj = e[0]
+            environments.append({"id": e[0], "name": e[1]})
+            if e[2] == 1:
+                active_env_id = e[0]
+
+        requested_env_id = request.query.get("envId", active_env_id)
+
+        var_rows = self.db.execute(
+            "SELECT id, environment_id, name, active_index FROM variables WHERE environment_id = ?",
+            (requested_env_id,),
+        ).fetchall()
+
+        val_rows = self.db.execute(
+            """SELECT id, variable_id, name, value FROM variable_values 
+               WHERE variable_id IN (SELECT id FROM variables WHERE environment_id = ?)""",
+            (requested_env_id,),
+        ).fetchall()
 
         vals_by_var = {}
         for r in val_rows:
@@ -41,7 +56,7 @@ class VariableHandlers:
             variables.append(
                 {
                     "id": v_id,
-                    "project": r[1],
+                    "environmentId": r[1],
                     "name": r[2],
                     "activeIndex": r[3],
                     "values": vals_by_var.get(
@@ -53,36 +68,45 @@ class VariableHandlers:
 
         return web.json_response(
             {
-                "activeProject": active_proj,
+                "activeEnvironmentId": active_env_id,
                 "environments": environments,
                 "variables": variables,
             }
         )
 
     async def handle_vars_post(self, request):
-        data = await request.json()
-        var_id = data["id"]
-        self.db.execute(
-            "INSERT INTO variables VALUES (?, ?, ?, ?)",
-            (
-                var_id,
-                data.get("project", "Default"),
-                data.get("name", ""),
-                data.get("activeIndex", 0),
-            ),
-        )
-        for val in data.get("values", []):
+        try:
+            data = await request.json()
+            if not data or "id" not in data:
+                return web.json_response(
+                    {"success": False, "error": "Missing variable ID"}, status=400
+                )
+
+            var_id = data["id"]
             self.db.execute(
-                "INSERT INTO variable_values VALUES (?, ?, ?, ?)",
+                "INSERT INTO variables VALUES (?, ?, ?, ?)",
                 (
-                    val.get("id", str(uuid.uuid4())),
                     var_id,
-                    val.get("name", ""),
-                    val.get("value", ""),
+                    data.get("environmentId", "default-env-id"),
+                    data.get("name", ""),
+                    data.get("activeIndex", 0),
                 ),
             )
-        self.db.commit()
-        return web.json_response({"success": True})
+
+            for val in data.get("values", []):
+                self.db.execute(
+                    "INSERT INTO variable_values VALUES (?, ?, ?, ?)",
+                    (
+                        val.get("id", str(uuid.uuid4())),
+                        var_id,
+                        val.get("name", ""),
+                        val.get("value", ""),
+                    ),
+                )
+            self.db.commit()
+            return web.json_response({"success": True})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
 
     async def handle_vars_put(self, request):
         var_id = request.match_info["id"]
@@ -107,56 +131,49 @@ class VariableHandlers:
 
     async def handle_vars_delete(self, request):
         var_id = request.match_info["id"]
-        self.db.execute("DELETE FROM variable_values WHERE variable_id=?", (var_id,))
-        self.db.execute("DELETE FROM variables WHERE id=?", (var_id,))
+        self.db.execute(
+            "DELETE FROM variables WHERE id=?", (var_id,)
+        )  # DB Cascade handles values!
         self.db.commit()
         return web.json_response({"success": True})
 
     async def handle_env_post(self, request):
         data = await request.json()
-        active_proj = data.get("activeProject", "Default")
-        new_env = data.get("newEnvironment")
-        if new_env:
+        env_id = data.get("id", str(uuid.uuid4()))
+        env_name = data.get("name")
+
+        if env_name:
             self.db.execute(
-                "INSERT OR IGNORE INTO environments VALUES (?, 0)", (new_env,)
+                "INSERT INTO environments VALUES (?, ?, 0)", (env_id, env_name)
             )
+
+        # Set Active
+        active_id = data.get("activeId", env_id)
         self.db.execute("UPDATE environments SET is_active=0")
-        self.db.execute(
-            "INSERT OR REPLACE INTO environments (name, is_active) VALUES (?, 1)",
-            (active_proj,),
-        )
+        self.db.execute("UPDATE environments SET is_active=1 WHERE id=?", (active_id,))
         self.db.commit()
-        return web.json_response({"success": True})
+        return web.json_response({"success": True, "id": env_id})
 
     async def handle_env_put(self, request):
-        old_name = unquote(request.match_info["name"])
+        env_id = request.match_info["id"]
         data = await request.json()
-        new_name = data.get("newName")
-
-        if not new_name or old_name == "Default":
-            return web.json_response(
-                {"success": False, "error": "Cannot rename Default or empty"}
-            )
-
         self.db.execute(
-            "UPDATE environments SET name=? WHERE name=?", (new_name, old_name)
-        )
-        self.db.execute(
-            "UPDATE variables SET environment=? WHERE environment=?",
-            (new_name, old_name),
+            "UPDATE environments SET name=? WHERE id=?",
+            (data.get("name", "Untitled"), env_id),
         )
         self.db.commit()
         return web.json_response({"success": True})
 
     async def handle_env_delete(self, request):
-        env_name = unquote(request.match_info["name"])
-        if env_name == "Default":
+        env_id = request.match_info["id"]
+        if env_id == "default-env-id":
             return web.json_response(
                 {"success": False, "error": "Cannot delete Default"}
             )
 
-        self.db.execute("DELETE FROM environments WHERE name=?", (env_name,))
-        self.db.execute("DELETE FROM variables WHERE environment=?", (env_name,))
-        self.db.execute("UPDATE environments SET is_active=1 WHERE name='Default'")
+        self.db.execute(
+            "DELETE FROM environments WHERE id=?", (env_id,)
+        )  # DB Cascade handles variables!
+        self.db.execute("UPDATE environments SET is_active=1 WHERE id='default-env-id'")
         self.db.commit()
         return web.json_response({"success": True})

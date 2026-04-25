@@ -1,10 +1,11 @@
 import { memo } from 'react';
 
-interface Props {
+interface TrafficItemProps {
   id: string;
   method: string;
   status: number; // 0 for pending/unsent
   title: string;
+  group?: string;
   isIntercepted?: boolean;
   isActive: boolean;
   activeColor?: 'emerald' | 'purple' | 'sky';
@@ -13,8 +14,8 @@ interface Props {
 }
 
 export const TrafficItem = memo(({
-  id, method, status, title, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
-}: Props) => {
+  id, method, status, title, group, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
+}: TrafficItemProps) => {
 
   const getMethodColor = (m: string) => {
     if (m === 'GET') return 'text-sky-400';
@@ -49,6 +50,12 @@ export const TrafficItem = memo(({
             <span className={getStatusColor(status)}>
               {status === 0 ? (isIntercepted ? 'PAUSED' : 'PENDING') : status}
             </span>
+            {/* Visual badge for Repeater Groups */}
+            {group && group !== 'Default' && (
+              <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 font-mono">
+                {group}
+              </span>
+            )}
           </div>
           {onDelete && (
             <button
