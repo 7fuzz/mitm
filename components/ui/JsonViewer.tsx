@@ -35,25 +35,36 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
 
 export default function JsonViewer({
   label, value, isLast = true, expandSignal, collapseSignal, path,
-  searchTerm = "", filterMode = false, forceShow = false
+  searchTerm = "", filterMode = false, forceShow = false,
+  redactedKeys = [],
+  onToggleRedact = undefined,
+  collapsedPaths = new Set<string>(),
+  onToggleCollapse = undefined,
+  expandedArrays = new Set<string>(),
+  onExpandArray = undefined
 }: any) {
-  const [expanded, setExpanded] = useState(true);
-  const [showAllArray, setShowAllArray] = useState(false);
+
+  // Use centralized collapse state if provided, otherwise default to expanded
+  const isCollapsed = collapsedPaths.has(path);
+  const expanded = !isCollapsed;
+
+  // const [showAllArray, setShowAllArray] = useState(false);
 
   const termLower = searchTerm.toLowerCase();
   const labelMatches = label ? label.toLowerCase().includes(termLower) : false;
-  const shouldForceShow = forceShow || labelMatches; // If parent matched, show all children!
+  const shouldForceShow = forceShow || labelMatches;
 
   const containsMatch = useMemo(() => {
     if (!searchTerm) return false;
     return typeof value === 'object' && value !== null && deepSearch(value, termLower);
   }, [value, searchTerm, termLower]);
 
-  useEffect(() => { if (expandSignal > 0) setExpanded(true); }, [expandSignal]);
-  useEffect(() => { if (collapseSignal > 0) setExpanded(false); }, [collapseSignal]);
-
-  // Force expand if searching
-  useEffect(() => { if (searchTerm && containsMatch) setExpanded(true); }, [searchTerm, containsMatch]);
+  // Handle centralized expanding for search
+  useEffect(() => {
+    if (searchTerm && containsMatch && isCollapsed && onToggleCollapse) {
+      onToggleCollapse(path, false); // Force expand
+    }
+  }, [searchTerm, containsMatch]);
 
   const isArray = Array.isArray(value);
   const isObject = value !== null && typeof value === "object" && !isArray;
@@ -69,26 +80,47 @@ export default function JsonViewer({
     else if (typeof value === "boolean") valueColor = "text-purple-400";
     else if (value === null) { valueColor = "text-rose-400"; formattedValue = "null"; }
 
+    // --- REDACTION LOGIC ---
+    const isRedacted = label && redactedKeys.includes(label);
+    if (isRedacted) {
+      formattedValue = typeof value === 'number' ? '0' : '[REDACTED]';
+      valueColor = 'text-rose-400 font-bold bg-rose-500/10 px-1 rounded';
+    }
+
     const valueMatches = formattedValue.toLowerCase().includes(termLower);
 
-    // FILTER LOGIC: Destroy node if filtering and nothing matches
     if (filterMode && searchTerm && !shouldForceShow && !valueMatches && !labelMatches) {
       return null;
     }
 
     return (
-      <div className="font-mono text-[13px] leading-relaxed flex" data-path={path} data-state="primitive">
-        <div className="w-5 shrink-0" />
-        <div className="flex-1 min-w-0 break-all">
+      <div className="font-mono text-[13px] leading-relaxed flex items-center group" data-path={path}>
+        <div className="w-6 shrink-0 flex justify-center">
+          {/* Quick Toggle Lock Icon (Uses SVG Eyes) */}
+          {label && onToggleRedact && (
+            <button
+              onClick={() => onToggleRedact(label)}
+              className={`transition-opacity text-[11px] ${isRedacted ? 'text-rose-500 opacity-100' : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-sky-400'}`}
+              title={isRedacted ? "Unredact Value" : "Redact Value"}
+            >
+              {isRedacted ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              )}
+            </button>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 break-all flex items-center">
           {label && (
             <span className="text-sky-400 mr-1 whitespace-nowrap">
               "<HighlightText text={label} query={searchTerm} />":
             </span>
           )}
           <span className={valueColor}>
-            {isString && '"'}
+            {isString && !isRedacted && '"'}
             <HighlightText text={formattedValue} query={searchTerm} />
-            {isString && '"'}
+            {isString && !isRedacted && '"'}
           </span>
           {!isLast && <span className="text-zinc-500">,</span>}
         </div>
@@ -101,7 +133,6 @@ export default function JsonViewer({
   const closeBracket = isArray ? "]" : "}";
   const items = isArray ? value : Object.entries(value);
 
-  // Pre-filter the items before rendering so we know exactly who is left
   const processedItems = useMemo(() => {
     if (!filterMode || !searchTerm || shouldForceShow) return items;
 
@@ -118,23 +149,24 @@ export default function JsonViewer({
     });
   }, [items, searchTerm, filterMode, isArray, termLower, shouldForceShow]);
 
-  // FILTER LOGIC: Destroy object if filtering and it has no matching children
   if (filterMode && searchTerm && !shouldForceShow && processedItems.length === 0) {
     return null;
   }
 
   const isEmpty = processedItems.length === 0;
   const isLongArray = isArray && processedItems.length > 1;
+  const effectiveShowAll = expandedArrays.has(path) || !!searchTerm;
 
-  // When searching, auto-expand large arrays
-  const effectiveShowAll = showAllArray || !!searchTerm;
   const visibleItems = isLongArray && !effectiveShowAll ? processedItems.slice(0, 1) : processedItems;
-  const nodeState = isEmpty ? "expanded" : !expanded ? "collapsed" : isLongArray && !effectiveShowAll ? "truncated" : "expanded";
+
+  const handleToggle = () => {
+    if (onToggleCollapse) onToggleCollapse(path);
+  };
 
   return (
-    <div className="font-mono text-[13px] leading-relaxed" data-path={path} data-state={nodeState}>
+    <div className="font-mono text-[13px] leading-relaxed" data-path={path}>
       <div className="flex items-start group">
-        <button onClick={() => setExpanded(!expanded)} className="w-5 shrink-0 flex justify-center items-center cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors mt-0.5" disabled={isEmpty}>
+        <button onClick={handleToggle} className="w-6 shrink-0 flex justify-center items-center cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors mt-0.5" disabled={isEmpty}>
           {!isEmpty && (expanded ? "▼" : "▶")}
         </button>
         <div className="flex-1 min-w-0 flex items-center flex-wrap">
@@ -147,7 +179,7 @@ export default function JsonViewer({
           {isEmpty && <span className="text-zinc-400">{closeBracket}{!isLast ? "," : ""}</span>}
           {!expanded && !isEmpty && (
             <>
-              <span className="cursor-pointer text-zinc-500 hover:text-zinc-300 mx-2 bg-zinc-800 px-1 rounded text-[10px]" onClick={() => setExpanded(true)}>...</span>
+              <span className="cursor-pointer text-zinc-500 hover:text-zinc-300 mx-2 bg-zinc-800 px-1 rounded text-[10px]" onClick={handleToggle}>...</span>
               <span className="text-zinc-400">{closeBracket}{!isLast ? "," : ""}</span>
               {isArray && <span className="text-zinc-500 ml-2 text-[11px]">({processedItems.length} items)</span>}
               {isObject && <span className="text-zinc-500 ml-2 text-[11px]">({processedItems.length} keys)</span>}
@@ -155,25 +187,24 @@ export default function JsonViewer({
           )}
         </div>
       </div>
-
       {expanded && !isEmpty && (
-        <div className="ml-2.25 pl-3.5 border-l border-zinc-700 hover:border-zinc-500 transition-colors">
+        <div className="ml-3 pl-3.5 border-l border-zinc-700 hover:border-zinc-500 transition-colors">
           {isArray
             ? visibleItems.map((item: any, index: number) => (
-              <JsonViewer key={index} value={item} isLast={index === visibleItems.length - 1} expandSignal={expandSignal} collapseSignal={collapseSignal} path={`${path}-${index}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} />
+              <JsonViewer key={index} value={item} isLast={index === visibleItems.length - 1} path={`${path}-${index}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))
             : visibleItems.map(([key, val]: any, index: number) => (
-              <JsonViewer key={key} label={key} value={val} isLast={index === visibleItems.length - 1} expandSignal={expandSignal} collapseSignal={collapseSignal} path={`${path}-${encodeURIComponent(key)}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} />
+              <JsonViewer key={key} label={key} value={val} isLast={index === visibleItems.length - 1} path={`${path}-${encodeURIComponent(key)}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))}
-
           {isLongArray && !effectiveShowAll && (
-            <div className="text-zinc-500 hover:text-sky-400 text-xs py-1 cursor-pointer select-none pl-2 flex items-center gap-1" onClick={() => setShowAllArray(true)}>
+            // 4. UPDATE onClick to use the new prop
+            <div className="text-zinc-500 hover:text-sky-400 text-xs py-1 cursor-pointer select-none pl-2 flex items-center gap-1" onClick={() => onExpandArray && onExpandArray(path)}>
               <span className="bg-zinc-800 px-1.5 py-0.5 rounded">+{processedItems.length - 1} more items</span>
             </div>
           )}
         </div>
       )}
-      {expanded && !isEmpty && <div className="ml-5 text-zinc-400">{closeBracket}{!isLast ? "," : ""}</div>}
+      {expanded && !isEmpty && <div className="ml-6 text-zinc-400">{closeBracket}{!isLast ? "," : ""}</div>}
     </div>
   );
 }

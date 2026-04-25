@@ -6,6 +6,7 @@ import { UrlEditor } from '../Editor/UrlEditor';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { useTraffic } from '@/hooks/traffic';
 import { SaveModal } from '../ui/SaveModal'; // Assuming you have this
+import { useNotification } from '../ui/NotificationProvider';
 
 // === NEW: HTTP Formatters for the Viewer ===
 const buildRawRequestMessage = (req: Traffic) => {
@@ -33,6 +34,8 @@ export function HistoryView() {
     // NEW: Destructure the safe repeater functions instead of raw setters
     refreshRepeater, setRepeaterSelectedId
   } = useTraffic();
+
+  const { notify } = useNotification();
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [localLimit, setLocalLimit] = useState(historyLimit.toString());
@@ -84,10 +87,10 @@ export function HistoryView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        alert('✓ Sent to Repeater!');
+        notify.success('Staged to workbench!');
       }
     } catch (error) {
-      alert('Error sending to repeater: ' + error);
+      notify.error('Error sending to repeater: ' + error);
     }
   };
 
@@ -163,14 +166,14 @@ export function HistoryView() {
               <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
                 <div className="flex flex-col space-y-3">
                   <h3 className="text-sky-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Payload</h3>
-                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[400px]">
+                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">
                     <HttpResponseViewer text={buildRawRequestMessage(selectedReq)} />
                   </div>
                 </div>
 
                 <div className="flex flex-col space-y-3">
                   <h3 className="text-amber-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Response_Payload</h3>
-                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-[400px]">
+                  <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">
                     {selectedReq.status_code === 0 ? (
                       <div className="h-full flex items-center justify-center text-zinc-600 text-[10px] uppercase tracking-widest">Awaiting Response...</div>
                     ) : (

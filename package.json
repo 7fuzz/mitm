@@ -10,6 +10,7 @@
     "proxy": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others \"./scripts/venv/bin/mitmdump -s scripts/bridge.py\" \"next dev\""
   },
   "dependencies": {
+    "@pandatix/js-cvss": "^0.4.4",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"

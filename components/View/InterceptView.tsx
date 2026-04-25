@@ -6,13 +6,16 @@ import { UrlEditor } from '../Editor/UrlEditor';
 import { InterceptTimer } from '../ui/InterceptTimer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
+import { useNotification } from '../ui/NotificationProvider';
 
 export function InterceptView() {
   const {
     traffic, isIntercepting, interceptMode, ignoredMethods,
     updateConfig, resumeRequest, uiLayout, updateUILayout,
-    refreshRepeater, setRepeaterSelectedId
+    refreshRepeater, setRepeaterSelectedId, variables, activeEnvId
   } = useTraffic();
+
+  const { notify } = useNotification();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -60,7 +63,7 @@ export function InterceptView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: `${currentReq.method} ${path} (Intercept)`,
-          groupId: 'Intercepted',
+          groupId: null, // FIXED: Safely lands in the Default Collection
           method: editMethod || currentReq.method,
           url: editUrl || currentReq.url,
           headers: editHeaders,
@@ -77,19 +80,33 @@ export function InterceptView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        alert('✓ Staged in Workbench!');
+        notify.success('Staged in Workbench');
       }
     } catch (error) {
-      alert('Error staging to workbench: ' + error);
+      notify.error(`Failed to stage: ${error}`);
     }
   };
 
   const handleForward = () => {
     if (currentReq) {
+      // Build the variable dictionary based on the active environment
+      const varDict: Record<string, string> = {};
+      variables.filter(v => v.environmentId === activeEnvId).forEach(v => {
+        if (v.name.trim()) {
+          const activeVal = v.values[v.activeIndex] || v.values[0];
+          varDict[v.name.trim()] = activeVal ? activeVal.value : '';
+        }
+      });
+
+      // Pass it to the resume endpoint!
       if (currentReq.phase === 'response') {
-        resumeRequest(currentReq.id, { status_code: editStatusCode, headers: editHeaders, body: editBody });
+        resumeRequest(currentReq.id, {
+          status_code: editStatusCode, headers: editHeaders, body: editBody, variables: varDict
+        });
       } else {
-        resumeRequest(currentReq.id, { method: editMethod, url: editUrl, headers: editHeaders, body: editBody });
+        resumeRequest(currentReq.id, {
+          method: editMethod, url: editUrl, headers: editHeaders, body: editBody, variables: varDict
+        });
       }
       setSelectedId(null);
     }
@@ -122,14 +139,6 @@ export function InterceptView() {
       )}
       toolbarRight={
         <>
-          <button
-            onClick={handleStageToWorkbench}
-            disabled={!currentReq}
-            className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold mr-2"
-          >
-            Stage_to_Workbench
-          </button>
-
           <button onClick={toggleIntercept} className={`px-4 py-1.5 rounded font-black text-[10px] uppercase tracking-widest transition-all border ${isIntercepting ? 'bg-rose-500/20 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}>
             {isIntercepting ? 'Intercept_On' : 'Intercept_Off'}
           </button>
@@ -174,13 +183,20 @@ export function InterceptView() {
         currentReq ? (
           <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
 
-            {isRes && (
-              <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex gap-3 items-center">
+            {/* MOVED & UPGRADED: Target Endpoint & Stage Button */}
+            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-between shadow-inner shadow-black/20">
+              <div className="flex items-center gap-3">
                 <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Target Endpoint:</span>
-                <span className="text-sky-500 text-xs font-black">{currentReq.method}</span>
+                <span className={`text-xs font-black ${isRes ? 'text-amber-500' : 'text-emerald-500'}`}>{currentReq.method}</span>
                 <span className="text-zinc-300 text-xs font-mono break-all">{currentReq.url}</span>
               </div>
-            )}
+              <button
+                onClick={handleStageToWorkbench}
+                className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
+              >
+                Stage_to_Workbench
+              </button>
+            </div>
 
             <div className="space-y-3">
               <h3 className={`${isRes ? 'text-amber-500' : 'text-emerald-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>

@@ -6,6 +6,7 @@ import { SavedView } from '@/components/View/SavedView';
 import { RepeaterView } from '@/components/View/RepeaterView';
 import { HistoryView } from '@/components/View/HistoryView';
 import { OptionsView } from '@/components/View/OptionsView';
+import { UtilitiesView } from '@/components/View/UtilitiesView';
 
 // ==========================================
 // 1. THE OUTER WRAPPER (No Hooks Here!)
@@ -25,7 +26,7 @@ function TrafficApp() {
   // ✅ This now works perfectly because TrafficApp lives inside TrafficProvider!
   const { traffic, repeaterRequests } = useTraffic();
 
-  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options' | 'utilities'>('history');
 
   const pendingCount = traffic.filter(t => t.is_intercepted).length;
 
@@ -79,6 +80,13 @@ function TrafficApp() {
           >
             Options
           </button>
+
+          <button
+            onClick={() => setActiveTab('utilities')}
+            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'utilities' ? 'border-fuchsia-500 text-fuchsia-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+          >
+            Utilities
+          </button>
         </div>
 
         <div className="flex items-center gap-2 text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
@@ -99,7 +107,7 @@ function TrafficApp() {
         {activeTab === 'saved' && <SavedView />}
         {activeTab === 'repeater' && <RepeaterView />}
         {activeTab === 'options' && <OptionsView />}
-
+        {activeTab === 'utilities' && <UtilitiesView />}
       </main>
     </div>
   );

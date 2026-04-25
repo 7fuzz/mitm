@@ -1,5 +1,7 @@
 import json
 import os
+import re
+from urllib.parse import unquote
 from aiohttp import web
 
 
@@ -37,28 +39,59 @@ class CoreHandlers:
             if data.get("drop"):
                 flow.kill()
             else:
+                # 1. Grab variables from the frontend payload (default to empty dict)
+                variables = data.get("variables", {})
+
+                # 2. The Interpolation Engine
+                def interpolate(text):
+                    if not text or not isinstance(text, str):
+                        return text
+                    # Replace {{var}}
+                    text = re.sub(
+                        r"\{\{([^}]+)\}\}",
+                        lambda m: str(variables.get(m.group(1).strip(), m.group(0))),
+                        text,
+                    )
+                    # Replace URL-encoded %7B%7Bvar%7D%7D
+                    return re.sub(
+                        r"%7B%7B(.*?)%7D%7D",
+                        lambda m: str(
+                            variables.get(unquote(m.group(1)).strip(), m.group(0))
+                        ),
+                        text,
+                        flags=re.IGNORECASE,
+                    )
+
+                # 3. Apply interpolations before mutating the actual mitmproxy flow
                 if phase == "request":
                     if "method" in data:
-                        flow.request.method = data["method"]
+                        flow.request.method = interpolate(data["method"]).upper()
                     if "url" in data:
-                        flow.request.url = data["url"]
+                        flow.request.url = interpolate(data["url"])
                     if "body" in data:
-                        flow.request.text = data["body"]
+                        flow.request.text = interpolate(data["body"])
                         flow.request.headers.pop("Content-Length", None)
                     if "headers" in data:
                         flow.request.headers.clear()
                         for k, v in data["headers"].items():
-                            flow.request.headers[k] = str(v)
+                            interp_k = interpolate(k)
+                            # Ensure we don't mess up content-length calculation
+                            if interp_k.lower() != "content-length":
+                                flow.request.headers[interp_k] = str(interpolate(v))
+
                 elif phase == "response":
                     if "status_code" in data:
                         flow.response.status_code = int(data["status_code"])
                     if "body" in data:
-                        flow.response.text = data["body"]
+                        flow.response.text = interpolate(data["body"])
                         flow.response.headers.pop("Content-Length", None)
                     if "headers" in data:
                         flow.response.headers.clear()
                         for k, v in data["headers"].items():
-                            flow.response.headers[k] = str(v)
+                            interp_k = interpolate(k)
+                            if interp_k.lower() != "content-length":
+                                flow.response.headers[interp_k] = str(interpolate(v))
+
             event.set()
             return web.Response(text="Resumed")
         return web.Response(text="Not Found", status=404)

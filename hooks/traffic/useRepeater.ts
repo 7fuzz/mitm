@@ -119,10 +119,14 @@ export function useRepeater() {
 
   const deleteGroup = async (id: string) => {
     setRepeaterGroups(prev => prev.filter(g => g.id !== id));
-    if (activeGroupId === id) await switchGroup('All'); // switchGroup automatically handles saving the state!
-    await fetch(`/api/repeater-groups/${id}`, { method: 'DELETE' });
-  };
+    setRepeaterRequests(prev => prev.filter(r => r.groupId !== id));
 
+    await fetch(`/api/repeater-groups/${id}`, { method: 'DELETE' });
+
+    if (activeGroupId === id) {
+      await switchGroup('All');
+    }
+  };
   return {
     repeaterRequests, repeaterGroups, activeGroupId, switchGroup,
     _setRawRepeater: setRepeaterRequests, _setRawGroups: setRepeaterGroups, initActiveGroup,

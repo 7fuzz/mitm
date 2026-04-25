@@ -7,7 +7,7 @@ import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
-import { PromptModal } from '../ui/PromptModal';
+import { PromptModal, ConfirmModal } from '../Modals'; // NEW: Imported ConfirmModal
 
 export interface RepeaterRequest {
   id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
@@ -33,21 +33,19 @@ export function RepeaterView() {
   const [editHeaders, setEditHeaders] = useState<Record<string, string>>({});
   const [editBody, setEditBody] = useState('');
 
+  // Modals
   const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
   const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => setPromptConfig({ isOpen: true, title, initialValue, action });
   const closePrompt = () => setPromptConfig(prev => ({ ...prev, isOpen: false }));
 
-  // === FIXED: Ensure selectedId is still valid in the current filter ===
+  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: () => { } });
+  const openConfirm = (title: string, message: string, action: () => void) => setConfirmConfig({ isOpen: true, title, message, action });
+
   const currentReq = repeaterRequests.find(r => r.id === selectedId) || repeaterRequests[0];
 
-  // === FIXED: Properly map groupId to the human-readable group name for the sidebar ===
   const trafficMapped: Traffic[] = repeaterRequests.map(req => {
     const groupName = req.groupId ? repeaterGroups.find(g => g.id === req.groupId)?.name : 'Default';
-    return {
-      id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0,
-      host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '',
-      is_intercepted: false, group: groupName || 'Default'
-    };
+    return { id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0, host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '', is_intercepted: false, group: groupName || 'Default' };
   });
 
   useEffect(() => {
@@ -58,15 +56,12 @@ export function RepeaterView() {
       setEditUrl(currentReq.url);
       setEditHeaders(currentReq.headers || {});
       setEditBody(currentReq.body || '');
-
-      // Keep selection in sync if the filter changed it
       if (currentReq.id !== selectedId) setSelectedId(currentReq.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentReq]);
 
   const handleAdd = async () => {
-    // Auto-assign to current collection filter if not "All"
     const targetGroup = (activeGroupId !== 'All' && activeGroupId !== 'null') ? activeGroupId : null;
     const newId = await addEmptyRequest(targetGroup);
     if (newId) setSelectedId(newId);
@@ -147,12 +142,15 @@ export function RepeaterView() {
     return `${headerText}\n\n${currentReq.response.body}`;
   };
 
-  // Grab the currently active group object for the Rename/Delete buttons
   const activeGroupObj = repeaterGroups.find(g => g.id === activeGroupId);
 
   return (
     <>
       <PromptModal isOpen={promptConfig.isOpen} title={promptConfig.title} initialValue={promptConfig.initialValue} onClose={closePrompt} onSubmit={promptConfig.action} />
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen} title={confirmConfig.title} message={confirmConfig.message} isDestructive={true} confirmText="Delete"
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))} onConfirm={confirmConfig.action}
+      />
 
       <WorkspaceLayout
         uiLayout={uiLayout}
@@ -160,33 +158,42 @@ export function RepeaterView() {
         listComponent={(layout) => (
           <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
         )}
+
         toolbarLeft={
-          <div className="flex items-center gap-2 bg-zinc-950 p-0.5 rounded border border-zinc-800">
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest pl-2">Collection:</span>
+          <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
+            <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Collection:</span>
             <select
               value={activeGroupId}
               onChange={(e) => switchGroup(e.target.value)}
-              className="bg-zinc-900 text-purple-400 text-[10px] uppercase font-bold px-2 py-1 outline-none border border-zinc-700 rounded cursor-pointer max-w-37.5 truncate"
+              className="bg-transparent text-purple-400 text-[10px] uppercase font-bold outline-none cursor-pointer min-w-30 max-w-50 truncate"
             >
-              <option value="All">All Groups</option>
-              <option value="null">Default (Uncategorized)</option>
-              <option disabled>──────────</option>
-              {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              <option value="All" className="bg-zinc-900 text-zinc-300">All Groups</option>
+              <option value="null" className="bg-zinc-900 text-zinc-300">Default (Uncategorized)</option>
+              <option disabled className="bg-zinc-900 text-zinc-600">──────────</option>
+              {repeaterGroups.map(g => <option key={g.id} value={g.id} className="bg-zinc-900 text-zinc-300">{g.name}</option>)}
             </select>
 
-            <div className="flex items-center gap-1 px-1">
+            <div className="flex items-center gap-1 border-l border-zinc-800 pl-2 ml-1">
               <button
                 onClick={() => activeGroupObj && openPrompt('Rename Collection', activeGroupObj.name, (newName) => renameGroup(activeGroupObj.id, newName))}
                 disabled={activeGroupId === 'All' || activeGroupId === 'null'}
-                className="p-1.5 text-zinc-500 hover:text-purple-400 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
+                className="p-1 text-zinc-500 hover:text-purple-400 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
                 title="Rename Collection"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
               </button>
               <button
-                onClick={() => { if (activeGroupObj && confirm(`Delete collection "${activeGroupObj.name}"? Requests inside will be moved to Default.`)) deleteGroup(activeGroupObj.id); }}
+                onClick={() => {
+                  if (activeGroupObj) {
+                    openConfirm(
+                      'Delete Collection',
+                      `Are you sure you want to delete "${activeGroupObj.name}"? ALL requests inside this collection will be permanently destroyed.`,
+                      () => deleteGroup(activeGroupObj.id)
+                    );
+                  }
+                }}
                 disabled={activeGroupId === 'All' || activeGroupId === 'null'}
-                className="p-1.5 text-zinc-500 hover:text-rose-500 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
+                className="p-1 text-zinc-500 hover:text-rose-500 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
                 title="Delete Collection"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -194,15 +201,22 @@ export function RepeaterView() {
             </div>
           </div>
         }
+
         toolbarRight={
           <>
-            <button onClick={handleAdd} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-emerald-400 text-[10px] rounded transition-all uppercase font-black">+ New</button>
-            <button onClick={importPostman} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-sky-400 text-[10px] rounded transition-all uppercase font-black">Import</button>
-            <button onClick={handleDuplicate} disabled={!currentReq} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Duplicate</button>
-            <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 disabled:opacity-30 text-zinc-100 text-[10px] rounded transition-all uppercase font-black">Clear</button>
-            <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black">{isLoading ? 'Executing...' : 'Run'}</button>
+            <button onClick={importPostman} className="px-3 py-1.5 text-zinc-500 hover:text-sky-400 text-[10px] rounded transition-all uppercase font-bold mr-2">Import</button>
+            <div className="w-px h-4 bg-zinc-800 mx-1"></div>
+            <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-3 py-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2">Clear</button>
+
+            <div className="flex items-center gap-px">
+              <button onClick={handleAdd} className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 text-[10px] rounded-l border border-zinc-800 transition-all uppercase font-black" title="New Request">+ New</button>
+              <button onClick={handleDuplicate} disabled={!currentReq} className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 disabled:opacity-30 text-zinc-300 text-[10px] rounded-r transition-all uppercase font-black" title="Duplicate Request">Copy</button>
+            </div>
+
+            <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-6 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black shadow-lg shadow-purple-500/20 ml-2">{isLoading ? 'Executing...' : 'Execute'}</button>
           </>
         }
+
         mainContent={(splitMode) => (
           currentReq ? (
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
@@ -220,7 +234,6 @@ export function RepeaterView() {
                   <div>
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Collection Assignment</label>
                     <div className="flex gap-2">
-                      {/* === FIXED: Uses pure <select> and our real repeaterGroups state! === */}
                       <select
                         value={editGroupId || 'null'}
                         onChange={(e) => {
@@ -286,15 +299,15 @@ export function RepeaterView() {
                     )}
                   </div>
                   <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">
-                    {currentReq.response ? <HttpResponseViewer text={getRawResponseText()} /> : <div className="flex items-center justify-center h-full text-zinc-600 text-[10px] uppercase tracking-widest border border-zinc-800 border-dashed rounded">Hit Send to get a response...</div>}
+                    {currentReq.response ? <HttpResponseViewer text={getRawResponseText()} /> : <div className="flex items-center justify-center h-full text-zinc-600 text-[10px] uppercase tracking-widest border border-zinc-800 border-dashed rounded">Hit Execute to get a response...</div>}
                   </div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center opacity-50 relative z-10 min-h-[60vh]">
-              <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">NOTHING_TO_SEE</div>
-              <button onClick={handleAdd} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Request</button>
+              <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">WORKBENCH_IDLE</div>
+              <button onClick={handleAdd} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Specification</button>
             </div>
           )
         )}

@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { PromptModal } from '../ui/PromptModal';
 import { GlobalVariable, GlobalVariableValue, UILayout, useTraffic } from '@/hooks/traffic';
+import { ConfirmModal, PromptModal } from '../Modals';
 
 const DebouncedVariableCard = ({ variable, onUpdate, onDelete }: { variable: GlobalVariable, onUpdate: any, onDelete: any }) => {
   const [name, setName] = useState(variable.name);
@@ -119,12 +119,24 @@ export function WorkspaceLayout({ listComponent, mainContent, toolbarLeft, toolb
     action: (val: string) => { }
   });
 
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    isDestructive: false,
+    action: () => { }
+  });
+
   const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => {
     setPromptConfig({ isOpen: true, title, initialValue, action });
   };
 
   const closePrompt = () => {
     setPromptConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const openConfirm = (title: string, message: string, isDestructive: boolean, action: () => void) => {
+    setConfirmConfig({ isOpen: true, title, message, isDestructive, action });
   };
 
   return (
@@ -137,6 +149,15 @@ export function WorkspaceLayout({ listComponent, mainContent, toolbarLeft, toolb
         initialValue={promptConfig.initialValue}
         onClose={closePrompt}
         onSubmit={promptConfig.action}
+      />
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        isDestructive={confirmConfig.isDestructive}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.action}
       />
 
       {/* Global Toolbar Area */}
@@ -242,7 +263,12 @@ export function WorkspaceLayout({ listComponent, mainContent, toolbarLeft, toolb
 
                 {/* FIXED: Passed activeEnvId to deleteEnvironment */}
                 <button
-                  onClick={() => { if (confirm(`Are you sure you want to delete the environment "${activeEnv.name}" and ALL its variables?`)) deleteEnvironment(activeEnvId); }}
+                  onClick={() => openConfirm(
+                    'Delete Environment',
+                    `Are you sure you want to delete "${activeEnv.name}" and ALL its variables? This cannot be undone.`,
+                    true, // Makes the button red!
+                    () => deleteEnvironment(activeEnvId)
+                  )}
                   disabled={activeEnvId === 'default-env-id'}
                   className="p-1.5 text-zinc-500 hover:text-rose-500 disabled:opacity-20 disabled:hover:text-zinc-500 transition-colors"
                   title="Delete Environment"

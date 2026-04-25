@@ -5,6 +5,7 @@ from api.variables import VariableHandlers
 from api.history import HistoryHandlers
 from api.repeater import RepeaterHandlers
 from api.core import CoreHandlers
+from api.vault import VaultHandlers
 
 
 class APIServer:
@@ -43,6 +44,7 @@ class APIServer:
         variables = VariableHandlers(self.bridge, self.db)
         history = HistoryHandlers(self.bridge, self.db)
         repeater = RepeaterHandlers(self.bridge, self.db)
+        vault = VaultHandlers(self.bridge, self.db)
 
         # Register Core & State Routes
         app.router.add_post("/resume/{id}", core.handle_resume)
@@ -68,9 +70,10 @@ class APIServer:
 
         # Register Repeater & Vault Routes
         app.router.add_post("/repeat", repeater.handle_repeat)
-        app.router.add_post("/save", repeater.handle_save)
-        app.router.add_get("/saved", repeater.handle_get_saved)
-        app.router.add_delete("/saved/{id}", repeater.handle_delete_saved)
+
+        app.router.add_post("/saved", vault.handle_save)
+        app.router.add_get("/saved", vault.handle_get_saved)
+        app.router.add_delete("/saved/{id}", vault.handle_delete_saved)
 
         # Repeater CRUD (individual operations)
         app.router.add_get("/repeater-db", repeater.handle_repeater_get)
