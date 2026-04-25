@@ -1,7 +1,8 @@
 "use client";
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import JsonViewer from "./JsonViewer";
+import { useTraffic } from '@/hooks/traffic';
+import { useNotification } from "./NotificationProvider";
 
 // === Isolated Search Component ===
 const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void }) => {
@@ -18,7 +19,7 @@ const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void })
   }, [input, onSearch]);
 
   return (
-    <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0">
+    <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0 h-7">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-colors ${isTyping ? 'text-amber-500 animate-pulse' : 'text-zinc-500'}`}>
         <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
       </svg>
@@ -30,7 +31,7 @@ const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void })
         className="w-20 md:w-24 focus:w-32 transition-all bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600"
       />
       {input && (
-        <button onClick={() => { setInput(""); onSearch(""); }} className="text-zinc-500 hover:text-rose-400 mr-1">✕</button>
+        <button onClick={() => { setInput(""); onSearch(""); }} className="text-zinc-500 hover:text-rose-400 mr-1 flex items-center justify-center">✕</button>
       )}
     </div>
   );
@@ -78,10 +79,7 @@ const parseHttpMessage = (text: string) => {
   const headersStr = text.substring(0, splitIndex);
   const rawBody = text.substring(splitIndex + gap);
 
-  // === NEW: Extract First Line separately from Headers ===
   const lines = headersStr.split(/\r?\n/).filter(line => line.trim());
-
-  // If the line has no colon, it's definitely the Request/Status line!
   const firstLine = lines.length > 0 && lines[0].indexOf(':') === -1 ? lines.shift() : "";
 
   const headerList = lines.map(line => {
@@ -99,6 +97,8 @@ const parseHttpMessage = (text: string) => {
 
 export default function HttpResponseViewer({ text }: { text: string }) {
   const parsed = parseHttpMessage(text);
+  const { setToolkitJson } = useTraffic();
+  const { notify } = useNotification();
 
   const isImage = parsed.contentType.startsWith('image/');
   const isVideo = parsed.contentType.startsWith('video/');
@@ -108,8 +108,6 @@ export default function HttpResponseViewer({ text }: { text: string }) {
   const isMediaOrFile = isImage || isVideo || isAudio || (parsed.contentType.includes('application/') && !parsed.json && !isXml && !isHtml);
 
   const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render">("pretty");
-  const [expandSignal, setExpandSignal] = useState(0);
-  const [collapseSignal, setCollapseSignal] = useState(0);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMode, setFilterMode] = useState(false);
@@ -119,6 +117,42 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
+  const [expandedArrays, setExpandedArrays] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = (path: string, forceExpand?: boolean) => {
+    setCollapsedPaths(prev => {
+      const next = new Set(prev);
+      if (forceExpand === false) next.delete(path);
+      else if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const expandArray = (path: string) => {
+    setExpandedArrays(prev => new Set(prev).add(path));
+  };
+
+  const collapseAllNodes = () => {
+    if (!parsed.json) return;
+    const paths = new Set<string>();
+
+    const traverse = (obj: any, currentPath: string) => {
+      if (obj !== null && typeof obj === 'object') {
+        paths.add(currentPath);
+        if (Array.isArray(obj)) {
+          obj.forEach((item, i) => traverse(item, `${currentPath}-${i}`));
+        } else {
+          Object.entries(obj).forEach(([k, v]) => traverse(v, `${currentPath}-${encodeURIComponent(k)}`));
+        }
+      }
+    };
+
+    traverse(parsed.json, "root");
+    setCollapsedPaths(paths);
+  };
 
   const formattedBody = useMemo(() => {
     if (parsed.json) {
@@ -166,7 +200,6 @@ export default function HttpResponseViewer({ text }: { text: string }) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded overflow-hidden h-full flex flex-col relative">
 
-      {/* === UPDATED: Render First Line & Headers === */}
       {(parsed.headerList.length > 0 || parsed.firstLine) && (
         <div className="border-b border-zinc-800 bg-zinc-950 resize-y overflow-auto min-h-20 max-h-[60%] z-10" style={{ height: '160px' }}>
           <div className="p-4 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[11px] font-mono">
@@ -185,61 +218,54 @@ export default function HttpResponseViewer({ text }: { text: string }) {
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="bg-zinc-900/80 p-2 flex flex-wrap gap-y-2 gap-x-4 justify-between items-center border-b border-zinc-800 shrink-0">
+      {/* === PERFECTLY ALIGNED TOOLBAR === */}
+      <div className="bg-zinc-900/80 p-3 flex flex-col-reverse lg:flex-row gap-4 justify-between items-center border-b border-zinc-800 shrink-0">
 
-        <div className="flex bg-zinc-950 p-0.5 rounded items-center border border-zinc-800 shrink-0">
-          <button onClick={() => setViewMode("pretty")} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-            {isMediaOrFile ? "Preview" : "Pretty"}
-          </button>
-          {isHtml && (
-            <button onClick={() => setViewMode("render")} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "render" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-              Render
+        {/* LEFT BLOCK (Bottom on Mobile) - justify-between on mobile forces nice spacing */}
+        <div className="flex flex-wrap items-center justify-between lg:justify-start gap-3 w-full lg:w-auto">
+
+          {/* STRICT HEIGHT: h-7 */}
+          <div className="flex bg-zinc-950 p-0.5 rounded items-center border border-zinc-800 shrink-0 h-7">
+            <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              {isMediaOrFile ? "Preview" : "Pretty"}
             </button>
-          )}
-          <button onClick={() => setViewMode("raw")} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "raw" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-            Raw
-          </button>
-        </div>
+            {isHtml && (
+              <button onClick={() => setViewMode("render")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "render" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+                Render
+              </button>
+            )}
+            <button onClick={() => setViewMode("raw")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "raw" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Raw
+            </button>
+          </div>
 
-        {/* Right Controls Container */}
-        <div className="flex flex-wrap items-center gap-3 justify-end flex-1 min-w-0">
-
+          {/* JSON Controls */}
           {parsed.json && viewMode === "pretty" && (
-            <div className="flex items-center mr-auto shrink-0">
+            <div className="flex flex-wrap items-center gap-1 shrink-0">
               <DebouncedSearchInput onSearch={setSearchTerm} />
+
+              {/* STRICT HEIGHT/WIDTH: h-7 w-7 */}
               <button
                 onClick={() => setFilterMode(!filterMode)}
                 title={filterMode ? "Filter Active: Hiding unmatched lines" : "Highlight Active: Showing all lines"}
-                className={`ml-1 p-1.5 rounded transition-colors ${filterMode ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-600 hover:text-zinc-300'}`}
+                className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${filterMode ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg>
               </button>
-            </div>
-          )}
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={handleCopyFull} className="text-[10px] uppercase font-bold text-zinc-400 hover:text-white tracking-widest transition-colors shrink-0">
-              {copiedFull ? "✓ Copied!" : "Copy Full"}
-            </button>
-            <button onClick={handleCopyBody} className="text-[10px] uppercase font-bold text-emerald-500 hover:text-emerald-400 tracking-widest transition-colors shrink-0">
-              {copiedAll ? "✓ Copied!" : "Copy Body"}
-            </button>
-          </div>
-
-          {/* Expand/Collapse Icons */}
-          {parsed.json && viewMode === "pretty" && (
-            <div className="flex items-center gap-1 shrink-0">
               <div className="w-px h-4 bg-zinc-700 mx-1 hidden sm:block"></div>
-              <button onClick={() => setExpandSignal((s) => s + 1)} title="Expand All" className="p-1.5 rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
+
+              {/* STRICT HEIGHT/WIDTH: h-7 w-7 */}
+              <button onClick={() => setCollapsedPaths(new Set())} title="Expand All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="7 13 12 18 17 13"></polyline>
                   <polyline points="7 6 12 11 17 6"></polyline>
                 </svg>
               </button>
-              <button onClick={() => setCollapseSignal((s) => s + 1)} title="Collapse All" className="p-1.5 rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
+
+              <button onClick={collapseAllNodes} title="Collapse All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="17 11 12 6 7 11"></polyline>
                   <polyline points="17 18 12 13 7 18"></polyline>
@@ -247,6 +273,33 @@ export default function HttpResponseViewer({ text }: { text: string }) {
               </button>
             </div>
           )}
+        </div>
+
+        {/* RIGHT BLOCK (Top on Mobile) - justify-between splits Toolkit & Copy actions nicely */}
+        <div className="flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto lg:ml-auto">
+          {parsed.json ? (
+            <button
+              onClick={() => {
+                setToolkitJson(formattedBody);
+                notify.success("Sent to JSON Toolkit");
+              }}
+              // STRICT HEIGHT: h-7
+              className="h-7 flex items-center px-3 text-[9px] uppercase font-bold text-sky-400 hover:bg-sky-500/20 tracking-widest transition-colors shrink-0 border border-sky-500/30 bg-sky-500/10 rounded"
+            >
+              Send to Toolkit
+            </button>
+          ) : <div></div> /* Empty div keeps 'Copy' buttons right-aligned if no JSON */}
+
+          {/* STRICT HEIGHT: h-7 */}
+          <div className="flex items-center gap-2 h-7">
+            <button onClick={handleCopyBody} className="h-full flex items-center text-[10px] uppercase font-bold text-emerald-500 hover:text-emerald-400 tracking-widest transition-colors shrink-0">
+              {copiedAll ? "✓ Copied Body!" : "Copy Body"}
+            </button>
+            <div className="w-px h-3 bg-zinc-700"></div>
+            <button onClick={handleCopyFull} className="h-full flex items-center text-[10px] uppercase font-bold text-zinc-400 hover:text-white tracking-widest transition-colors shrink-0">
+              {copiedFull ? "✓ Copied Full!" : "Copy Full"}
+            </button>
+          </div>
         </div>
 
       </div>
@@ -273,14 +326,18 @@ export default function HttpResponseViewer({ text }: { text: string }) {
             <a href={mediaUrl} download="file.bin" className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-black uppercase text-xs tracking-widest rounded">Download File</a>
           </div>
         ) : parsed.json ? (
+
           <JsonViewer
             value={parsed.json}
-            expandSignal={expandSignal}
-            collapseSignal={collapseSignal}
             path="root"
             searchTerm={searchTerm}
             filterMode={filterMode}
+            collapsedPaths={collapsedPaths}
+            onToggleCollapse={toggleCollapse}
+            expandedArrays={expandedArrays}
+            onExpandArray={expandArray}
           />
+
         ) : (isXml || isHtml) && viewMode === "pretty" ? (
           <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap wrap-break-words">
             {formatMarkup(parsed.rawBody)}

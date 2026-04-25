@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { JsonEditor } from '../Editor/JsonEditor';
 import JsonViewer from '../ui/JsonViewer';
 import { useNotification } from '../ui/NotificationProvider';
+import { useTraffic } from '@/hooks/traffic';
 
 export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }) {
   const { notify } = useNotification();
 
-  const [rawJson, setRawJson] = useState('{\n  "status": "success",\n  "data": {\n    "token": "secret_123",\n    "user_id": 42\n  }\n}');
-
+  const { toolkitJson: rawJson, setToolkitJson: setRawJson } = useTraffic();
   const [leftTab, setLeftTab] = useState<'raw' | 'editor'>('raw');
 
   const [searchTerm, setSearchTerm] = useState('');

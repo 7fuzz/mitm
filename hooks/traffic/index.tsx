@@ -7,6 +7,7 @@ import { useVariables } from './useVariables';
 import { useConfig } from './useConfig';
 import { useRepeater } from './useRepeater';
 import { useTrafficLog } from './useTrafficLog';
+import { useJsonToolkit } from './useJsonToolkit';
 
 // Re-export types so other components can still import them from '@/hooks/traffic'
 export * from './types';
@@ -21,6 +22,7 @@ function useTrafficState() {
   const repeater = useRepeater();
   const trafficData = useTrafficLog();
   const isFirstSync = useRef(true);
+  const jsonToolkit = useJsonToolkit();
 
   const [isStateLoaded, setIsStateLoaded] = useState(false);
 
@@ -68,6 +70,7 @@ function useTrafficState() {
         config.initConfig.setIgnoredMethods(state.intercept.ignored);
       }
       if (state.ui_layout) config.initConfig.setUiLayout(state.ui_layout);
+      if (state.toolkit_json) jsonToolkit._initToolkitJson(state.toolkit_json);
       if (state.queue && state.queue.length > 0) trafficData.setTraffic(prev => [...state.queue, ...prev]);
 
       // === FIXED: Dynamic Initial Repeater Load based on Saved State! ===
@@ -119,6 +122,7 @@ function useTrafficState() {
     ...(({ initConfig, prefsRef, limitRef, ...rest }) => rest)(config),
     // Strip out internal repeater boot tools so the UI component can't mess them up!
     ...(({ _setRawRepeater, _setRawGroups, initActiveGroup, ...rest }) => rest)(repeater),
+    ...(({ _initToolkitJson, ...rest }) => rest)(jsonToolkit),
     ...trafficData,
     selectedReq: trafficData.traffic.find((r) => r.id === selections.selectedId) || null,
   };
