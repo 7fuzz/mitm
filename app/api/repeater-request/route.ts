@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const res = await fetch('http://127.0.0.1:3001/repeater', {
+    const isRaw = req.nextUrl.searchParams.get('raw') === 'true';
+    
+    const res = await fetch(`http://127.0.0.1:3001/repeater${isRaw ? '?raw=true' : ''}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

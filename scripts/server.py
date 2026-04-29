@@ -6,6 +6,7 @@ from api.history import HistoryHandlers
 from api.repeater import RepeaterHandlers
 from api.core import CoreHandlers
 from api.vault import VaultHandlers
+from api.replacements import ReplacementHandlers
 
 
 class APIServer:
@@ -45,6 +46,7 @@ class APIServer:
         history = HistoryHandlers(self.bridge, self.db)
         repeater = RepeaterHandlers(self.bridge, self.db)
         vault = VaultHandlers(self.bridge, self.db)
+        replacements = ReplacementHandlers(self.bridge, self.db)
 
         # Register Core & State Routes
         app.router.add_post("/resume/{id}", core.handle_resume)
@@ -90,6 +92,13 @@ class APIServer:
 
         # Import
         app.router.add_post("/repeater-import", repeater.handle_postman_import)
+
+        # Replacements
+        replacements = ReplacementHandlers(self.bridge, self.db)
+        app.router.add_get("/replacements", replacements.handle_replacements_get)
+        app.router.add_post("/replacements", replacements.handle_replacements_post)
+        app.router.add_put("/replacements", replacements.handle_replacements_put)
+        app.router.add_delete("/replacements", replacements.handle_replacements_delete)
 
         runner = web.AppRunner(app)
         await runner.setup()

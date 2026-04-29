@@ -155,7 +155,7 @@ class VariableHandlers:
         return web.json_response({"success": True, "id": env_id})
 
     async def handle_env_put(self, request):
-        env_id = request.match_info["id"]
+        env_id = request.match_info["name"]
         data = await request.json()
         self.db.execute(
             "UPDATE environments SET name=? WHERE id=?",
@@ -165,7 +165,7 @@ class VariableHandlers:
         return web.json_response({"success": True})
 
     async def handle_env_delete(self, request):
-        env_id = request.match_info["id"]
+        env_id = request.match_info["name"]
         if env_id == "default-env-id":
             return web.json_response(
                 {"success": False, "error": "Cannot delete Default"}

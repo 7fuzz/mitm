@@ -1,0 +1,27 @@
+{
+  "URL_REPLACEMENTS": {
+    "api.": "api{{env}}.",
+    "api-hrms.": "api{{env}}-hrms.",
+    "sso.": "sso{{env}}."
+  },
+  "HEADER_VALUE_REPLACEMENTS": {
+    "Bearer ": "Bearer {{token}}"
+  },
+  "HEADER_HOST_REPLACEMENTS": {
+    "api.": "api{{env}}.",
+    "api-hrms.": "api{{env}}-hrms.",
+    "sso.": "sso{{env}}."
+  },
+  "BODY_KEY_REPLACEMENTS": {
+    "company": "{{company}}",
+    "company_id": "{{company}}",
+    "employee": "{{employee}}",
+    "employee_id": "{{employee}}",
+    "attachment": "{{attachment}}",
+    "claim_approver": "{{approver}}"
+  },
+  "URL_PARAM_REPLACEMENTS": {
+    "company_id": "{{company}}",
+    "employee_id": "{{employee}}"
+  }
+}
