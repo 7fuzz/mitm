@@ -38,11 +38,14 @@ export async function fetchReplacements(): Promise<typeof DEFAULT_REPLACEMENTS> 
     const res = await fetch('/api/replacements');
     const data = await res.json();
     
-    URL_REPLACEMENTS = data.URL_REPLACEMENTS || {};
-    HEADER_VALUE_REPLACEMENTS = data.HEADER_VALUE_REPLACEMENTS || {};
-    HEADER_HOST_REPLACEMENTS = data.HEADER_HOST_REPLACEMENTS || {};
-    BODY_KEY_REPLACEMENTS = data.BODY_KEY_REPLACEMENTS || {};
-    URL_PARAM_REPLACEMENTS = data.URL_PARAM_REPLACEMENTS || {};
+    // API returns { grouped: {...}, ordered: [...] }
+    const grouped = data.grouped || {};
+    
+    URL_REPLACEMENTS = grouped.URL_REPLACEMENTS || {};
+    HEADER_VALUE_REPLACEMENTS = grouped.HEADER_VALUE_REPLACEMENTS || {};
+    HEADER_HOST_REPLACEMENTS = grouped.HEADER_HOST_REPLACEMENTS || {};
+    BODY_KEY_REPLACEMENTS = grouped.BODY_KEY_REPLACEMENTS || {};
+    URL_PARAM_REPLACEMENTS = grouped.URL_PARAM_REPLACEMENTS || {};
     
     return data;
   } catch (e) {
@@ -52,7 +55,10 @@ export async function fetchReplacements(): Promise<typeof DEFAULT_REPLACEMENTS> 
 }
 
 // Initialize replacements on module load
-if (typeof window === 'undefined') {
+if (typeof window !== 'undefined') {
+  // Client-side: fetch from API on load
+  fetchReplacements().catch(console.error);
+} else {
   // Server-side: just set defaults
   URL_REPLACEMENTS = DEFAULT_REPLACEMENTS.URL_REPLACEMENTS;
   HEADER_VALUE_REPLACEMENTS = DEFAULT_REPLACEMENTS.HEADER_VALUE_REPLACEMENTS;

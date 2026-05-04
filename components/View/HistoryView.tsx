@@ -7,7 +7,6 @@ import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { useTraffic } from '@/hooks/traffic';
 import { SaveModal } from '../ui/SaveModal'; // Assuming you have this
 import { useNotification } from '../ui/NotificationProvider';
-import { applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements } from '@/config/replacements';
 
 // === NEW: HTTP Formatters for the Viewer ===
 const buildRawRequestMessage = (req: Traffic) => {
@@ -33,7 +32,9 @@ export function HistoryView() {
     historyLimit, setHistoryLimit, isLimitEnabled, setIsLimitEnabled,
     uiLayout, updateUILayout,
     // NEW: Destructure the safe repeater functions instead of raw setters
-    refreshRepeater, setRepeaterSelectedId
+    refreshRepeater, setRepeaterSelectedId,
+    // NEW: Get replacement apply functions
+    applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements,
   } = useTraffic();
 
   const { notify } = useNotification();

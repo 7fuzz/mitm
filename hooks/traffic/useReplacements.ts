@@ -111,6 +111,68 @@ export function useReplacements() {
     }
   }, [fetchReplacements]);
 
+  // Apply functions - defined inside the hook before return
+  const applyUrlReplacements = useCallback((url: string): string => {
+    try {
+      const parsed = new URL(url);
+      let hostname = parsed.hostname;
+      for (const [pattern, replacement] of Object.entries(replacements.URL_REPLACEMENTS)) {
+        if (hostname.includes(pattern)) {
+          hostname = hostname.replace(pattern, replacement);
+        }
+      }
+      parsed.hostname = hostname;
+
+      // Apply query parameter replacements
+      const searchParams = parsed.search;
+      let newSearch = searchParams;
+      for (const [key, value] of Object.entries(replacements.URL_PARAM_REPLACEMENTS)) {
+        const regex = new RegExp(`([?&]${key}=)([^&]*)`, 'g');
+        newSearch = newSearch.replace(regex, `$1${value}`);
+      }
+      parsed.search = newSearch;
+
+      return parsed.toString();
+    } catch {
+      let result = url;
+      for (const [pattern, replacement] of Object.entries(replacements.URL_REPLACEMENTS)) {
+        if (result.includes(pattern)) {
+          result = result.replace(pattern, replacement);
+        }
+      }
+      return result;
+    }
+  }, [replacements]);
+
+  const applyHeaderReplacements = useCallback((headers: Record<string, string>): Record<string, string> => {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+      let newValue = value;
+      if (newValue.startsWith('Bearer ')) {
+        newValue = 'Bearer {{token}}';
+      }
+      if (key.toLowerCase() === 'host') {
+        for (const [pattern, replacement] of Object.entries(replacements.HEADER_HOST_REPLACEMENTS)) {
+          if (newValue.includes(pattern)) {
+            newValue = newValue.replace(pattern, replacement);
+          }
+        }
+      }
+      result[key] = newValue;
+    }
+    return result;
+  }, [replacements]);
+
+  const applyBodyReplacements = useCallback((body: string): string => {
+    try {
+      const parsed = JSON.parse(body);
+      const transformed = transformObjectHelper(parsed, replacements.BODY_KEY_REPLACEMENTS);
+      return JSON.stringify(transformed, null, 2);
+    } catch {
+      return body;
+    }
+  }, [replacements]);
+
   useEffect(() => {
     fetchReplacements();
   }, [fetchReplacements]);
@@ -124,5 +186,26 @@ export function useReplacements() {
     saveReplacements,
     updateOrder,
     deleteReplacement,
+    applyUrlReplacements,
+    applyHeaderReplacements,
+    applyBodyReplacements,
   };
+}
+
+// Helper function for nested JSON body transformation
+function transformObjectHelper(obj: any, bodyReplacements: Record<string, string>): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => transformObjectHelper(item, bodyReplacements));
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const lowerKey = key.toLowerCase();
+    if (bodyReplacements[lowerKey]) {
+      result[key] = bodyReplacements[lowerKey];
+    } else if (typeof value === 'object') {
+      result[key] = transformObjectHelper(value, bodyReplacements);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
 }
