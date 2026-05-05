@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "proxy": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others \"./scripts/venv/bin/mitmdump -s scripts/bridge.py\" \"next start\""
+    "proxy": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others \"exec ./scripts/venv/bin/mitmdump -s scripts/bridge.py\" \"exec next start\""
   },
   "dependencies": {
     "@pandatix/js-cvss": "^0.4.4",
