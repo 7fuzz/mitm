@@ -48,12 +48,17 @@ export default function JsonViewer({
   const isCollapsed = collapsedPaths.has(path);
   const expanded = !isCollapsed;
 
-  // const [showAllArray, setShowAllArray] = useState(false);
-
   const termLower = searchTerm.toLowerCase();
   const labelMatches = label ? label.toLowerCase().includes(termLower) : false;
   const shouldForceShow = forceShow || labelMatches;
 
+  const isPrimitive = value === null || typeof value !== "object";
+  const valueMatches = isPrimitive ? String(value).toLowerCase().includes(termLower) : false;
+  
+  // Check filter condition - but don't return early, handle in hook instead
+  const shouldFilterOut = filterMode && searchTerm && !shouldForceShow && !valueMatches && !labelMatches && isPrimitive;
+
+  // --- Hooks - must be called unconditionally ---
   const containsMatch = useMemo(() => {
     if (!searchTerm) return false;
     return typeof value === 'object' && value !== null && deepSearch(value, termLower);
@@ -64,10 +69,34 @@ export default function JsonViewer({
     if (searchTerm && containsMatch && isCollapsed && onToggleCollapse) {
       onToggleCollapse(path, false); // Force expand
     }
-  }, [searchTerm, containsMatch]);
+  }, [searchTerm, containsMatch, isCollapsed, onToggleCollapse, path]);
 
   const isArray = Array.isArray(value);
   const isObject = value !== null && typeof value === "object" && !isArray;
+
+  // --- Process items for objects/arrays (always call useMemo) ---
+  const items = isArray ? value : (isObject ? Object.entries(value) : []);
+  const openBracket = isArray ? "[" : "{";
+  const closeBracket = isArray ? "]" : "}";
+
+  const processedItems = useMemo(() => {
+    if (!filterMode || !searchTerm || shouldForceShow) return items;
+
+    return items.filter((item: any) => {
+      if (isArray) {
+        if (item === null || typeof item !== 'object') return String(item).toLowerCase().includes(termLower);
+        return deepSearch(item, termLower);
+      } else {
+        const [k, v] = item;
+        if (k.toLowerCase().includes(termLower)) return true;
+        if (v === null || typeof v !== 'object') return String(v).toLowerCase().includes(termLower);
+        return deepSearch(v, termLower);
+      }
+    });
+  }, [items, searchTerm, filterMode, isArray, termLower, shouldForceShow]);
+
+  // Handle filter-out case for objects/arrays
+  const shouldFilterOutObject = filterMode && searchTerm && !shouldForceShow && processedItems.length === 0;
 
   // --- Primitive Leaf Nodes ---
   if (value === null || typeof value !== "object") {
@@ -87,9 +116,8 @@ export default function JsonViewer({
       valueColor = 'text-rose-400 font-bold bg-rose-500/10 px-1 rounded';
     }
 
-    const valueMatches = formattedValue.toLowerCase().includes(termLower);
-
-    if (filterMode && searchTerm && !shouldForceShow && !valueMatches && !labelMatches) {
+    // Filter check handled via shouldFilterOut
+    if (shouldFilterOut) {
       return null;
     }
 
@@ -128,28 +156,8 @@ export default function JsonViewer({
     );
   }
 
-  // --- Object / Array Parent Nodes ---
-  const openBracket = isArray ? "[" : "{";
-  const closeBracket = isArray ? "]" : "}";
-  const items = isArray ? value : Object.entries(value);
-
-  const processedItems = useMemo(() => {
-    if (!filterMode || !searchTerm || shouldForceShow) return items;
-
-    return items.filter((item: any) => {
-      if (isArray) {
-        if (item === null || typeof item !== 'object') return String(item).toLowerCase().includes(termLower);
-        return deepSearch(item, termLower);
-      } else {
-        const [k, v] = item;
-        if (k.toLowerCase().includes(termLower)) return true;
-        if (v === null || typeof v !== 'object') return String(v).toLowerCase().includes(termLower);
-        return deepSearch(v, termLower);
-      }
-    });
-  }, [items, searchTerm, filterMode, isArray, termLower, shouldForceShow]);
-
-  if (filterMode && searchTerm && !shouldForceShow && processedItems.length === 0) {
+  // Filter check for objects/arrays (after hooks are called)
+  if (shouldFilterOutObject) {
     return null;
   }
 
@@ -197,7 +205,6 @@ export default function JsonViewer({
               <JsonViewer key={key} label={key} value={val} isLast={index === visibleItems.length - 1} path={`${path}-${encodeURIComponent(key)}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))}
           {isLongArray && !effectiveShowAll && (
-            // 4. UPDATE onClick to use the new prop
             <div className="text-zinc-500 hover:text-sky-400 text-xs py-1 cursor-pointer select-none pl-2 flex items-center gap-1" onClick={() => onExpandArray && onExpandArray(path)}>
               <span className="bg-zinc-800 px-1.5 py-0.5 rounded">+{processedItems.length - 1} more items</span>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HeaderEditor } from '../Editor/HeaderEditor';
 import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
@@ -40,6 +40,15 @@ export function RepeaterView() {
 
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: () => { } });
   const openConfirm = (title: string, message: string, action: () => void) => setConfirmConfig({ isOpen: true, title, message, action });
+
+  // Debounce for name updates
+  const nameDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debouncedUpdateName = (id: string, name: string) => {
+    if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
+    nameDebounceRef.current = setTimeout(() => {
+      updateRequest(id, { name });
+    }, 300);
+  };
 
   const currentReq = repeaterRequests.find(r => r.id === selectedId) || repeaterRequests[0];
 
@@ -227,7 +236,7 @@ export function RepeaterView() {
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
                     <input
                       value={editName}
-                      onChange={(e) => { setEditName(e.target.value); updateRequest(currentReq.id, { name: e.target.value }); }}
+                      onChange={(e) => { setEditName(e.target.value); debouncedUpdateName(currentReq.id, e.target.value); }}
                       className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors"
                     />
                   </div>

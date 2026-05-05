@@ -298,7 +298,7 @@ export function WorkspaceLayout({ listComponent, mainContent, toolbarLeft, toolb
               </button>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 max-h-100 overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4 max-h-100 overflow-y-auto pr-2">
               {/* FIXED: Filters by environmentId */}
               {variables.filter(v => v.environmentId === activeEnvId).map(v => (
                 <DebouncedVariableCard

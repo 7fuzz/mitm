@@ -48,6 +48,19 @@ class Database:
             id TEXT PRIMARY KEY, variable_id TEXT, name TEXT, value TEXT,
             FOREIGN KEY(variable_id) REFERENCES variables(id) ON DELETE CASCADE
         )""")
+
+        # Replacements table for Send to Repeater transformations
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS replacements (
+            id TEXT PRIMARY KEY, 
+            type TEXT NOT NULL, 
+            pattern TEXT NOT NULL, 
+            replacement TEXT NOT NULL,
+            description TEXT,
+            is_active INTEGER DEFAULT 1,
+            order_index INTEGER DEFAULT 0,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )""")
         self.conn.commit()
 
     def execute(self, query, params=()):
@@ -59,3 +72,128 @@ class Database:
     def get_state_key(self, key, default=None):
         row = self.execute("SELECT value FROM app_state WHERE key=?", (key,)).fetchone()
         return json.loads(row[0]) if row else default
+
+    # Replacements CRUD
+    def get_all_replacements(self):
+        rows = self.execute("SELECT id, type, pattern, replacement, description, is_active, order_index FROM replacements WHERE is_active = 1 ORDER BY type, order_index").fetchall()
+        return [
+            {"id": r[0], "type": r[1], "pattern": r[2], "replacement": r[3], "description": r[4], "is_active": bool(r[5]), "order_index": r[6]}
+            for r in rows
+        ]
+
+    def get_replacements_by_type(self, replacement_type):
+        rows = self.execute("SELECT id, type, pattern, replacement, description, is_active, order_index FROM replacements WHERE type = ? AND is_active = 1 ORDER BY order_index", (replacement_type,)).fetchall()
+        return {r[2]: r[3] for r in rows}
+
+    def save_replacement(self, id, replacement_type, pattern, replacement, description="", order_index=0):
+        self.execute(
+            """INSERT OR REPLACE INTO replacements (id, type, pattern, replacement, description, is_active, order_index, updated_at) 
+               VALUES (?, ?, ?, ?, ?, 1, ?, strftime('%s', 'now'))""",
+            (id, replacement_type, pattern, replacement, description, order_index)
+        )
+        self.commit()
+
+    def delete_replacement(self, id):
+        self.execute("UPDATE replacements SET is_active = 0 WHERE id = ?", (id,))
+        self.commit()
+
+    def update_replacement_order(self, id, order_index):
+        self.execute("UPDATE replacements SET order_index = ?, updated_at = strftime('%s', 'now') WHERE id = ?", (order_index, id))
+        self.commit()
+
+    def bulk_save_replacements(self, replacements_list):
+        for item in replacements_list:
+            self.execute(
+                """INSERT OR REPLACE INTO replacements (id, type, pattern, replacement, description, is_active, order_index, updated_at) 
+                   VALUES (?, ?, ?, ?, ?, 1, ?, strftime('%s', 'now'))""",
+                (item.get("id"), item.get("type"), item.get("pattern"), item.get("replacement"), item.get("description", ""), item.get("order_index", 0))
+            )
+        self.commit()
+
+    # ==================== API Methods ====================
+    # These methods handle the HTTP request/response logic
+    # and delegate to the CRUD methods above
+
+    def get_replacements_api(self):
+        """Get all replacements grouped by type with order info (API handler)"""
+        replacements = self.get_all_replacements()
+        
+        # Group by type for the frontend, preserving order
+        grouped = {
+            "URL_REPLACEMENTS": {},
+            "HEADER_VALUE_REPLACEMENTS": {},
+            "HEADER_HOST_REPLACEMENTS": {},
+            "BODY_KEY_REPLACEMENTS": {},
+            "URL_PARAM_REPLACEMENTS": {}
+        }
+        
+        # Also return ordered list for drag-and-drop
+        ordered = []
+        
+        for r in replacements:
+            r_type = r.get("type", "")
+            if r_type in grouped:
+                grouped[r_type][r["pattern"]] = r["replacement"]
+                ordered.append({
+                    "id": r["id"],
+                    "type": r_type,
+                    "pattern": r["pattern"],
+                    "replacement": r["replacement"],
+                    "order_index": r.get("order_index", 0)
+                })
+        
+        return {
+            "grouped": grouped,
+            "ordered": ordered
+        }
+
+    def save_replacements_bulk_api(self, data):
+        """Save replacements (bulk replace) with order (API handler)"""
+        # Clear existing and insert new
+        self.execute("UPDATE replacements SET is_active = 0")
+        
+        import uuid
+        order_counter = {}
+        
+        for r_type, patterns in data.items():
+            if isinstance(patterns, dict):
+                # Sort by order_index if provided
+                sorted_items = sorted(patterns.items(), key=lambda x: x[1].get("order_index", 0) if isinstance(x[1], dict) else 0)
+                for idx, (pattern, value) in enumerate(sorted_items):
+                    if isinstance(value, dict):
+                        # New format with order info
+                        self.save_replacement(
+                            value.get("id") or str(uuid.uuid4()),
+                            r_type,
+                            pattern,
+                            value.get("replacement", ""),
+                            f"Auto-saved {r_type}",
+                            value.get("order_index", idx)
+                        )
+                    else:
+                        # Legacy format (just string value)
+                        self.save_replacement(
+                            str(uuid.uuid4()),
+                            r_type,
+                            pattern,
+                            value,
+                            f"Auto-saved {r_type}",
+                            idx
+                        )
+        
+        return {"success": True}
+
+    def update_replacement_order_api(self, items):
+        """Update replacement order (API handler)"""
+        for item in items:
+            self.update_replacement_order(
+                item.get("id"),
+                item.get("order_index", 0)
+            )
+        return {"success": True}
+
+    def delete_replacement_api(self, replacement_id):
+        """Delete a specific replacement (API handler)"""
+        if replacement_id:
+            self.delete_replacement(replacement_id)
+        return {"success": True}

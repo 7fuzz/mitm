@@ -101,6 +101,7 @@ class RepeaterHandlers:
     async def handle_repeater_create(self, request):
         try:
             data = await request.json()
+            is_raw = request.query.get("raw") == "true"
             item_id = str(uuid.uuid4())
             group_id = data.get("groupId")  # STRICT ID LINKING
 

@@ -8,6 +8,7 @@ import { useConfig } from './useConfig';
 import { useRepeater } from './useRepeater';
 import { useTrafficLog } from './useTrafficLog';
 import { useJsonToolkit } from './useJsonToolkit';
+import { useReplacements } from './useReplacements';
 
 // Re-export types so other components can still import them from '@/hooks/traffic'
 export * from './types';
@@ -115,6 +116,8 @@ function useTrafficState() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const replacements = useReplacements();
+
   return {
     ...selections,
     ...variables,
@@ -124,6 +127,7 @@ function useTrafficState() {
     ...(({ _setRawRepeater, _setRawGroups, initActiveGroup, ...rest }) => rest)(repeater),
     ...(({ _initToolkitJson, ...rest }) => rest)(jsonToolkit),
     ...trafficData,
+    ...replacements,
     selectedReq: trafficData.traffic.find((r) => r.id === selections.selectedId) || null,
   };
 }
