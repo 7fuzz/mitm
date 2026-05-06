@@ -7,19 +7,20 @@ import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
-import { PromptModal, ConfirmModal } from '../Modals'; // NEW: Imported ConfirmModal
+import { PromptModal, ConfirmModal, ExtractionModal } from '../Modals';
 
 export interface RepeaterRequest {
   id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
+  extract?: Record<string, string>;
   response?: { status: number; headers: Record<string, string>; body: string; time?: number; };
 }
 
 export function RepeaterView() {
   const {
     repeaterRequests, repeaterGroups, activeGroupId, switchGroup,
-    addEmptyRequest, duplicateRequest, updateRequest, deleteRequest, importPostman,
-    createGroup, renameGroup, deleteGroup,
-    variables, activeEnvId,
+    addEmptyRequest, duplicateRequest, updateRequest, deleteRequest,
+    createGroup, renameGroup, deleteGroup, reorderRequests,
+    variables, activeEnvId, updateVariableAutoValue,
     uiLayout, updateUILayout,
     repeaterSelectedId: selectedId, setRepeaterSelectedId: setSelectedId
   } = useTraffic();
@@ -32,6 +33,7 @@ export function RepeaterView() {
   const [editUrl, setEditUrl] = useState('');
   const [editHeaders, setEditHeaders] = useState<Record<string, string>>({});
   const [editBody, setEditBody] = useState('');
+  const [editExtract, setEditExtract] = useState<Record<string, string>>({});
 
   // Modals
   const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
@@ -40,6 +42,8 @@ export function RepeaterView() {
 
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: () => { } });
   const openConfirm = (title: string, message: string, action: () => void) => setConfirmConfig({ isOpen: true, title, message, action });
+
+  const [extractionModalOpen, setExtractionModalOpen] = useState(false);
 
   // Debounce for name updates
   const nameDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -65,6 +69,7 @@ export function RepeaterView() {
       setEditUrl(currentReq.url);
       setEditHeaders(currentReq.headers || {});
       setEditBody(currentReq.body || '');
+      setEditExtract(currentReq.extract || {});
       if (currentReq.id !== selectedId) setSelectedId(currentReq.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,8 +106,23 @@ export function RepeaterView() {
       const data = await response.json();
       if (!data.success) return alert('Error: ' + (data.error || 'Unknown error'));
 
+      // --- EXTRACTION LOGIC ---
+      if (editExtract && Object.keys(editExtract).length > 0) {
+        try {
+          const respJson = JSON.parse(data.body);
+          Object.entries(editExtract).forEach(([varName, path]) => {
+            const value = path.split('.').reduce((obj, key) => obj?.[key], respJson);
+            if (value !== undefined) {
+              updateVariableAutoValue(varName, String(value));
+            }
+          });
+        } catch (e) {
+          console.error("Failed to parse response for extraction:", e);
+        }
+      }
+
       await updateRequest(currentReq.id, {
-        method: editMethod, url: editUrl, headers: editHeaders, body: editBody,
+        method: editMethod, url: editUrl, headers: editHeaders, body: editBody, extract: editExtract,
         response: { status: data.status ?? 0, headers: data.headers || {}, body: data.body || '', time: Date.now() },
       });
     } catch (error) { alert('Error: ' + error); } finally { setIsLoading(false); }
@@ -160,12 +180,22 @@ export function RepeaterView() {
         isOpen={confirmConfig.isOpen} title={confirmConfig.title} message={confirmConfig.message} isDestructive={true} confirmText="Delete"
         onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))} onConfirm={confirmConfig.action}
       />
+      <ExtractionModal
+        isOpen={extractionModalOpen}
+        onClose={() => setExtractionModalOpen(false)}
+        onSave={(rules) => {
+          setEditExtract(rules);
+          updateRequest(currentReq.id, { extract: rules });
+        }}
+        initialRules={editExtract}
+        availableVariables={variables.filter(v => v.environmentId === activeEnvId)}
+      />
 
       <WorkspaceLayout
         uiLayout={uiLayout}
         onUpdateLayout={updateUILayout}
         listComponent={(layout) => (
-          <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
+          <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} onReorder={reorderRequests} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
         )}
 
         toolbarLeft={
@@ -213,8 +243,6 @@ export function RepeaterView() {
 
         toolbarRight={
           <>
-            <button onClick={importPostman} className="px-3 py-1.5 text-zinc-500 hover:text-sky-400 text-[10px] rounded transition-all uppercase font-bold mr-2">Import</button>
-            <div className="w-px h-4 bg-zinc-800 mx-1"></div>
             <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-3 py-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2">Clear</button>
 
             <div className="flex items-center gap-px">
@@ -231,7 +259,7 @@ export function RepeaterView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <div className="space-y-3">
                 <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Metadata</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
                     <input
@@ -265,6 +293,15 @@ export function RepeaterView() {
                         + New
                       </button>
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Variable Extractions</label>
+                    <button
+                      onClick={() => setExtractionModalOpen(true)}
+                      className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-amber-400 text-[11px] font-mono text-left hover:border-amber-500 transition-colors truncate"
+                    >
+                      {Object.keys(editExtract).length > 0 ? `${Object.keys(editExtract).length} Rules Configured` : 'Configure Extractions...'}
+                    </button>
                   </div>
                 </div>
               </div>

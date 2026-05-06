@@ -53,16 +53,23 @@ class VariableHandlers:
         variables = []
         for r in var_rows:
             v_id = r[0]
+            v_vals = vals_by_var.get(v_id, [])
+            
+            # Ensure "(auto)" variant exists
+            if not any(val["name"] == "(auto)" for val in v_vals):
+                auto_val = {"id": str(uuid.uuid4()), "name": "(auto)", "value": ""}
+                v_vals.append(auto_val)
+                # Persist it so it doesn't get lost
+                self.db.execute("INSERT INTO variable_values VALUES (?, ?, ?, ?)", (auto_val["id"], v_id, auto_val["name"], auto_val["value"]))
+                self.db.commit()
+
             variables.append(
                 {
                     "id": v_id,
                     "environmentId": r[1],
                     "name": r[2],
                     "activeIndex": r[3],
-                    "values": vals_by_var.get(
-                        v_id,
-                        [{"id": str(uuid.uuid4()), "name": "Default", "value": ""}],
-                    ),
+                    "values": v_vals,
                 }
             )
 

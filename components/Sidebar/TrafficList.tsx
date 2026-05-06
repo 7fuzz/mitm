@@ -2,14 +2,28 @@ import { useState } from 'react';
 import { Traffic } from '@/types/traffic';
 import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
 import { TrafficItem } from './TrafficItem';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface TrafficListProps {
   items: Traffic[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
+  onReorder?: (newIds: string[]) => void;
   activeColor?: 'emerald' | 'purple' | 'sky';
   layout?: 'sidebar' | 'table';
+}
+
+function SortableTrafficItem({ req, activeId, activeColor, onSelect, onDelete }: { req: Traffic, activeId: string | null, activeColor: any, onSelect: any, onDelete: any }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: req.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
+      <TrafficItem id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete} />
+    </div>
+  );
 }
 
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'];
@@ -47,11 +61,23 @@ const getStatusColor = (s: number) => {
   return 'text-rose-500';
 };
 
-export function TrafficList({ items, activeId, onSelect, onDelete, activeColor = 'emerald', layout = 'sidebar' }: TrafficListProps) {
+export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, activeColor = 'emerald', layout = 'sidebar' }: TrafficListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState<Record<string, FilterState>>({});
   const [statusFilter, setStatusFilter] = useState<Record<string, FilterState>>({});
   const [showFilters, setShowFilters] = useState(false);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id && onReorder) {
+      const oldIndex = filteredItems.findIndex(i => i.id === active.id);
+      const newIndex = filteredItems.findIndex(i => i.id === over.id);
+      const newItems = arrayMove(filteredItems, oldIndex, newIndex);
+      onReorder(newItems.map(i => i.id));
+    }
+  };
 
   const toggleMethod = (method: string) => setMethodFilter(prev => ({ ...prev, [method]: prev[method] === undefined ? 'include' : prev[method] === 'include' ? 'exclude' : undefined }));
   const toggleStatus = (status: string) => setStatusFilter(prev => ({ ...prev, [status]: prev[status] === undefined ? 'include' : prev[status] === 'include' ? 'exclude' : undefined }));
@@ -154,11 +180,21 @@ export function TrafficList({ items, activeId, onSelect, onDelete, activeColor =
           </table>
         ) : (
           <div className="absolute inset-0 overflow-y-auto divide-y divide-zinc-800/50">
-            {filteredItems.map(req => (
-              <TrafficItem
-                key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
-              />
-            ))}
+            {onReorder ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={filteredItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                  {filteredItems.map(req => (
+                    <SortableTrafficItem key={req.id} req={req} activeId={activeId} activeColor={activeColor} onSelect={onSelect} onDelete={onDelete} />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            ) : (
+              filteredItems.map(req => (
+                <TrafficItem
+                  key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
+                />
+              ))
+            )}
           </div>
         )}
       </div>

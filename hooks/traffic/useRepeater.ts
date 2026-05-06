@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { RepeaterRequest } from '@/components/View/RepeaterView';
-
-export interface RepeaterGroup { id: string; name: string; orderIndex?: number; }
+import { RepeaterGroup } from './types';
 
 export function useRepeater() {
   const [repeaterRequests, setRepeaterRequests] = useState<RepeaterRequest[]>([]);
@@ -103,6 +102,38 @@ export function useRepeater() {
     input.click();
   };
 
+  const importProject = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        
+        let importEnv = false;
+        if (data.placeholders && Object.keys(data.placeholders).length > 0) {
+          importEnv = confirm(`This project contains ${Object.keys(data.placeholders).length} environment variables. Would you like to import them as a new environment?`);
+        }
+
+        const response = await fetch('/api/repeater-import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...data, importEnv }),
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`✓ Imported ${result.imported} request(s)${importEnv ? ' and environment variables' : ''}`);
+          await refreshRepeater();
+          if (importEnv) window.location.reload(); 
+        } else alert(`Error: ${result.error}`);
+      } catch (error) { alert(`Failed to import: ${error}`); }
+    };
+    input.click();
+  };
+
   const createGroup = async (name: string) => {
     if (!name.trim()) return null;
     const res = await fetch('/api/repeater-groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
@@ -127,10 +158,32 @@ export function useRepeater() {
       await switchGroup('All');
     }
   };
+  const reorderRequests = async (reorderedIds: string[]) => {
+    // Optimistically update UI
+    setRepeaterRequests(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        const idxA = reorderedIds.indexOf(a.id);
+        const idxB = reorderedIds.indexOf(b.id);
+        return idxA - idxB;
+      });
+      return sorted;
+    });
+
+    try {
+      await fetch('/api/repeater-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reorderedIds)
+      });
+    } catch (error) {
+      console.error("Failed to save reorder:", error);
+    }
+  };
+
   return {
     repeaterRequests, repeaterGroups, activeGroupId, switchGroup,
     _setRawRepeater: setRepeaterRequests, _setRawGroups: setRepeaterGroups, initActiveGroup,
     refreshRepeater, addEmptyRequest, duplicateRequest, deleteRequest, updateRequest, importPostman,
-    createGroup, renameGroup, deleteGroup
+    importProject, createGroup, renameGroup, deleteGroup, reorderRequests
   };
 }

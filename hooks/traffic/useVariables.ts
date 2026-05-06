@@ -66,10 +66,30 @@ export function useVariables() {
     fetch(`/api/environments/${id}`, { method: 'DELETE' });
   };
 
+  const updateVariableAutoValue = (name: string, value: string) => {
+    setVariables(prev => prev.map(v => {
+      if (v.name === name && v.environmentId === activeEnvId) {
+        const autoVal = v.values.find(val => val.name === '(auto)');
+        if (autoVal) {
+          const newValues = v.values.map(val => val.name === '(auto)' ? { ...val, value } : val);
+          // Sync to backend
+          fetch(`/api/variables/${v.id}`, { 
+            method: 'PUT', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ values: newValues }) 
+          }).catch(console.error);
+          return { ...v, values: newValues };
+        }
+      }
+      return v;
+    }));
+  };
+
   return {
     variables, environments, activeEnvId,
     loadVariables,
     addVariable, updateVariable, deleteVariable,
-    setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment
+    setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
+    updateVariableAutoValue
   };
 }

@@ -9,3 +9,9 @@ export interface GlobalVariable {
   values: GlobalVariableValue[];
   activeIndex: number;
 }
+
+export interface RepeaterGroup {
+  id: string;
+  name: string;
+  orderIndex?: number;
+}

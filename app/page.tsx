@@ -7,6 +7,7 @@ import { RepeaterView } from '@/components/View/RepeaterView';
 import { HistoryView } from '@/components/View/HistoryView';
 import { OptionsView } from '@/components/View/OptionsView';
 import { UtilitiesView } from '@/components/View/UtilitiesView';
+import { WorkspaceView } from '@/components/View/WorkspaceView';
 
 // ==========================================
 // 1. THE OUTER WRAPPER (No Hooks Here!)
@@ -23,10 +24,9 @@ export default function Page() {
 // 2. THE INNER APP (Safe to use Context!)
 // ==========================================
 function TrafficApp() {
-  // ✅ This now works perfectly because TrafficApp lives inside TrafficProvider!
   const { traffic, repeaterRequests } = useTraffic();
 
-  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options' | 'utilities'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
 
   const pendingCount = traffic.filter(t => t.is_intercepted).length;
 
@@ -75,10 +75,10 @@ function TrafficApp() {
           </button>
 
           <button
-            onClick={() => setActiveTab('options')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'options' ? 'border-orange-500 text-orange-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+            onClick={() => setActiveTab('workspace')}
+            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'workspace' ? 'border-blue-500 text-blue-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
           >
-            Options
+            Workspace
           </button>
 
           <button
@@ -86,6 +86,13 @@ function TrafficApp() {
             className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'utilities' ? 'border-fuchsia-500 text-fuchsia-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
           >
             Utilities
+          </button>
+
+          <button
+            onClick={() => setActiveTab('options')}
+            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'options' ? 'border-orange-500 text-orange-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+          >
+            Options
           </button>
         </div>
 
@@ -100,14 +107,13 @@ function TrafficApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden relative">
-
-        {/* LOOK HOW CLEAN THIS IS NOW! NO MORE MASSIVE PROP DRILLING! */}
         {activeTab === 'history' && <HistoryView />}
         {activeTab === 'intercept' && <InterceptView />}
         {activeTab === 'saved' && <SavedView />}
         {activeTab === 'repeater' && <RepeaterView />}
-        {activeTab === 'options' && <OptionsView />}
+        {activeTab === 'workspace' && <WorkspaceView />}
         {activeTab === 'utilities' && <UtilitiesView />}
+        {activeTab === 'options' && <OptionsView />}
       </main>
     </div>
   );

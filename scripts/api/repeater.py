@@ -3,7 +3,7 @@ import uuid
 import time
 import re
 import aiohttp
-from urllib.parse import unquote
+from urllib.parse import unquote, urlencode
 from aiohttp import web
 
 
@@ -16,20 +16,19 @@ class RepeaterHandlers:
         """Get repeater requests, optionally filtered by group"""
         group_id_param = request.query.get("groupId", "All")
 
-        # Changed rg.id to rw.group_id for a safer source of truth
-        query = """SELECT rw.id, rw.name, rw.group_id, rg.name, rw.method, rw.url, rw.request, rw.response, rw.timestamp 
+        # Use order_index for sorting
+        query = """SELECT rw.id, rw.name, rw.group_id, rg.name, rw.method, rw.url, rw.request, rw.response, rw.timestamp, rw.order_index, rw.extract 
                    FROM repeater_workspace rw 
                    LEFT JOIN repeater_groups rg ON rw.group_id = rg.id"""
         params = ()
 
-        # Apply strict SQL filtering
         if group_id_param == "null":
             query += " WHERE rw.group_id IS NULL"
         elif group_id_param != "All":
             query += " WHERE rw.group_id = ?"
             params = (group_id_param,)
 
-        query += " ORDER BY rg.order_index, rw.timestamp ASC"
+        query += " ORDER BY rw.order_index ASC, rw.timestamp ASC"
 
         rows = self.db.execute(query, params).fetchall()
 
@@ -40,13 +39,15 @@ class RepeaterHandlers:
             item = {
                 "id": r[0],
                 "name": r[1],
-                "groupId": r[2],  # Uses strict UUID
-                "group": r[3] or "Default",  # Human-readable name for UI
+                "groupId": r[2],
+                "group": r[3] or "Default",
                 "method": r[4],
                 "url": r[5],
                 "headers": req.get("headers", {}),
                 "body": req.get("body", ""),
                 "timestamp": r[8],
+                "orderIndex": r[9] if len(r) > 9 else 0,
+                "extract": json.loads(r[10]) if len(r) > 10 and r[10] else {}
             }
             if res:
                 item["response"] = {
@@ -59,12 +60,25 @@ class RepeaterHandlers:
         return web.json_response(result)
 
     async def handle_repeater_post(self, request):
-        """Full sync endpoint - completely purged of string logic"""
+        """Batch update or reorder requests"""
         data = await request.json()
+        
+        # If data is a list of reordered IDs
+        if isinstance(data, list):
+            for idx, item in enumerate(data):
+                item_id = item if isinstance(item, str) else item.get("id")
+                if item_id:
+                    self.db.execute(
+                        "UPDATE repeater_workspace SET order_index = ? WHERE id = ?",
+                        (idx, item_id)
+                    )
+            self.db.commit()
+            return web.json_response({"success": True})
+            
+        # Legacy full sync logic
         self.db.execute("DELETE FROM repeater_workspace")
-        # Notice we do NOT delete groups here anymore! Groups are handled independently.
 
-        for item in data:
+        for idx, item in enumerate(data):
             req_data = {
                 "headers": item.get("headers", {}),
                 "body": item.get("body", ""),
@@ -79,11 +93,10 @@ class RepeaterHandlers:
                 else None
             )
 
-            # STRICT ID LINKING
             group_id = item.get("groupId")
 
             self.db.execute(
-                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item["id"],
                     item["name"],
@@ -93,6 +106,8 @@ class RepeaterHandlers:
                     json.dumps(req_data),
                     json.dumps(res_data) if res_data else None,
                     item["timestamp"],
+                    item.get("orderIndex", idx),
+                    json.dumps(item.get("extract", {}))
                 ),
             )
         self.db.commit()
@@ -103,15 +118,21 @@ class RepeaterHandlers:
             data = await request.json()
             is_raw = request.query.get("raw") == "true"
             item_id = str(uuid.uuid4())
-            group_id = data.get("groupId")  # STRICT ID LINKING
+            group_id = data.get("groupId")
 
             req_data = {
                 "headers": data.get("headers", {}),
                 "body": data.get("body", ""),
             }
 
+            # Find next order index
+            order_index = 0
+            row = self.db.execute("SELECT MAX(order_index) FROM repeater_workspace WHERE group_id IS ?", (group_id,) if group_id else (None,)).fetchone()
+            if row and row[0] is not None:
+                order_index = row[0] + 1
+
             self.db.execute(
-                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item_id,
                     data.get("name", "New Request"),
@@ -121,6 +142,8 @@ class RepeaterHandlers:
                     json.dumps(req_data),
                     None,
                     int(time.time() * 1000),
+                    order_index,
+                    json.dumps(data.get("extract", {}))
                 ),
             )
             self.db.commit()
@@ -135,7 +158,19 @@ class RepeaterHandlers:
             item_id = request.match_info["id"]
             data = await request.json()
 
-            # 1. Update Group ID cleanly (No legacy string lookups fighting it anymore!)
+            if "extract" in data:
+                self.db.execute(
+                    "UPDATE repeater_workspace SET extract = ? WHERE id = ?",
+                    (json.dumps(data["extract"]), item_id),
+                )
+
+            if "orderIndex" in data:
+                self.db.execute(
+                    "UPDATE repeater_workspace SET order_index = ? WHERE id = ?",
+                    (data["orderIndex"], item_id),
+                )
+
+            # 1. Update Group ID cleanly
             if "groupId" in data:
                 self.db.execute(
                     "UPDATE repeater_workspace SET group_id = ? WHERE id = ?",
@@ -323,10 +358,16 @@ class RepeaterHandlers:
             return web.json_response({"success": False, "error": str(e)}, status=500)
 
     async def handle_postman_import(self, request):
-        """Import Postman collection JSON and dynamically resolve folder groups"""
+        """Import Postman collection OR our own custom exported format"""
         try:
             data = await request.json()
             postman_data = data.get("collection", {})
+            import_env = data.get("importEnv", False)
+            
+            # Detect our custom format
+            if "test_cases" in data:
+                return await self.handle_custom_import(data, import_env)
+
             root_group_name = data.get("group", "Postman Import")
 
             if not postman_data:
@@ -450,9 +491,15 @@ class RepeaterHandlers:
 
                     item_id = str(uuid.uuid4())
                     final_group_id = parent_group_id or root_group_id
+                    
+                    # Find next order index in group
+                    order_index = 0
+                    row = self.db.execute("SELECT MAX(order_index) FROM repeater_workspace WHERE group_id = ?", (final_group_id,)).fetchone()
+                    if row and row[0] is not None:
+                        order_index = row[0] + 1
 
                     self.db.execute(
-                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
                             item_id,
                             item_name,
@@ -462,6 +509,8 @@ class RepeaterHandlers:
                             json.dumps({"headers": headers, "body": body}),
                             None,
                             int(time.time() * 1000),
+                            order_index,
+                            json.dumps({})
                         ),
                     )
                     imported_count += 1
@@ -477,5 +526,90 @@ class RepeaterHandlers:
                     "message": f"Imported {imported_count} request(s)",
                 }
             )
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+    async def handle_custom_import(self, data, import_env):
+        """Logic for our internal export format"""
+        try:
+            project_name = data.get("name", "Imported Project")
+            global_url = data.get("url", "")
+            global_headers = data.get("header", {})
+            placeholders = data.get("placeholders", {})
+            test_cases = data.get("test_cases", [])
+
+            # 1. Optional Environment Import
+            if import_env and placeholders:
+                env_id = str(uuid.uuid4())
+                self.db.execute("INSERT INTO environments (id, name, is_active) VALUES (?, ?, 0)", (env_id, project_name))
+                for k, v in placeholders.items():
+                    var_id = str(uuid.uuid4())
+                    self.db.execute("INSERT INTO variables (id, environment_id, name, active_index) VALUES (?, ?, ?, ?)", (var_id, env_id, k, 0))
+                    self.db.execute("INSERT INTO variable_values (id, variable_id, name, value) VALUES (?, ?, ?, ?)", (str(uuid.uuid4()), var_id, "Default", str(v)))
+            
+            # 2. Import Repeater Requests
+            imported_count = 0
+            for tc in test_cases:
+                group_name = tc.get("name", "Imported Group")
+                group_url = tc.get("url", global_url)
+                targets = tc.get("target", [])
+
+                # Create or get group
+                group_row = self.db.execute("SELECT id FROM repeater_groups WHERE name = ?", (group_name,)).fetchone()
+                if not group_row:
+                    group_id = str(uuid.uuid4())
+                    group_order = (self.db.execute("SELECT MAX(order_index) FROM repeater_groups").fetchone()[0] or -1)
+                    self.db.execute("INSERT INTO repeater_groups (id, name, order_index, timestamp) VALUES (?, ?, ?, ?)",
+                                (group_id, group_name, group_order + 1, int(time.time() * 1000)))
+                else:
+                    group_id = group_row[0]
+
+                for target in targets:
+                    item_name = target.get("name", "Untitled")
+                    endpoint = target.get("endpoint", "")
+                    method = target.get("method", "GET")
+                    
+                    # Merge headers
+                    headers = {**global_headers, **target.get("header", {})}
+                    # Remove nullified headers
+                    headers = {k: v for k, v in headers.items() if v is not None}
+
+                    # Construct full URL if needed
+                    full_url = group_url + endpoint
+                    
+                    # Append params if present
+                    params = target.get("params", {})
+                    if params:
+                        query_str = urlencode(params)
+                        if "?" in full_url:
+                            full_url += "&" + query_str
+                        else:
+                            full_url += "?" + query_str
+
+                    body = target.get("body", "")
+                    if not isinstance(body, str):
+                        body = json.dumps(body)
+
+                    item_id = str(uuid.uuid4())
+                    
+                    # Find next order index in group
+                    order_index = 0
+                    row = self.db.execute("SELECT MAX(order_index) FROM repeater_workspace WHERE group_id = ?", (group_id,)).fetchone()
+                    if row and row[0] is not None:
+                        order_index = row[0] + 1
+
+                    # Merge extractions
+                    extract = target.get("extract", {})
+                    if "get_id_from_response" in target:
+                        extract["id"] = target["get_id_from_response"]
+
+                    self.db.execute(
+                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (item_id, item_name, group_id, method, full_url, json.dumps({"headers": headers, "body": body}), None, int(time.time() * 1000), order_index, json.dumps(extract))
+                    )
+                    imported_count += 1
+            
+            self.db.commit()
+            return web.json_response({"success": True, "imported": imported_count})
         except Exception as e:
             return web.json_response({"success": False, "error": str(e)}, status=500)

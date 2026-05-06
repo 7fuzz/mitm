@@ -1,0 +1,948 @@
+{
+  "name": "Duluin HRMS Comprehensive Performance Test",
+  "url": "{{apiUrl}}",
+  "header": {
+    "X-Forwarded-Host": "https://dev.hrms.duluin.com",
+    "X-Account-Type": "hris_employee",
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Authorization": "Bearer {{token}}"
+  },
+  "placeholders": {
+    "username": "0818477133",
+    "password": "password",
+    "employeeId": "3ac6df88-4ae2-4b93-863b-27c18306ae2f",
+    "companyId": "c8f745e0-aa6e-458b-bb70-4dda3e2accea",
+    "ssoUrl": "https://ssodev.duluin.com",
+    "apiUrl": "https://apidev.duluin.com",
+    "api-hrmsUrl": "https://apidev-hrms.duluin.com",
+    "claim_approver": "263d7965-4583-4231-8b98-18a27af1708d",
+    "claim_type_id": "1a839bea-493a-4462-925d-adf404007f11",
+    "approverId": "3ac6df88-4ae2-4b93-863b-27c18306ae2f",
+    "leave_type": "3575ae0e-fcce-4514-94d3-b48d2b5b5dab",
+    "user_shift": "74d2ee64-e7c8-469c-85b5-8a19da01c7be",
+    "target_shift": "22e84fba-1077-4f5d-804b-80398533756d",
+    "target_user": "6fcf75f3-074f-4c96-815d-fb612b2e27a9",
+    "adminToken": "",
+    "attachment": "https://devapis3.hrms.duluin.com/hrms/3ac6df88-4ae2-4b93-863b-27c18306ae2f/69cba71eaebfc3.59786448.jpg"
+  },
+  "test_cases": [
+    {
+      "name": "Login and Fetch Employee Details",
+      "url": "{{ssoUrl}}",
+      "target": [
+        {
+          "name": "Login",
+          "endpoint": "/api/users/login",
+          "method": "POST",
+          "header": {
+            "Authorization": null
+          },
+          "body": {
+            "email": "{{username}}",
+            "password": "{{password}}"
+          },
+          "extract": {
+            "token": "result.token",
+            "employeeId": "result.employee_id"
+          }
+        },
+        {
+          "name": "Get Employee",
+          "endpoint": "/api/v1/employees/employee/{{employeeId}}",
+          "method": "GET",
+          "extract": {
+            "companyId": "data.company_id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle: First Open App (Initial Load)",
+      "target": [
+        {
+          "name": "Get Company Permissions",
+          "url": "{{apiUrl}}",
+          "endpoint": "/api/users/company/{{companyId}}/permissions",
+          "method": "GET"
+        },
+        {
+          "name": "Get Employee Details (SSO)",
+          "url": "{{ssoUrl}}",
+          "endpoint": "/api/v1/employees/employee/{{employeeId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Get App Distribution Detail",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/notifications/app-distribution/detail",
+          "method": "GET",
+          "params": {
+            "package_id": "com.duluin.duluin_hris_app"
+          }
+        },
+        {
+          "name": "Get User Information",
+          "url": "{{apiUrl}}",
+          "endpoint": "/api/users/user",
+          "method": "GET"
+        },
+        {
+          "name": "Get Shift Assignment List",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/shift-assignment/shift-list",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "startDate": "2026-03-31",
+            "endDate": "2026-04-07"
+          }
+        },
+        {
+          "name": "Get Attendance Logs",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/attendance",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "page": 1,
+            "sort_field": "createdAt",
+            "sort_order": "desc",
+            "limit": 200,
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Get Attendance by Employee",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/attendance/employee/{{employeeId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Post Master Checkpoint",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/master-checkpoint/datatables",
+          "method": "POST",
+          "params": {
+            "company_id": "{{companyId}}"
+          },
+          "body": {}
+        },
+        {
+          "name": "Get Overtime Request",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/attendance-request/get-overtime-request-by-employee/{{employeeId}}",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Get Overtime Attendance",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/overtime-attendance/employee/{{employeeId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Get Shift by Employee ID",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/shift-assignment/employee_id/{{employeeId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Get Leave Approver List",
+          "url": "{{apiUrl}}",
+          "endpoint": "/api/v1/attendance/leave/approver",
+          "method": "GET",
+          "params": {
+            "approver_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "status": "open",
+            "approval_view": "submit",
+            "limit": 100,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Recent Attendance",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/attendance",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "page": 1,
+            "sort_field": "attendance_date",
+            "sort_order": "desc",
+            "month": "03",
+            "year": "2026",
+            "limit": 4,
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Get Employee Birthday List",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/employees/employee/birthday_list",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Get Payroll Claims",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/payroll/claims",
+          "method": "GET",
+          "params": {
+            "approver_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "approval_view": "submit",
+            "status": "submitted",
+            "page": 1,
+            "limit": 100,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Attendance Requests",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "GET",
+          "params": {
+            "page": 1,
+            "limit": 100,
+            "fetch_for_approver_id": "{{employeeId}}",
+            "approval_view": "submit",
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Get Publisher News",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/publisher/news",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}",
+            "sort_order": "desc"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle: Expense Non-Natura",
+      "target": [
+        {
+          "name": "Get Expense List (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim/all",
+          "method": "POST",
+          "body": {
+            "company_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "page": 1,
+            "limit": 100,
+            "sort": "DESC"
+          }
+        },
+        {
+          "name": "Get Expense Type (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim_type/all",
+          "method": "POST",
+          "body": {
+            "company_id": "{{companyId}}",
+            "pajak_natura": false
+          }
+        },
+        {
+          "name": "Add Expense (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim",
+          "method": "POST",
+          "body": {
+            "company": "{{companyId}}",
+            "employee": "{{employeeId}}",
+            "title": "Test Add Claim",
+            "claim_category": "expense",
+            "amount": 150000,
+            "status": "submitted",
+            "description": "Deskripsi",
+            "expense_approver": "",
+            "pajak_natura": false,
+            "expenseDetails": [
+              {
+                "claim_type_id": "{{claim_type_id}}",
+                "amount": "150000",
+                "expense_date": "2026-03-25",
+                "description": "Testing",
+                "attachment_url": "{{attachment}}",
+                "internalParticipants": [],
+                "externalParticipants": []
+              }
+            ]
+          },
+          "get_id_from_response": "data.id"
+        },
+        {
+          "name": "Detail Expense (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim/{{id}}",
+          "method": "GET"
+        },
+        {
+          "name": "Update Expense to Draft (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim/{{id}}",
+          "method": "PUT",
+          "body": {
+            "status": "draft"
+          }
+        },
+        {
+          "name": "Update Data Expense (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim/{{id}}",
+          "method": "PUT",
+          "body": {
+            "company": "{{companyId}}",
+            "employee": "{{employeeId}}",
+            "title": "Test",
+            "claim_category": "expense",
+            "amount": 1088,
+            "status": "submitted",
+            "description": "A",
+            "expense_approver": "{{employeeId}}",
+            "pajak_natura": false,
+            "expenseDetails": [
+              {
+                "claim_type_id": "a4a25746-7c35-4917-b449-ab585550fb60",
+                "amount": "755",
+                "expense_date": "2026-03-11",
+                "description": "Year",
+                "attachment_url": "{{attachment}}",
+                "internalParticipants": [],
+                "externalParticipants": []
+              },
+              {
+                "claim_type_id": "e7aa8580-8a8c-4a01-9462-6922a569e1df",
+                "amount": "333",
+                "expense_date": "2026-03-10",
+                "description": "Test",
+                "attachment_url": "{{attachment}}",
+                "internalParticipants": [],
+                "externalParticipants": []
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Expense (Non-Natura)",
+          "endpoint": "/api/v1/payroll/expense_claim/{{id}}",
+          "method": "DELETE"
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle: Advance Claim",
+      "target": [
+        {
+          "name": "Get All Advance",
+          "endpoint": "/api/v1/payroll/advance_claim/all",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "page": 1,
+            "limit": 10,
+            "sort": "DESC",
+            "column": "createdAt"
+          }
+        },
+        {
+          "name": "Add Advance",
+          "endpoint": "/api/v1/payroll/advance_claim/",
+          "method": "POST",
+          "body": {
+            "company": "{{companyId}}",
+            "employee": "{{employeeId}}",
+            "amount": "123456",
+            "purposes": "Stratosper",
+            "payment_method": "bank_transfer",
+            "attachment": null,
+            "paid_amount": "0",
+            "pending_amount": "0",
+            "claimed_amount": "0",
+            "returned_amount": "0",
+            "status": "submitted",
+            "bank_name": "ANGLOMAS INTERNASIONAL BANK",
+            "bank_account_number": "888888888888888888",
+            "bank_account_name": "Saya",
+            "claim_approver": "{{claim_approver}}"
+          },
+          "get_id_from_response": "data.id"
+        },
+        {
+          "name": "Get Advance Details",
+          "endpoint": "/api/v1/payroll/advance_claim/{{id}}",
+          "method": "GET"
+        },
+        {
+          "name": "Update Advance (Cash)",
+          "endpoint": "/api/v1/payroll/advance_claim/{{id}}/",
+          "method": "PUT",
+          "body": {
+            "company": "{{companyId}}",
+            "employee": "{{employeeId}}",
+            "amount": "336",
+            "purposes": "Tasteh",
+            "payment_method": "cash",
+            "attachment": null,
+            "paid_amount": "0.00",
+            "pending_amount": "0.00",
+            "claimed_amount": "33.00",
+            "returned_amount": "0.00",
+            "status": "submitted",
+            "claim_approver": "{{employeeId}}"
+          }
+        },
+        {
+          "name": "Get Bank (Advance Bank)",
+          "url": "https://dashboard.duluin.com",
+          "endpoint": "/api/meta/bank",
+          "method": "GET"
+        },
+        {
+          "name": "Delete Advance",
+          "endpoint": "/api/v1/payroll/advance_claim/{{id}}",
+          "method": "DELETE"
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle: Travel Request",
+      "target": [
+        {
+          "name": "Get All Travel",
+          "endpoint": "/api/v1/payroll/travel_request/all",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "page": 1,
+            "limit": 10,
+            "sort": "desc"
+          }
+        },
+        {
+          "name": "Add Travel",
+          "endpoint": "/api/v1/payroll/travel_request",
+          "method": "POST",
+          "body": {
+            "company_id": "{{companyId}}",
+            "company_parent_id": null,
+            "employee_id": "{{employeeId}}",
+            "purpose": "Kliam",
+            "attachment": "",
+            "claim_approver": "",
+            "employee_contact_type": null,
+            "employee_contact_number": null,
+            "identity_document_type": "KTP",
+            "identity_document_number": "0987098709870987",
+            "passport_number": "",
+            "description": "Travel",
+            "organizer_name": null,
+            "organizer_address": null,
+            "other_details": null,
+            "bank_name": "",
+            "bank_account_number": "",
+            "bank_account_name": "",
+            "status": "submitted",
+            "itineraries": [
+              {
+                "travel_from": "Bandung",
+                "travel_to": "Jakarta",
+                "mode_of_travel": "flight",
+                "departure_time": "2100-01-01T00:00:00.000"
+              }
+            ],
+            "costings": [
+              {
+                "expense_claim_type_id": "{{claim_type_id}}",
+                "travel_from": "Bandung",
+                "travel_to": "Jakarta",
+                "budget_amount": "123456"
+              }
+            ]
+          },
+          "get_id_from_response": "data.id"
+        },
+        {
+          "name": "Get Travel Details",
+          "endpoint": "/api/v1/payroll/travel_request/{{id}}",
+          "method": "GET"
+        },
+        {
+          "name": "Update Travel to Draft",
+          "endpoint": "/api/v1/payroll/travel_request/{{id}}/status",
+          "method": "PATCH",
+          "body": {
+            "employee_id": "{{employeeId}}",
+            "status": "draft"
+          }
+        },
+        {
+          "name": "Update Travel Date (No Budgeting)",
+          "endpoint": "/api/v1/payroll/travel_request/{{id}}",
+          "method": "PUT",
+          "body": {
+            "company_id": "{{companyId}}",
+            "company_parent_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "purpose": "Mencari Kitab Suci",
+            "attachment": "",
+            "claim_approver": "{{employeeId}}",
+            "employee_contact_type": "WhatsApp",
+            "employee_contact_number": "75757575",
+            "identity_document_type": "KTP",
+            "identity_document_number": "0987098709870987",
+            "passport_number": "",
+            "description": "Coba",
+            "organizer_name": null,
+            "organizer_address": null,
+            "other_details": null,
+            "bank_name": "",
+            "bank_account_number": "",
+            "bank_account_name": "",
+            "status": "draft",
+            "itineraries": [
+              {
+                "travel_from": "Bandung",
+                "travel_to": "Jakarta",
+                "mode_of_travel": "bus",
+                "departure_time": "2026-03-11T03:10:00.000Z"
+              }
+            ],
+            "costings": [
+              {
+                "expense_claim_type_id": "{{claim_type_id}}",
+                "travel_from": "Bandung",
+                "travel_to": "Jakarta",
+                "budget_amount": "2000000",
+                "is_roundtrip": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "Delete Travel",
+          "endpoint": "/api/v1/payroll/travel_request/{{id}}",
+          "method": "DELETE"
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle: Leave Application",
+      "target": [
+        {
+          "name": "Get Leave Allocation",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/leave/allocation/annual/{{employeeId}}",
+          "method": "GET",
+          "params": {
+            "year": "2026"
+          }
+        },
+        {
+          "name": "Get All Leave Application",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/v1/attendance/leave",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "limit": 6,
+            "status": "open",
+            "page": 1,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Leave Type",
+          "url": "{{apiUrl}}",
+          "endpoint": "/api/v1/attendance/leave-type/employee/{{employeeId}}",
+          "method": "GET",
+          "params": {
+            "company_id": "{{companyId}}"
+          }
+        },
+        {
+          "name": "Submit Leave Application",
+          "url": "{{apiUrl}}",
+          "endpoint": "/api/v1/attendance/leave",
+          "method": "POST",
+          "body": {
+            "company_id": "{{companyId}}",
+            "employee_id": "{{employeeId}}",
+            "approver_id": "{{employeeId}}",
+            "from_date": "[[today+1/10vu]]T00:00:00.000",
+            "to_date": "[[today+1/10vu]]T00:00:00.000",
+            "leave_type_id": "{{leave_type}}",
+            "reason": "tick",
+            "posting_at": "[[today]]T17:51:09.539385",
+            "status": "open",
+            "attachment": "{{attachment}}"
+          },
+          "get_id_from_response": "data.id"
+        },
+        {
+          "name": "Delete Leave Application",
+          "url": "{{api-hrmsUrl}}",
+          "endpoint": "/api/proxy/v1/attendance/leave/{{id}}",
+          "method": "DELETE",
+          "header": {
+            "X-Account-Type": "hris_company",
+            "Authorization": "Bearer {{adminToken}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle : Attendance Requests",
+      "target": [
+        {
+          "name": "Request On Duty",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "POST",
+          "body": {
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "on duty",
+            "explanation": "Reason",
+            "from_date": "[[today+1/6vu]]",
+            "to_date": "[[today+1/6vu]]",
+            "status": "submit",
+            "attachment": null
+          },
+          "extract": {
+            "onDutyReqId": "data.id"
+          }
+        },
+        {
+          "name": "Request Work from Home",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "POST",
+          "body": {
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "Work from home",
+            "explanation": "Alasan",
+            "from_date": "[[today+2/6vu]]",
+            "to_date": "[[today+2/6vu]]",
+            "status": "submit",
+            "attachment": null
+          },
+          "extract": {
+            "wfhReqId": "data.id"
+          }
+        },
+        {
+          "name": "Request Overtime",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "POST",
+          "body": {
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "overtime",
+            "explanation": "test",
+            "from_date": "[[today+0/6vu]]T00:00:00.000",
+            "to_date": "[[today+0/6vu]]T00:00:00.000",
+            "status": "submit",
+            "time_in": "06:38",
+            "time_out": "07:38",
+            "request_shift_status": null,
+            "attachment": null
+          },
+          "extract": {
+            "overtimeReqId": "data.id"
+          }
+        },
+        {
+          "name": "Tukar Shift (Requesting)",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "POST",
+          "body": {
+            "id": null,
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "tukar_shift",
+            "explanation": "spesifik",
+            "from_date": "[[today+3/6vu]]T00:00:00.000",
+            "to_date": "[[today+3/6vu]]T00:00:00.000",
+            "status": "submit",
+            "request_shift_approver_id": "{{target_user}}",
+            "request_shift_status": "submit",
+            "requester_shift_id": "{{user_shift}}",
+            "targeted_shift_id": "{{target_shift}}",
+            "targeted_from_date": "[[today+3/6vu]]",
+            "targeted_to_date": "[[today+3/6vu]]",
+            "attachment": null
+          },
+          "extract": {
+            "tukarShiftReqId": "data.id"
+          }
+        },
+        {
+          "name": "Pindah Shift (Requesting)",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "POST",
+          "body": {
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "pindah_shift",
+            "explanation": "Tet",
+            "from_date": "[[today+4/6vu]]T00:00:00.000",
+            "to_date": "[[today+4/6vu]]T00:00:00.000",
+            "status": "submit",
+            "request_shift_approver_id": null,
+            "request_shift_status": null,
+            "requester_shift_id": "{{user_shift}}",
+            "targeted_shift_id": "{{target_shift}}",
+            "targeted_from_date": "[[today+4/6vu]]",
+            "targeted_to_date": "[[today+4/6vu]]",
+            "attachment": null
+          },
+          "extract": {
+            "pindahShiftReqId": "data.id"
+          }
+        },
+        {
+          "name": "Change Request status to draft (On Duty)",
+          "endpoint": "/api/v1/attendance/attendance-request/bulk-update",
+          "method": "POST",
+          "body": {
+            "ids": [
+              "{{onDutyReqId}}"
+            ],
+            "status": "draft"
+          }
+        },
+        {
+          "name": "Update Request (On Duty)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{onDutyReqId}}",
+          "method": "PATCH",
+          "body": {
+            "id": "{{onDutyReqId}}",
+            "approver_id": "{{employeeId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "on duty",
+            "explanation": "Reason Updated",
+            "from_date": "[[today+1/6vu]]",
+            "to_date": "[[today+1/6vu]]",
+            "status": "submit",
+            "attachment": null
+          }
+        },
+        {
+          "name": "Update Request Shift exchange",
+          "endpoint": "/api/v1/attendance/attendance-request/{{tukarShiftReqId}}",
+          "method": "PATCH",
+          "body": {
+            "id": "{{tukarShiftReqId}}",
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "tukar_shift",
+            "explanation": "spesifik update",
+            "from_date": "[[today+3/6vu]]",
+            "to_date": "[[today+3/6vu]]",
+            "status": "submit",
+            "request_shift_approver_id": "{{target_user}}",
+            "request_shift_status": "submit",
+            "requester_shift_id": "{{user_shift}}",
+            "targeted_shift_id": "{{target_shift}}",
+            "targeted_from_date": "[[today+3/6vu]]",
+            "targeted_to_date": "[[today+3/6vu]]",
+            "attachment": null
+          }
+        },
+        {
+          "name": "Update Request (Work from Home)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{wfhReqId}}",
+          "method": "PATCH",
+          "body": {
+            "id": "{{wfhReqId}}",
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "Work from home",
+            "explanation": "Alasan Updated",
+            "from_date": "[[today+2/6vu]]",
+            "to_date": "[[today+2/6vu]]",
+            "status": "submit",
+            "attachment": null
+          }
+        },
+        {
+          "name": "Update Request (Overtime)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{overtimeReqId}}",
+          "method": "PATCH",
+          "body": {
+            "id": "{{overtimeReqId}}",
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "overtime",
+            "explanation": "test updated",
+            "from_date": "[[today+0/6vu]]T00:00:00.000",
+            "to_date": "[[today+0/6vu]]T00:00:00.000",
+            "status": "submit",
+            "time_in": "12:38",
+            "time_out": "13:38",
+            "request_shift_status": null,
+            "attachment": null
+          }
+        },
+        {
+          "name": "Update Request (Pindah Shift)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{pindahShiftReqId}}",
+          "method": "PATCH",
+          "body": {
+            "id": "{{pindahShiftReqId}}",
+            "approver_id": "{{approverId}}",
+            "employee_id": "{{employeeId}}",
+            "company_id": "{{companyId}}",
+            "reason": "pindah_shift",
+            "explanation": "Tet updated",
+            "from_date": "[[today+4/6vu]]T00:00:00.000",
+            "to_date": "[[today+4/6vu]]T00:00:00.000",
+            "status": "submit",
+            "request_shift_approver_id": null,
+            "request_shift_status": null,
+            "requester_shift_id": "{{user_shift}}",
+            "targeted_shift_id": "{{target_shift}}",
+            "targeted_from_date": "[[today+4/6vu]]",
+            "targeted_to_date": "[[today+4/6vu]]",
+            "attachment": null
+          }
+        },
+        {
+          "name": "Get Submitted Requests (Diajukan)",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "status": "submit",
+            "page": 1,
+            "limit": 6,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Approved Requests (Disetujui)",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "status": "approved",
+            "page": 1,
+            "limit": 6,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Rejected Requests (Ditolak)",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "status": "rejected",
+            "page": 1,
+            "limit": 6,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Get Draft Requests",
+          "endpoint": "/api/v1/attendance/attendance-request",
+          "method": "GET",
+          "params": {
+            "employee_id": "{{employeeId}}",
+            "status": "draft",
+            "page": 1,
+            "limit": 6,
+            "sort_field": "createdAt",
+            "sort_order": "desc"
+          }
+        },
+        {
+          "name": "Detail On Duty",
+          "endpoint": "/api/v1/attendance/attendance-request/{{onDutyReqId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Detail Work from Home",
+          "endpoint": "/api/v1/attendance/attendance-request/{{wfhReqId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Detail Overtime",
+          "endpoint": "/api/v1/attendance/attendance-request/{{overtimeReqId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Detail Tukar Shift",
+          "endpoint": "/api/v1/attendance/attendance-request/{{tukarShiftReqId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Detail Pindah Shift",
+          "endpoint": "/api/v1/attendance/attendance-request/{{pindahShiftReqId}}",
+          "method": "GET"
+        },
+        {
+          "name": "Delete Request (On Duty)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{onDutyReqId}}",
+          "method": "DELETE"
+        },
+        {
+          "name": "Delete Request (WFH)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{wfhReqId}}",
+          "method": "DELETE"
+        },
+        {
+          "name": "Delete Request (Overtime)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{overtimeReqId}}",
+          "method": "DELETE"
+        },
+        {
+          "name": "Delete Request (Tukar Shift)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{tukarShiftReqId}}",
+          "method": "DELETE"
+        },
+        {
+          "name": "Delete Request (Pindah Shift)",
+          "endpoint": "/api/v1/attendance/attendance-request/{{pindahShiftReqId}}",
+          "method": "DELETE"
+        }
+      ]
+    },
+    {
+      "name": "Session Cleanup",
+      "url": "{{ssoUrl}}",
+      "target": [
+        {
+          "name": "Logout",
+          "endpoint": "/api/users/logout",
+          "method": "POST",
+          "body": {}
+        }
+      ]
+    }
+  ]
+}

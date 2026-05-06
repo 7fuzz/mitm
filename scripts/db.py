@@ -28,6 +28,8 @@ class Database:
         self.conn.execute("""CREATE TABLE IF NOT EXISTS repeater_workspace (
             id TEXT PRIMARY KEY, name TEXT, group_id TEXT, method TEXT, url TEXT, 
             request TEXT, response TEXT, timestamp INTEGER,
+            order_index INTEGER DEFAULT 0,
+            extract TEXT,
             FOREIGN KEY(group_id) REFERENCES repeater_groups(id) ON DELETE SET NULL
         )""")
 
