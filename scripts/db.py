@@ -75,7 +75,7 @@ class Database:
         import uuid
         import os
 
-        json_path = os.path.join(os.path.dirname(__file__), "..", "config", "replacements.json")
+        json_path = os.path.join(os.path.dirname(__file__), "replacements.json")
         if not os.path.exists(json_path):
             return
 
