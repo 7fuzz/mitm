@@ -9,7 +9,7 @@ export async function GET() {
     const res = await fetch(`${PYTHON_API}/replacements`);
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (e) {
+  } catch (_e) {
     return NextResponse.json({ error: 'Failed to fetch replacements from proxy' }, { status: 500 });
   }
 }
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (_error) {
     console.error("Replacements API Error:", error);
     return NextResponse.json({ success: false, error: 'Failed to save replacements' }, { status: 400 });
   }
@@ -44,7 +44,7 @@ export async function PUT(req: Request) {
     
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Failed to update replacement order' }, { status: 400 });
   }
 }
@@ -61,7 +61,7 @@ export async function DELETE(req: Request) {
     
     const data = await res.json();
     return NextResponse.json(data);
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Failed to delete replacement' }, { status: 400 });
   }
 }

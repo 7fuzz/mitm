@@ -24,6 +24,24 @@ const DEFAULT_REPLACEMENTS: ReplacementsData = {
   TEXT_REPLACEMENTS: {}
 };
 
+// Helper function for nested JSON body transformation
+function transformObjectHelper(obj: unknown, bodyReplacements: Record<string, string>): unknown {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => transformObjectHelper(item, bodyReplacements));
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const lowerKey = key.toLowerCase();
+    if (bodyReplacements[lowerKey]) {
+      result[key] = bodyReplacements[lowerKey];
+    } else if (typeof value === 'object') {
+      result[key] = transformObjectHelper(value, bodyReplacements);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export function useReplacements() {
   const [replacements, setReplacements] = useState<ReplacementsData>(DEFAULT_REPLACEMENTS);
   const [orderedReplacements, setOrderedReplacements] = useState<OrderedReplacement[]>([]);
@@ -31,15 +49,14 @@ export function useReplacements() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchReplacements = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
     try {
       const res = await fetch('/api/replacements');
+      setError(null);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       // Handle new format with grouped and ordered
       if (data.grouped) {
-        const grouped = data.grouped;
+        const grouped = data.grouped as ReplacementsData & { HEADER_VALUE_REPLACEMENTS?: Record<string, string> };
         // Migration: Merge legacy header replacements if they exist
         const unifiedHeaders = {
           ...(grouped.HEADER_VALUE_REPLACEMENTS || {}),
@@ -54,14 +71,14 @@ export function useReplacements() {
       } else {
         setReplacements(data);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const saveReplacements = useCallback(async (data: any, incremental = false) => {
+  const saveReplacements = useCallback(async (data: ReplacementsData | OrderedReplacement[], incremental = false) => {
     setError(null);
     try {
       const res = await fetch(`/api/replacements${incremental ? '?incremental=true' : ''}`, {
@@ -75,16 +92,16 @@ export function useReplacements() {
         if (incremental) {
           await fetchReplacements();
         } else {
-          setReplacements(data);
+          setReplacements(data as ReplacementsData);
         }
       }
       return result;
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : 'Unknown error';
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
       setError(errMsg);
       return { success: false, error: errMsg };
     }
-  }, []);
+  }, [fetchReplacements]);
 
   const updateOrder = useCallback(async (items: OrderedReplacement[]) => {
     setError(null);
@@ -125,11 +142,10 @@ export function useReplacements() {
     }
   }, [fetchReplacements]);
 
-  // Apply functions - defined inside the hook before return
+  // Apply functions
   const applyUrlReplacements = useCallback((url: string): string => {
     try {
       let result = url;
-      // 1. Apply global text replacements first
       for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
         result = result.replaceAll(pattern, replacement);
       }
@@ -143,7 +159,6 @@ export function useReplacements() {
       }
       parsed.hostname = hostname;
 
-      // Apply query parameter replacements
       const searchParams = parsed.search;
       let newSearch = searchParams;
       for (const [key, value] of Object.entries(replacements.URL_PARAM_REPLACEMENTS)) {
@@ -155,7 +170,6 @@ export function useReplacements() {
       return parsed.toString();
     } catch {
       let result = url;
-      // 1. Apply global text replacements
       for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
         result = result.replaceAll(pattern, replacement);
       }
@@ -174,7 +188,6 @@ export function useReplacements() {
       let newValue = value;
       const lowerKey = key.toLowerCase();
       
-      // 1. Unified header replacement based on KEY
       for (const [pattern, replacement] of Object.entries(replacements.HEADER_REPLACEMENTS)) {
         if (lowerKey === pattern.toLowerCase()) {
            newValue = replacement;
@@ -182,7 +195,6 @@ export function useReplacements() {
         }
       }
 
-      // 2. Global text replacement on VALUE
       for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
         newValue = newValue.replaceAll(pattern, replacement);
       }
@@ -195,7 +207,6 @@ export function useReplacements() {
   const applyBodyReplacements = useCallback((body: string): string => {
     try {
       let transformedBody = body;
-      // 1. Apply global text replacements
       for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
         transformedBody = transformedBody.replaceAll(pattern, replacement);
       }
@@ -205,7 +216,6 @@ export function useReplacements() {
       return JSON.stringify(transformed, null, 2);
     } catch {
       let result = body;
-      // Fallback: apply text replacements even if not valid JSON
       for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
         result = result.replaceAll(pattern, replacement);
       }
@@ -214,7 +224,7 @@ export function useReplacements() {
   }, [replacements]);
 
   useEffect(() => {
-    fetchReplacements();
+    Promise.resolve().then(() => fetchReplacements());
   }, [fetchReplacements]);
 
   return {
@@ -230,22 +240,4 @@ export function useReplacements() {
     applyHeaderReplacements,
     applyBodyReplacements,
   };
-}
-
-// Helper function for nested JSON body transformation
-function transformObjectHelper(obj: any, bodyReplacements: Record<string, string>): any {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(item => transformObjectHelper(item, bodyReplacements));
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const lowerKey = key.toLowerCase();
-    if (bodyReplacements[lowerKey]) {
-      result[key] = bodyReplacements[lowerKey];
-    } else if (typeof value === 'object') {
-      result[key] = transformObjectHelper(value, bodyReplacements);
-    } else {
-      result[key] = value;
-    }
-  }
-  return result;
 }

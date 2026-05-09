@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 // --- Sub-component: Handles typing without losing focus ---
 const EditableKey = ({ initialKey, onCommit }: { initialKey: string, onCommit: (oldK: string, newK: string) => void }) => {
   const [localKey, setLocalKey] = useState(initialKey);
+  const [prevInitialKey, setPrevInitialKey] = useState(initialKey);
 
-  useEffect(() => setLocalKey(initialKey), [initialKey]);
+  if (initialKey !== prevInitialKey) {
+    setPrevInitialKey(initialKey);
+    setLocalKey(initialKey);
+  }
 
   const handleBlur = () => {
     const trimmed = localKey.trim();
@@ -17,54 +21,71 @@ const EditableKey = ({ initialKey, onCommit }: { initialKey: string, onCommit: (
 
   return (
     <div className="w-1/3 flex items-center shrink-0 group/key">
-      <span className="text-zinc-600 font-mono text-[11px] mr-1">"</span>
+      <span className="text-zinc-600 font-mono text-[11px] mr-1">&quot;</span>
       <input
         value={localKey}
         onChange={(e) => setLocalKey(e.target.value)}
         onBlur={handleBlur}
         className="flex-1 bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-sky-500 text-sky-400 text-[11px] font-mono outline-none min-w-0 transition-colors"
       />
-      <span className="text-zinc-600 font-mono text-[11px] ml-1">":</span>
+      <span className="text-zinc-600 font-mono text-[11px] ml-1">&quot;:</span>
     </div>
   );
 };
 
 // --- Recursive Node Component ---
-const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
+interface JsonNodeProps {
+  label: string | null;
+  value: unknown;
+  onChange: (newVal: unknown) => void;
+  onDelete?: () => void;
+  onKeyChange?: (oldKey: string, newKey: string) => void;
+}
+
+const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodeProps) => {
   const isArray = Array.isArray(value);
   const isObject = value !== null && typeof value === 'object' && !isArray;
 
   if (isObject || isArray) {
-    const keys = Object.keys(value);
+    const keys = Object.keys(value as object);
 
-    const handleChildChange = (key: string, newVal: any) => {
-      const cloned = isArray ? [...value] : { ...value };
-      cloned[key] = newVal;
+    const handleChildChange = (key: string, newVal: unknown) => {
+      const cloned = isArray ? [...(value as unknown[])] : { ...(value as Record<string, unknown>) };
+      if (isArray) (cloned as unknown[])[Number(key)] = newVal;
+      else (cloned as Record<string, unknown>)[key] = newVal;
       onChange(cloned);
     };
 
     const handleChildDelete = (key: string) => {
-      const cloned: any = isArray ? [...value] : { ...value };
-      if (isArray) cloned.splice(Number(key), 1);
-      else delete cloned[key];
-      onChange(cloned);
+      if (isArray) {
+        const cloned = [...(value as unknown[])];
+        cloned.splice(Number(key), 1);
+        onChange(cloned);
+      } else {
+        const cloned = { ...(value as Record<string, unknown>) };
+        delete cloned[key];
+        onChange(cloned);
+      }
     };
 
     const handleChildKeyChange = (oldKey: string, newKey: string) => {
       if (oldKey === newKey || isArray) return;
-      const newObj: any = {};
-      for (const k in value) {
-        if (k === oldKey) newObj[newKey] = value[oldKey];
-        else newObj[k] = value[k];
+      const original = value as Record<string, unknown>;
+      const newObj: Record<string, unknown> = {};
+      for (const k in original) {
+        if (k === oldKey) newObj[newKey] = original[oldKey];
+        else newObj[k] = original[k];
       }
       onChange(newObj);
     };
 
     const handleAdd = () => {
-      const cloned: any = isArray ? [...value] : { ...value };
-      if (isArray) cloned.push(""); // New array items default to empty string
-      else cloned[`new_key_${Date.now().toString().slice(-4)}`] = ""; // New keys default to empty string
-      onChange(cloned);
+      if (isArray) {
+        onChange([...(value as unknown[]), ""]);
+      } else {
+        const next = { ...(value as Record<string, unknown>), [`new_key_${Date.now().toString().slice(-4)}`]: "" };
+        onChange(next);
+      }
     };
 
     return (
@@ -89,8 +110,8 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
           <div key={k} className="mt-1">
             <JsonNode
               label={isArray ? null : k}
-              value={value[k]}
-              onChange={(newVal: any) => handleChildChange(k, newVal)}
+              value={(value as Record<string, unknown>)[k]}
+              onChange={(newVal: unknown) => handleChildChange(k, newVal)}
               onDelete={() => handleChildDelete(k)}
               onKeyChange={isArray ? null : handleChildKeyChange}
             />
@@ -103,7 +124,6 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
     );
   }
 
-  // === UPGRADED: Primitive Leaf Node with Explicit Types ===
   const valueType = value === null ? 'null' : typeof value;
 
   const handleTypeSwitch = (newType: string) => {
@@ -121,7 +141,6 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
         <div className="w-4 shrink-0 text-zinc-600 text-[10px] flex justify-end pr-2">-</div>
       )}
 
-      {/* Type Selector Dropdown */}
       <select
         value={valueType}
         onChange={(e) => handleTypeSwitch(e.target.value)}
@@ -133,7 +152,6 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
         <option value="null">NULL</option>
       </select>
 
-      {/* Context-Aware Input Surface */}
       {valueType === 'boolean' ? (
         <select
           value={String(value)}
@@ -149,14 +167,14 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
         </div>
       ) : (
         <div className="flex-1 flex items-center bg-zinc-950/50 border border-zinc-800/50 hover:border-zinc-700 focus-within:border-sky-500 rounded transition-colors overflow-hidden">
-          {valueType === 'string' && <span className="text-zinc-600 pl-2">"</span>}
+          {valueType === 'string' && <span className="text-zinc-600 pl-2">&quot;</span>}
           <input
             type={valueType === 'number' ? 'number' : 'text'}
             value={value}
             onChange={(e) => onChange(valueType === 'number' ? Number(e.target.value) : e.target.value)}
             className={`w-full bg-transparent p-1.5 outline-none text-[11px] font-mono ${valueType === 'number' ? 'text-sky-400' : 'text-emerald-400'}`}
           />
-          {valueType === 'string' && <span className="text-zinc-600 pr-2">"</span>}
+          {valueType === 'string' && <span className="text-zinc-600 pr-2">&quot;</span>}
         </div>
       )}
 
@@ -169,24 +187,21 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: any) => {
   );
 };
 
-// --- Main Wrapper ---
 export function JsonEditor({ initialBody, onChange }: { initialBody: string, onChange: (v: string) => void }) {
-  const [parsed, setParsed] = useState<any>(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
+  const { parsed, error } = useMemo(() => {
     try {
       if (!initialBody || initialBody.trim() === '') {
-        setParsed({});
-        setError('');
-        return;
+        return { parsed: {}, error: '' };
       }
-      setParsed(JSON.parse(initialBody));
-      setError('');
-    } catch (e) {
-      setError('Invalid JSON syntax. Fix it in Raw mode first.');
+      return { parsed: JSON.parse(initialBody), error: '' };
+    } catch (_e) {
+      return { parsed: null, error: 'Invalid JSON syntax. Fix it in Raw mode first.' };
     }
   }, [initialBody]);
+
+  const handleChange = useCallback((newObj: unknown) => {
+    onChange(JSON.stringify(newObj, null, 2));
+  }, [onChange]);
 
   if (error) return (
     <div className="text-rose-400 text-xs p-4 border border-rose-500/30 rounded bg-rose-500/10 font-mono m-4">
@@ -198,11 +213,9 @@ export function JsonEditor({ initialBody, onChange }: { initialBody: string, onC
   return (
     <div className="p-4 bg-zinc-900/30 rounded overflow-x-auto min-h-full">
       <JsonNode
+        label={null}
         value={parsed}
-        onChange={(newObj: any) => {
-          setParsed(newObj);
-          onChange(JSON.stringify(newObj, null, 2));
-        }}
+        onChange={handleChange}
       />
     </div>
   );

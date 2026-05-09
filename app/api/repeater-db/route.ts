@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
     const response = await fetch(targetUrl);
     return NextResponse.json(await response.json());
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Backend unreachable' }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface MultiGroupExportModalProps {
   isOpen: boolean;
@@ -10,12 +10,14 @@ interface MultiGroupExportModalProps {
 export function MultiGroupExportModal({ isOpen, groups, onClose, onExport }: MultiGroupExportModalProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [projectName, setProjectName] = useState('My Project Export');
+  const [prevOpen, setPrevOpen] = useState(isOpen);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedIds(groups.map(g => g.id));
-    }
-  }, [isOpen, groups]);
+  if (isOpen && !prevOpen) {
+    setPrevOpen(true);
+    setSelectedIds(groups.map(g => g.id));
+  } else if (!isOpen && prevOpen) {
+    setPrevOpen(false);
+  }
 
   if (!isOpen) return null;
 

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(await response.json());
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Backend unreachable' }, { status: 500 });
   }
 }

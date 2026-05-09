@@ -45,11 +45,11 @@ function TrafficApp() {
 
           <button
             onClick={() => setActiveTab('intercept')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'intercept' ? 'border-rose-500 text-rose-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+            className={`px-6 h-full flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'intercept' ? 'border-rose-500 text-rose-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
           >
             Intercept
             {pendingCount > 0 && (
-              <span className="bg-rose-500 text-zinc-950 px-1.5 py-0.5 rounded text-[9px] animate-pulse">
+              <span className="flex items-center justify-center min-w-5 h-5 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-full text-[9px] animate-pulse px-1 font-black">
                 {pendingCount}
               </span>
             )}
@@ -57,11 +57,11 @@ function TrafficApp() {
 
           <button
             onClick={() => setActiveTab('repeater')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'repeater' ? 'border-purple-500 text-purple-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+            className={`px-6 h-full flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'repeater' ? 'border-purple-500 text-purple-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
           >
             Workbench
             {repeaterRequests.length > 0 && (
-              <span className="bg-purple-500 text-zinc-950 px-1.5 py-0.5 rounded text-[9px]">
+              <span className="flex items-center justify-center min-w-5 h-5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full text-[9px] px-1 font-black">
                 {repeaterRequests.length}
               </span>
             )}
@@ -100,12 +100,12 @@ function TrafficApp() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
-          <span className="relative flex h-2 w-2">
+        <div className="flex items-center gap-3 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full group hover:border-emerald-500/40 transition-all cursor-default">
+          <div className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          Proxy_Active
+          </div>
+          <span className="text-[10px] text-emerald-500/80 font-black uppercase tracking-[0.15em]">Proxy_Live</span>
         </div>
       </header>
 

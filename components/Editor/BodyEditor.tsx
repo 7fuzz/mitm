@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { JsonEditor } from './JsonEditor';
 import { FormEditor } from './FormEditor';
 
@@ -9,16 +9,22 @@ interface Props {
 }
 
 export function BodyEditor({ body, headers, onChange }: Props) {
-  const [mode, setMode] = useState<'raw' | 'json' | 'form'>('raw');
-
   const contentTypeKey = Object.keys(headers).find(k => k.toLowerCase() === 'content-type');
   const contentType = contentTypeKey ? headers[contentTypeKey].toLowerCase() : '';
 
-  useEffect(() => {
+  const [mode, setMode] = useState<'raw' | 'json' | 'form'>(() => {
+    if (contentType.includes('application/json')) return 'json';
+    if (contentType.includes('form-urlencoded') || contentType.includes('multipart/form-data')) return 'form';
+    return 'raw';
+  });
+  const [prevContentType, setPrevContentType] = useState(contentType);
+
+  if (contentType !== prevContentType) {
+    setPrevContentType(contentType);
     if (contentType.includes('application/json')) setMode('json');
     else if (contentType.includes('form-urlencoded') || contentType.includes('multipart/form-data')) setMode('form');
     else setMode('raw');
-  }, [contentType]);
+  }
 
   return (
     // UPGRADED: Added resize-y to root container
@@ -28,8 +34,8 @@ export function BodyEditor({ body, headers, onChange }: Props) {
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Body Format:</span>
           <div className="flex bg-zinc-950 p-0.5 rounded items-center">
-            {['raw', 'json', 'form'].map((m) => (
-              <button key={m} onClick={() => setMode(m as any)} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === m ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+            {(['raw', 'json', 'form'] as const).map((m) => (
+              <button key={m} onClick={() => setMode(m)} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === m ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 {m}
               </button>
             ))}

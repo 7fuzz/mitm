@@ -17,7 +17,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     });
 
     return NextResponse.json(await response.json());
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Backend unreachable' }, { status: 500 });
   }
 }
@@ -32,7 +32,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     });
 
     return NextResponse.json(await response.json());
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ success: false, error: 'Backend unreachable' }, { status: 500 });
   }
 }

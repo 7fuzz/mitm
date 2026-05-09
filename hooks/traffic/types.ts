@@ -15,3 +15,21 @@ export interface RepeaterGroup {
   name: string;
   orderIndex?: number;
 }
+
+export interface RepeaterRequest {
+  id: string;
+  name: string;
+  groupId: string | null;
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+  timestamp: number;
+  extract?: Record<string, string>;
+  response?: {
+    status: number;
+    headers: Record<string, string>;
+    body: string;
+    time?: number;
+  };
+}

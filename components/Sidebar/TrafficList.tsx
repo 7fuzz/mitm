@@ -16,7 +16,7 @@ interface TrafficListProps {
   layout?: 'sidebar' | 'table';
 }
 
-function SortableTrafficItem({ req, activeId, activeColor, onSelect, onDelete }: { req: Traffic, activeId: string | null, activeColor: any, onSelect: any, onDelete: any }) {
+function SortableTrafficItem({ req, activeId, activeColor, onSelect, onDelete }: { req: Traffic, activeId: string | null, activeColor: 'emerald' | 'purple' | 'sky', onSelect: (id: string) => void, onDelete?: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: req.id });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
   return (

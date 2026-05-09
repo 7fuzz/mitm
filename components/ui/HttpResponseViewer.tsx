@@ -10,13 +10,17 @@ const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void })
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    setIsTyping(true);
     const handler = setTimeout(() => {
       onSearch(input);
       setIsTyping(false);
     }, 400); // 400ms debounce
     return () => clearTimeout(handler);
   }, [input, onSearch]);
+
+  const handleInputChange = (val: string) => {
+    setInput(val);
+    if (val !== input) setIsTyping(true);
+  };
 
   return (
     <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0 h-7">
@@ -27,11 +31,11 @@ const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void })
         type="text"
         placeholder="Search..."
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => handleInputChange(e.target.value)}
         className="w-20 md:w-24 focus:w-32 transition-all bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600"
       />
       {input && (
-        <button onClick={() => { setInput(""); onSearch(""); }} className="text-zinc-500 hover:text-rose-400 mr-1 flex items-center justify-center">✕</button>
+        <button onClick={() => { handleInputChange(""); onSearch(""); }} className="text-zinc-500 hover:text-rose-400 mr-1 flex items-center justify-center">✕</button>
       )}
     </div>
   );
@@ -117,6 +121,12 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [prevText, setPrevText] = useState(text);
+
+  if (text !== prevText) {
+    setPrevText(text);
+    setMediaUrl(null);
+  }
 
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
   const [expandedArrays, setExpandedArrays] = useState<Set<string>>(new Set());
@@ -139,13 +149,13 @@ export default function HttpResponseViewer({ text }: { text: string }) {
     if (!parsed.json) return;
     const paths = new Set<string>();
 
-    const traverse = (obj: any, currentPath: string) => {
+    const traverse = (obj: unknown, currentPath: string) => {
       if (obj !== null && typeof obj === 'object') {
         paths.add(currentPath);
         if (Array.isArray(obj)) {
           obj.forEach((item, i) => traverse(item, `${currentPath}-${i}`));
         } else {
-          Object.entries(obj).forEach(([k, v]) => traverse(v, `${currentPath}-${encodeURIComponent(k)}`));
+          Object.entries(obj as Record<string, unknown>).forEach(([k, v]) => traverse(v, `${currentPath}-${encodeURIComponent(k)}`));
         }
       }
     };
@@ -166,7 +176,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
   }, [parsed.json, parsed.rawBody]);
 
   useEffect(() => {
-    if (!parsed.rawBody || !isMediaOrFile) { setMediaUrl(null); return; }
+    if (!parsed.rawBody || !isMediaOrFile) return;
     let objectUrl: string | null = null;
     try {
       const isBase64 = !parsed.rawBody.includes(' ') && parsed.rawBody.length % 4 === 0 && /^[A-Za-z0-9+/=]+$/.test(parsed.rawBody.substring(0, 100));
@@ -178,14 +188,15 @@ export default function HttpResponseViewer({ text }: { text: string }) {
       } else {
         const blob = new Blob([parsed.rawBody], { type: parsed.contentType });
         objectUrl = URL.createObjectURL(blob);
-        setMediaUrl(objectUrl);
+        const url = objectUrl;
+        setTimeout(() => setMediaUrl(url), 0);
       }
-    } catch (e) { console.error("Failed to parse media blob", e); }
+    } catch (err) { console.error("Failed to parse media blob", err); }
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [parsed.rawBody, parsed.contentType, isMediaOrFile]);
 
   const handleCopyFull = () => {
-    let content = parsed.headersStr ? `${parsed.headersStr}\n\n${formattedBody}` : formattedBody;
+    const content = parsed.headersStr ? `${parsed.headersStr}\n\n${formattedBody}` : formattedBody;
     navigator.clipboard.writeText(content);
     setCopiedFull(true);
     setTimeout(() => setCopiedFull(false), 2000);

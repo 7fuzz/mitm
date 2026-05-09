@@ -1,9 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
+
+interface JsonViewerProps {
+  label?: string;
+  value: unknown;
+  isLast?: boolean;
+  expandSignal?: boolean;
+  collapseSignal?: boolean;
+  path: string;
+  searchTerm?: string;
+  filterMode?: boolean;
+  forceShow?: boolean;
+  redactedKeys?: string[];
+  onToggleRedact?: (key: string) => void;
+  collapsedPaths?: Set<string>;
+  onToggleCollapse?: (path: string, force?: boolean) => void;
+  expandedArrays?: Set<string>;
+  onExpandArray?: (path: string) => void;
+}
 
 // --- Deep Search Recursion ---
-const deepSearch = (obj: any, term: string): boolean => {
+const deepSearch = (obj: unknown, term: string): boolean => {
   if (!term) return false;
   if (obj === null || typeof obj !== 'object') {
     return String(obj).toLowerCase().includes(term);
@@ -11,7 +29,7 @@ const deepSearch = (obj: any, term: string): boolean => {
   if (Array.isArray(obj)) {
     return obj.some(item => deepSearch(item, term));
   }
-  return Object.entries(obj).some(([k, v]) =>
+  return Object.entries(obj as Record<string, unknown>).some(([k, v]) =>
     k.toLowerCase().includes(term) || deepSearch(v, term)
   );
 };
@@ -34,7 +52,7 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
 };
 
 export default function JsonViewer({
-  label, value, isLast = true, expandSignal, collapseSignal, path,
+  label, value, isLast = true, path,
   searchTerm = "", filterMode = false, forceShow = false,
   redactedKeys = [],
   onToggleRedact = undefined,
@@ -42,7 +60,7 @@ export default function JsonViewer({
   onToggleCollapse = undefined,
   expandedArrays = new Set<string>(),
   onExpandArray = undefined
-}: any) {
+}: JsonViewerProps) {
 
   // Use centralized collapse state if provided, otherwise default to expanded
   const isCollapsed = collapsedPaths.has(path);
@@ -82,12 +100,12 @@ export default function JsonViewer({
   const processedItems = useMemo(() => {
     if (!filterMode || !searchTerm || shouldForceShow) return items;
 
-    return items.filter((item: any) => {
+    return (items as unknown[]).filter((item: unknown) => {
       if (isArray) {
         if (item === null || typeof item !== 'object') return String(item).toLowerCase().includes(termLower);
         return deepSearch(item, termLower);
       } else {
-        const [k, v] = item;
+        const [k, v] = item as [string, unknown];
         if (k.toLowerCase().includes(termLower)) return true;
         if (v === null || typeof v !== 'object') return String(v).toLowerCase().includes(termLower);
         return deepSearch(v, termLower);
@@ -142,13 +160,13 @@ export default function JsonViewer({
         <div className="flex-1 min-w-0 break-all flex items-center">
           {label && (
             <span className="text-sky-400 mr-1 whitespace-nowrap">
-              "<HighlightText text={label} query={searchTerm} />":
+              &quot;<HighlightText text={label} query={searchTerm} />&quot;:
             </span>
           )}
           <span className={valueColor}>
-            {isString && !isRedacted && '"'}
+            {isString && !isRedacted && '&quot;'}
             <HighlightText text={formattedValue} query={searchTerm} />
-            {isString && !isRedacted && '"'}
+            {isString && !isRedacted && '&quot;'}
           </span>
           {!isLast && <span className="text-zinc-500">,</span>}
         </div>
@@ -180,7 +198,7 @@ export default function JsonViewer({
         <div className="flex-1 min-w-0 flex items-center flex-wrap">
           {label && (
             <span className="text-sky-400 mr-1 whitespace-nowrap">
-              "<HighlightText text={label} query={searchTerm} />":
+              &quot;<HighlightText text={label} query={searchTerm} />&quot;:
             </span>
           )}
           <span className="text-zinc-400">{openBracket}</span>
@@ -198,10 +216,10 @@ export default function JsonViewer({
       {expanded && !isEmpty && (
         <div className="ml-3 pl-3.5 border-l border-zinc-700 hover:border-zinc-500 transition-colors">
           {isArray
-            ? visibleItems.map((item: any, index: number) => (
+            ? (visibleItems as unknown[]).map((item: unknown, index: number) => (
               <JsonViewer key={index} value={item} isLast={index === visibleItems.length - 1} path={`${path}-${index}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))
-            : visibleItems.map(([key, val]: any, index: number) => (
+            : (visibleItems as [string, unknown][]).map(([key, val], index: number) => (
               <JsonViewer key={key} label={key} value={val} isLast={index === visibleItems.length - 1} path={`${path}-${encodeURIComponent(key)}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))}
           {isLongArray && !effectiveShowAll && (

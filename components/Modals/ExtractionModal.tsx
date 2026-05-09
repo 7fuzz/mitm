@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { GlobalVariable } from '@/hooks/traffic';
 
 interface ExtractionModalProps {
@@ -11,17 +11,21 @@ interface ExtractionModalProps {
 
 export function ExtractionModal({ isOpen, onClose, onSave, initialRules, availableVariables }: ExtractionModalProps) {
   const [rules, setRules] = useState<{ id: string; varName: string; path: string }[]>([]);
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  const [prevInitialRules, setPrevInitialRules] = useState(initialRules);
 
-  useEffect(() => {
-    if (isOpen) {
-      const initial = Object.entries(initialRules).map(([varName, path]) => ({
-        id: crypto.randomUUID(),
-        varName,
-        path
-      }));
-      setRules(initial.length > 0 ? initial : []);
-    }
-  }, [isOpen, initialRules]);
+  if (isOpen && (!prevOpen || initialRules !== prevInitialRules)) {
+    setPrevOpen(true);
+    setPrevInitialRules(initialRules);
+    const initial = Object.entries(initialRules).map(([varName, path]) => ({
+      id: crypto.randomUUID(),
+      varName,
+      path
+    }));
+    setRules(initial.length > 0 ? initial : []);
+  } else if (!isOpen && prevOpen) {
+    setPrevOpen(false);
+  }
 
   if (!isOpen) return null;
 

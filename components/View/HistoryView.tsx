@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Traffic } from '@/types/traffic';
 import { TrafficList } from '../Sidebar/TrafficList';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
@@ -42,8 +42,12 @@ export function HistoryView() {
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [localLimit, setLocalLimit] = useState(historyLimit.toString());
+  const [prevHistoryLimit, setPrevHistoryLimit] = useState(historyLimit);
 
-  useEffect(() => setLocalLimit(historyLimit.toString()), [historyLimit]);
+  if (historyLimit !== prevHistoryLimit) {
+    setPrevHistoryLimit(historyLimit);
+    setLocalLimit(historyLimit.toString());
+  }
 
   const handleLimitCommit = () => {
     const val = Number(localLimit);
@@ -51,7 +55,7 @@ export function HistoryView() {
     else setLocalLimit(historyLimit.toString());
   };
 
-  const handleSaveToVault = async (data: any) => {
+  const handleSaveToVault = async (data: unknown) => {
     await fetch('/api/saved', { method: 'POST', body: JSON.stringify(data) });
     setShowSaveModal(false);
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 interface Props {
   method?: string;
@@ -11,19 +11,14 @@ interface Props {
 export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readOnly = false }: Props) {
   const [mode, setMode] = useState<'raw' | 'structured'>('raw');
   const [rawUrl, setRawUrl] = useState(url);
+  const [prevUrl, setPrevUrl] = useState(url);
 
   const [domain, setDomain] = useState('');
   const [paths, setPaths] = useState<{ id: string; v: string }[]>([]);
   const [params, setParams] = useState<{ id: string; k: string; v: string }[]>([]);
   const [fragment, setFragment] = useState('');
 
-  useEffect(() => {
-    if (url === rawUrl) return;
-    setRawUrl(url);
-    parseUrlToStructured(url);
-  }, [url]);
-
-  const parseUrlToStructured = (targetUrl: string) => {
+  const parseUrlToStructured = useCallback((targetUrl: string) => {
     try {
       const parsed = new URL(targetUrl);
       setDomain(parsed.origin);
@@ -38,10 +33,16 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
       parsed.searchParams.forEach((v, k) => p.push({ id: crypto.randomUUID(), k, v }));
       setParams(p);
       setFragment(parsed.hash.replace('#', ''));
-    } catch {
+    } catch (_err) {
       setDomain(targetUrl); setPaths([]); setParams([]); setFragment('');
     }
-  };
+  }, []);
+
+  if (url !== prevUrl) {
+    setPrevUrl(url);
+    setRawUrl(url);
+    parseUrlToStructured(url);
+  }
 
   const handleModeSwitch = (newMode: 'raw' | 'structured') => {
     if (newMode === 'structured' && mode === 'raw') parseUrlToStructured(rawUrl);
@@ -76,7 +77,6 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
   return (
     <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-25">
 
-      {/* UPGRADED TOOLBAR: Now contains the HTTP Method Selector! */}
       <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800 shrink-0">
 
         <div className="flex items-center gap-3">

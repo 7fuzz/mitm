@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   const res = await fetch('http://127.0.0.1:3001/history', { cache: 'no-store' });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { JsonEditor } from '../Editor/JsonEditor';
 import JsonViewer from '../ui/JsonViewer';
 import { useNotification } from '../ui/NotificationProvider';
@@ -16,6 +16,15 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
   const [redactedKeys, setRedactedKeys] = useState<string[]>([]);
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
   const [expandedArrays, setExpandedArrays] = useState<Set<string>>(new Set());
+
+  const parsedData = useMemo(() => {
+    try {
+      if (!rawJson || rawJson.trim() === '') return { data: {}, error: null };
+      return { data: JSON.parse(rawJson), error: null };
+    } catch (_e) {
+      return { data: null, error: 'Invalid JSON syntax' };
+    }
+  }, [rawJson]);
 
   const handleFormat = () => {
     try {
@@ -52,116 +61,107 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
   };
 
   const redactAll = () => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      const allKeys = new Set<string>(redactedKeys);
+    if (parsedData.error) return notify.error('Cannot read tree: ' + parsedData.error);
+    const allKeys = new Set<string>(redactedKeys);
 
-      const extractAllKeys = (obj: any) => {
-        if (Array.isArray(obj)) {
-          obj.forEach(extractAllKeys);
-        } else if (obj !== null && typeof obj === 'object') {
-          for (const k of Object.keys(obj)) {
-            allKeys.add(k);
-            extractAllKeys(obj[k]);
-          }
+    const extractAllKeys = (obj: unknown) => {
+      if (Array.isArray(obj)) {
+        obj.forEach(extractAllKeys);
+      } else if (obj !== null && typeof obj === 'object') {
+        const rec = obj as Record<string, unknown>;
+        for (const k of Object.keys(rec)) {
+          allKeys.add(k);
+          extractAllKeys(rec[k]);
         }
-      };
+      }
+    };
 
-      extractAllKeys(parsed);
-      setRedactedKeys(Array.from(allKeys));
-      setIsRedactionActive(true);
-      notify.success('Redacted all values');
-    } catch {
-      notify.error('Cannot read tree: Invalid JSON');
-    }
+    extractAllKeys(parsedData.data);
+    setRedactedKeys(Array.from(allKeys));
+    setIsRedactionActive(true);
+    notify.success('Redacted all values');
   };
 
   const autoRedact = () => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      const newRedacted = new Set<string>(redactedKeys);
+    if (parsedData.error) return notify.error('Cannot read tree: ' + parsedData.error);
+    const newRedacted = new Set<string>(redactedKeys);
 
-      const isSensitive = (key: string) => {
-        const lower = key.toLowerCase();
+    const isSensitive = (key: string) => {
+      const lower = key.toLowerCase();
 
-        // Strict matches for short words to avoid false positives (e.g. 'width' matching 'id')
-        const strictMatch = ['id', 'key'];
-        for (const kw of strictMatch) {
-          if (lower === kw || lower.endsWith(`_${kw}`) || lower.startsWith(`${kw}_`) || lower.endsWith(kw)) {
-            return true;
-          }
+      // Strict matches for short words to avoid false positives (e.g. 'id' matching 'width')
+      const strictMatch = ['id', 'key'];
+      for (const kw of strictMatch) {
+        if (lower === kw || lower.endsWith(`_${kw}`) || lower.startsWith(`${kw}_`) || lower.endsWith(kw)) {
+          return true;
         }
+      }
 
-        // Broad matches for obvious secrets
-        const broadMatch = ['email', 'phone', 'name', 'token', 'password', 'secret', 'auth', 'hash', 'credential', 'company', 'employee'];
-        for (const kw of broadMatch) {
-          if (lower.includes(kw)) return true;
+      // Broad matches for obvious secrets
+      const broadMatch = ['email', 'phone', 'name', 'token', 'password', 'secret', 'auth', 'hash', 'credential', 'company', 'employee'];
+      for (const kw of broadMatch) {
+        if (lower.includes(kw)) return true;
+      }
+
+      return false;
+    };
+
+    const findKeys = (obj: unknown) => {
+      if (Array.isArray(obj)) {
+        obj.forEach(findKeys);
+      } else if (obj !== null && typeof obj === 'object') {
+        const rec = obj as Record<string, unknown>;
+        for (const k of Object.keys(rec)) {
+          if (isSensitive(k)) newRedacted.add(k);
+          findKeys(rec[k]);
         }
+      }
+    };
 
-        return false;
-      };
-
-      const findKeys = (obj: any) => {
-        if (Array.isArray(obj)) {
-          obj.forEach(findKeys);
-        } else if (obj !== null && typeof obj === 'object') {
-          for (const k of Object.keys(obj)) {
-            if (isSensitive(k)) newRedacted.add(k);
-            findKeys(obj[k]);
-          }
-        }
-      };
-
-      findKeys(parsed);
-      setRedactedKeys(Array.from(newRedacted));
-      setIsRedactionActive(true);
-      notify.success('Auto-redacted sensitive fields');
-    } catch {
-      notify.error('Cannot read tree: Invalid JSON');
-    }
+    findKeys(parsedData.data);
+    setRedactedKeys(Array.from(newRedacted));
+    setIsRedactionActive(true);
+    notify.success('Auto-redacted sensitive fields');
   };
 
   // --- RECURSIVE DATA EXPORTER ---
   const copyToClipboard = (onlyVisible: boolean) => {
-    try {
-      const parsed = JSON.parse(rawJson);
+    if (parsedData.error) return notify.error('Cannot copy: ' + parsedData.error);
 
-      const buildExport = (data: any, path: string = "root"): any => {
-        if (onlyVisible && collapsedPaths.has(path)) {
-          return Array.isArray(data) ? '[Hidden Array]' : '[Hidden Object]';
+    const buildExport = (data: unknown, path: string = "root"): unknown => {
+      if (onlyVisible && collapsedPaths.has(path)) {
+        return Array.isArray(data) ? '[Hidden Array]' : '[Hidden Object]';
+      }
+
+      if (Array.isArray(data)) {
+        if (onlyVisible && data.length > 1 && !expandedArrays.has(path)) {
+          return [
+            buildExport(data[0], `${path}-0`),
+            `[... ${data.length - 1} more items hidden]`
+          ];
         }
+        return data.map((item, i) => buildExport(item, `${path}-${i}`));
+      }
 
-        if (Array.isArray(data)) {
-          if (onlyVisible && data.length > 1 && !expandedArrays.has(path)) {
-            return [
-              buildExport(data[0], `${path}-0`),
-              `[... ${data.length - 1} more items hidden]`
-            ];
+      if (data !== null && typeof data === 'object') {
+        const result: Record<string, unknown> = {};
+        const rec = data as Record<string, unknown>;
+        for (const [k, v] of Object.entries(rec)) {
+          if (isRedactionActive && redactedKeys.includes(k)) {
+            result[k] = typeof v === 'number' ? 0 : '[REDACTED]';
+          } else {
+            result[k] = buildExport(v, `${path}-${encodeURIComponent(k)}`);
           }
-          return data.map((item, i) => buildExport(item, `${path}-${i}`));
         }
+        return result;
+      }
 
-        if (data !== null && typeof data === 'object') {
-          const result: any = {};
-          for (const [k, v] of Object.entries(data)) {
-            if (isRedactionActive && redactedKeys.includes(k)) {
-              result[k] = typeof v === 'number' ? 0 : '[REDACTED]';
-            } else {
-              result[k] = buildExport(v, `${path}-${encodeURIComponent(k)}`);
-            }
-          }
-          return result;
-        }
+      return data;
+    };
 
-        return data;
-      };
-
-      const finalData = buildExport(parsed);
-      navigator.clipboard.writeText(JSON.stringify(finalData, null, 2));
-      notify.success(`Copied ${onlyVisible ? 'Visible State' : 'All Data'}`);
-    } catch (e) {
-      notify.error('Cannot copy: Invalid JSON in Editor');
-    }
+    const finalData = buildExport(parsedData.data);
+    navigator.clipboard.writeText(JSON.stringify(finalData, null, 2));
+    notify.success(`Copied ${onlyVisible ? 'Visible State' : 'All Data'}`);
   };
 
   return (
@@ -289,27 +289,22 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
 
           {/* Viewer Render Phase */}
           <div className="p-4 h-full overflow-auto">
-            {(() => {
-              try {
-                const parsed = JSON.parse(rawJson);
-                return (
-                  <JsonViewer
-                    value={parsed}
-                    path="root"
-                    searchTerm={searchTerm}
-                    filterMode={filterMode}
-                    redactedKeys={isRedactionActive ? redactedKeys : []}
-                    onToggleRedact={isRedactionActive ? toggleRedactionForNode : undefined}
-                    collapsedPaths={collapsedPaths}
-                    onToggleCollapse={toggleCollapse}
-                    expandedArrays={expandedArrays}
-                    onExpandArray={expandArray}
-                  />
-                );
-              } catch {
-                return <div className="text-rose-500 text-xs font-mono">Syntax Error: Cannot build preview. Check Editor.</div>;
-              }
-            })()}
+            {parsedData.error ? (
+              <div className="text-rose-500 text-xs font-mono">Syntax Error: {parsedData.error}. Check Editor.</div>
+            ) : (
+              <JsonViewer
+                value={parsedData.data}
+                path="root"
+                searchTerm={searchTerm}
+                filterMode={filterMode}
+                redactedKeys={isRedactionActive ? redactedKeys : []}
+                onToggleRedact={isRedactionActive ? toggleRedactionForNode : undefined}
+                collapsedPaths={collapsedPaths}
+                onToggleCollapse={toggleCollapse}
+                expandedArrays={expandedArrays}
+                onExpandArray={expandArray}
+              />
+            )}
           </div>
         </div>
 

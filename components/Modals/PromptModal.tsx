@@ -10,15 +10,24 @@ interface PromptModalProps {
 
 export function PromptModal({ isOpen, title, initialValue = '', onClose, onSubmit }: PromptModalProps) {
   const [value, setValue] = useState(initialValue);
+  const [prevOpen, setPrevOpen] = useState(isOpen);
+  const [prevInitial, setPrevInitial] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  if (isOpen && (!prevOpen || initialValue !== prevInitial)) {
+    setPrevOpen(true);
+    setPrevInitial(initialValue);
+    setValue(initialValue);
+  } else if (!isOpen && prevOpen) {
+    setPrevOpen(false);
+  }
 
   // Auto-focus the input when the modal opens
   useEffect(() => {
     if (isOpen) {
-      setValue(initialValue);
       setTimeout(() => inputRef.current?.focus(), 10);
     }
-  }, [isOpen, initialValue]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -22,7 +22,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
     environments, activeEnvId, setActiveEnvironment, simpleMode
   } = useTraffic();
 
-  const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
+  const startResizing = useCallback(() => {
     setIsResizing(true);
   }, []);
 
@@ -57,10 +57,10 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
         <div className="flex items-center justify-between p-2 min-h-12 gap-4">
 
           {/* ZONE A: UI CONTROLS */}
-          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded border border-zinc-800/50">
+          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50 shadow-inner shadow-black/20">
             <button
               onClick={() => onUpdateLayout({ isListOpen: !isListOpen })}
-              className={`p-1.5 rounded transition-all ${isListOpen ? 'text-emerald-500' : 'text-zinc-600'}`}
+              className={`p-1.5 rounded-md transition-all ${isListOpen ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
               title={`${isListOpen ? 'Hide' : 'Show'} Sidebar`}
             >
               {isListOpen ? (
@@ -72,8 +72,8 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
             <div className="w-px h-4 bg-zinc-800 mx-1"></div>
             <button
               onClick={() => onUpdateLayout({ splitMode: splitMode === 'vertical' ? 'horizontal' : 'vertical' })}
-              className="p-1.5 text-zinc-500 hover:text-zinc-300"
-              title="Toggle Split Mode (Side-by-Side / Top-Bottom)"
+              className={`p-1.5 rounded-md transition-all ${splitMode === 'horizontal' ? 'text-sky-400 bg-sky-500/10' : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800'}`}
+              title="Toggle Split Mode"
             >
               {splitMode === 'horizontal' ? (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="3" x2="12" y2="21"></line></svg>
@@ -118,15 +118,17 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
             <div 
               ref={sidebarRef}
               style={{ width: sidebarWidth }}
-              className="border-r border-zinc-800 flex flex-col shrink-0 bg-zinc-950 transition-[width] duration-0"
+              className="border-r border-zinc-800 flex flex-col shrink-0 bg-zinc-950"
             >
               {listComponent()}
             </div>
             {/* Drag Handle */}
             <div
               onMouseDown={startResizing}
-              className={`w-1 cursor-col-resize hover:bg-sky-500/50 transition-colors z-10 ${isResizing ? 'bg-sky-500' : 'bg-transparent'}`}
-            />
+              className={`w-1.5 flex items-center justify-center cursor-col-resize hover:bg-sky-500/30 transition-all z-10 group relative ${isResizing ? 'bg-sky-500/40' : 'bg-transparent hover:w-2'}`}
+            >
+               <div className={`w-0.5 h-10 rounded-full transition-all ${isResizing ? 'bg-sky-400 h-20' : 'bg-zinc-800 group-hover:bg-zinc-500 group-hover:h-12'}`} />
+            </div>
           </>
         )}
 

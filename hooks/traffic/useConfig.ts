@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { UILayout } from './types';
 
 export function useConfig() {
@@ -13,8 +13,8 @@ export function useConfig() {
   const limitRef = useRef({ enabled: isLimitEnabled, value: historyLimit });
   const prefsRef = useRef(prefs);
 
-  const updateConfig = async (enabled: boolean, mode: string, ignored: string[]) => {
-    setIsIntercepting(enabled); setInterceptMode(mode as any); setIgnoredMethods(ignored);
+  const updateConfig = async (enabled: boolean, mode: 'both' | 'request' | 'response', ignored: string[]) => {
+    setIsIntercepting(enabled); setInterceptMode(mode); setIgnoredMethods(ignored);
     if (prefsRef.current.intercept) fetch('/api/state', { method: 'POST', body: JSON.stringify({ intercept: { enabled, mode, ignored } }) });
   };
 
@@ -28,6 +28,14 @@ export function useConfig() {
     setUiLayout(next);
     fetch('/api/state', { method: 'POST', body: JSON.stringify({ ui_layout: next }) });
   };
+
+  useEffect(() => {
+    limitRef.current = { enabled: isLimitEnabled, value: historyLimit };
+  }, [isLimitEnabled, historyLimit]);
+
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
 
   const initConfig = { setPrefs, setIsLimitEnabled, setHistoryLimit, setIsIntercepting, setInterceptMode, setIgnoredMethods, setUiLayout };
 

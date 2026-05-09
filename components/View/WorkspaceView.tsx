@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useTraffic, GlobalVariable, ReplacementsData } from '@/hooks/traffic';
+import { useTraffic, RepeaterGroup, RepeaterRequest } from '@/hooks/traffic';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { ConfirmModal, PromptModal, MultiGroupExportModal } from '../Modals';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { RepeaterRequest } from './RepeaterView';
 
 type ReplacementCategory = 'URL_REPLACEMENTS' | 'HEADER_REPLACEMENTS' | 'BODY_KEY_REPLACEMENTS' | 'URL_PARAM_REPLACEMENTS' | 'TEXT_REPLACEMENTS';
 
@@ -23,7 +22,7 @@ const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: s
   TEXT_REPLACEMENTS: { label: 'Global Text', description: 'Global string replacement across URL, Headers, and Body (e.g., xyz -> {{var}})', color: 'indigo' },
 };
 
-function SortableGroupItem({ group, isActive, onSelect, onRename, onDelete }: any) {
+function SortableGroupItem({ group, isActive, onSelect, onRename, onDelete }: { group: RepeaterGroup, isActive: boolean, onSelect: (id: string) => void, onRename: (group: RepeaterGroup) => void, onDelete: (group: RepeaterGroup) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
 
@@ -55,14 +54,14 @@ export function WorkspaceView() {
     variables, addVariable, updateVariable, deleteVariable,
     repeaterGroups, createGroup, renameGroup, deleteGroup,
     importPostman, importProject, reorderGroups,
-    replacements, orderedReplacements, saveReplacements, deleteReplacement, isLoading: replacementsLoading,
-    simpleMode
+    replacements: _replacements, orderedReplacements, saveReplacements, deleteReplacement, isLoading: replacementsLoading,
+    simpleMode: _simpleMode
   } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'env' | 'collections' | 'replacements'>('env');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
+  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (_val: string) => { } });
   const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => setPromptConfig({ isOpen: true, title, initialValue, action });
   const closePrompt = () => setPromptConfig(prev => ({ ...prev, isOpen: false }));
 
@@ -88,8 +87,10 @@ export function WorkspaceView() {
   const isInitialLoad = useRef(true);
   const lastSavedRef = useRef<string>('');
 
-  // Sync local replacements when loaded from DB
-  useEffect(() => {
+  const [prevOrderedReplacements, setPrevOrderedReplacements] = useState(orderedReplacements);
+
+  if (orderedReplacements !== prevOrderedReplacements) {
+    setPrevOrderedReplacements(orderedReplacements);
     if (orderedReplacements && orderedReplacements.length > 0) {
       const converted: Record<ReplacementCategory, ReplacementEntry[]> = {
         URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
@@ -99,7 +100,12 @@ export function WorkspaceView() {
         TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
       };
       setLocalReplacements(converted);
-      
+    }
+  }
+
+  // Sync refs in effect
+  useEffect(() => {
+    if (orderedReplacements && orderedReplacements.length > 0) {
       const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
       lastSavedRef.current = payloadString;
       isInitialLoad.current = false;
@@ -107,7 +113,9 @@ export function WorkspaceView() {
   }, [orderedReplacements]);
 
   const saveReplacementsRef = useRef(saveReplacements);
-  saveReplacementsRef.current = saveReplacements;
+  useEffect(() => {
+    saveReplacementsRef.current = saveReplacements;
+  }, [saveReplacements]);
 
   const debouncedSave = useCallback((data: Record<ReplacementCategory, ReplacementEntry[]>) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -121,7 +129,7 @@ export function WorkspaceView() {
     if (lastSavedRef.current === currentPayloadString) return;
 
     // Find ONLY changed or new items
-    const lastItems: any[] = JSON.parse(lastSavedRef.current || '[]');
+    const lastItems: { id: string; pattern: string; replacement: string }[] = JSON.parse(lastSavedRef.current || '[]');
     const modifiedItems = currentItems.filter(curr => {
       const prev = lastItems.find(l => l.id === curr.id);
       return !prev || prev.pattern !== curr.pattern || prev.replacement !== curr.replacement;
@@ -141,7 +149,7 @@ export function WorkspaceView() {
         } else {
           setSaveReplacementsMessage('Save failed');
         }
-      } catch (e) {
+      } catch (_e) {
         setSaveReplacementsMessage('Save failed');
       }
       setIsSavingReplacements(false);
@@ -195,7 +203,7 @@ export function WorkspaceView() {
       } else {
         setSaveReplacementsMessage('Error: Failed to save replacements');
       }
-    } catch (e) {
+    } catch (_e) {
       setSaveReplacementsMessage('Error: Failed to save replacements');
     }
     setIsSavingReplacements(false);
@@ -234,7 +242,7 @@ export function WorkspaceView() {
       const splitUrl = (urlStr: string) => {
         let baseUrl = '';
         let endpoint = urlStr;
-        let params: Record<string, string> = {};
+        const params: Record<string, string> = {};
 
         if (urlStr.startsWith('{{')) {
           const endOfVar = urlStr.indexOf('}}');
@@ -250,7 +258,7 @@ export function WorkspaceView() {
             const u = new URL(urlStr);
             baseUrl = u.origin;
             endpoint = u.pathname;
-          } catch { /* fallback */ }
+          } catch (_e) { /* fallback */ }
         }
 
         try {
@@ -261,16 +269,16 @@ export function WorkspaceView() {
             const sp = new URLSearchParams(search);
             sp.forEach((v, k) => { params[k] = v; });
           }
-        } catch { /* ignore */ }
+        } catch (_e) { /* ignore */ }
         return { baseUrl, endpoint, params };
       };
 
       const headerCounts: Record<string, Record<string, number>> = {};
       flattenedRequests.forEach(req => {
         Object.entries(req.headers || {}).forEach(([k, v]) => {
-          const key = k.toLowerCase();
+          const key = (k as string).toLowerCase();
           if (!headerCounts[key]) headerCounts[key] = {};
-          headerCounts[key][v] = (headerCounts[key][v] || 0) + 1;
+          headerCounts[key][v as string] = (headerCounts[key][v as string] || 0) + 1;
         });
       });
 
@@ -302,9 +310,9 @@ export function WorkspaceView() {
             if (req.body && (req.body.startsWith('{') || req.body.startsWith('['))) {
               parsedBody = JSON.parse(req.body);
             }
-          } catch { /* keep as string */ }
+          } catch (_e) { /* keep as string */ }
 
-          const localHeaders: Record<string, any> = {};
+          const localHeaders: Record<string, string | null> = {};
           Object.entries(req.headers || {}).forEach(([k, v]) => {
             const gk = Object.keys(globalHeader).find(key => key.toLowerCase() === k.toLowerCase());
             if (!gk || globalHeader[gk] !== v) {
@@ -333,11 +341,11 @@ export function WorkspaceView() {
           url: mostCommonBase,
           target: targets
         };
-      }).filter(Boolean);
+      }).filter((tc): tc is NonNullable<typeof tc> => tc !== null);
 
       const exportData = {
         name: projectName,
-        url: (test_cases[0] as any)?.url || '{{apiUrl}}',
+        url: (test_cases[0] as { url: string })?.url || '{{apiUrl}}',
         header: globalHeader,
         placeholders,
         test_cases
@@ -531,8 +539,8 @@ export function WorkspaceView() {
                           group={group}
                           isActive={selectedGroupId === group.id}
                           onSelect={setSelectedGroupId}
-                          onRename={(g: any) => openPrompt('Rename Collection', g.name, (val) => renameGroup(g.id, val))}
-                          onDelete={(g: any) => openConfirm('Delete Collection', `Permanently destroy "${g.name}" and all requests inside?`, () => deleteGroup(g.id))}
+                          onRename={(g: RepeaterGroup) => openPrompt('Rename Collection', g.name, (val) => renameGroup(g.id, val))}
+                          onDelete={(g: RepeaterGroup) => openConfirm('Delete Collection', `Permanently destroy "${g.name}" and all requests inside?`, () => deleteGroup(g.id))}
                         />
                       ))}
                     </SortableContext>

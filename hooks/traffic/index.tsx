@@ -28,9 +28,6 @@ function useTrafficState() {
   const [isStateLoaded, setIsStateLoaded] = useState(false);
 
   useEffect(() => {
-    config.limitRef.current = { enabled: config.isLimitEnabled, value: config.historyLimit };
-    config.prefsRef.current = config.prefs;
-
     if (!isStateLoaded) return;
 
     // === NEW: Skip the POST request on the very first render after loading ===
@@ -55,7 +52,8 @@ function useTrafficState() {
         return prev;
       });
     }
-  }, [config.isLimitEnabled, config.historyLimit, isStateLoaded]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.isLimitEnabled, config.historyLimit, isStateLoaded, config.prefs.limits]);
 
   useEffect(() => {
     // === 1. CORE STATE LOAD ===
@@ -122,14 +120,17 @@ function useTrafficState() {
 
   const replacements = useReplacements();
 
+  const { initConfig: _ic, prefsRef: _pr, limitRef: _lr, ...configRest } = config; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { _initToolkitJson: _itj, ...jsonToolkitRest } = jsonToolkit; // eslint-disable-line @typescript-eslint/no-unused-vars
+
   return {
     ...selections,
     ...variables,
     // Strip out internal config tools
-    ...(({ initConfig, prefsRef, limitRef, ...rest }) => rest)(config),
+    ...configRest,
     // Export internal repeater boot tools for optimistic updates
     ...repeater,
-    ...(({ _initToolkitJson, ...rest }) => rest)(jsonToolkit),
+    ...jsonToolkitRest,
     ...trafficData,
     ...replacements,
     selectedReq: trafficData.traffic.find((r) => r.id === selections.selectedId) || null,

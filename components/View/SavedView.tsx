@@ -2,12 +2,25 @@ import { useState, useEffect } from 'react';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
 
+interface SavedRequest {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+interface SavedResponse {
+  status_code: number;
+  headers: Record<string, string>;
+  body: string;
+}
+
 interface SavedItem {
   id: string;
   name: string;
   group: string;
-  request: any;
-  response: any;
+  request: SavedRequest | null;
+  response: SavedResponse | null;
   timestamp: number;
 }
 
@@ -66,11 +79,11 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
 
     // Method filtering logic
     const methodIncludes = Object.entries(methodFilter)
-      .filter(([_, state]) => state === 'include')
-      .map(([method, _]) => method);
+      .filter(([_m, state]) => state === 'include')
+      .map(([method, _s]) => method);
     const methodExcludes = Object.entries(methodFilter)
-      .filter(([_, state]) => state === 'exclude')
-      .map(([method, _]) => method);
+      .filter(([_m, state]) => state === 'exclude')
+      .map(([method, _s]) => method);
 
     let matchesMethod = true;
     if (methodIncludes.length > 0) {
@@ -83,11 +96,11 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
     // Status filtering logic
     const statusCat = getStatusCategory(item.response?.status_code);
     const statusIncludes = Object.entries(statusFilter)
-      .filter(([_, state]) => state === 'include')
-      .map(([status, _]) => status);
+      .filter(([_st, state]) => state === 'include')
+      .map(([status, _s]) => status);
     const statusExcludes = Object.entries(statusFilter)
-      .filter(([_, state]) => state === 'exclude')
-      .map(([status, _]) => status);
+      .filter(([_st, state]) => state === 'exclude')
+      .map(([status, _s]) => status);
 
     let matchesStatus = true;
     if (statusIncludes.length > 0) {
@@ -212,7 +225,9 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
 
               <header className="flex justify-between items-start border-b border-zinc-800 pb-4">
                 <div className="space-y-1">
-                  <h3 className="text-emerald-500 text-[10px] font-bold uppercase tracking-widest">// TARGET_URL</h3>
+                  <h3 className="text-emerald-500 text-[10px] font-bold uppercase tracking-widest">
+                    {/* TARGET_URL */}
+                  </h3>
                   <div className="text-emerald-100 break-all bg-zinc-900/50 p-2 rounded border border-zinc-800/50">{selected.request?.url || 'N/A'}</div>
                 </div>
                 <div className="flex gap-2 items-start">

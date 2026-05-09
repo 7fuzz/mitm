@@ -2,20 +2,17 @@ import { useEffect, useState } from "react";
 
 // Live Timer Component
 export const InterceptTimer = ({ startTime }: { startTime: number }) => {
-  const [elapsed, setElapsed] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    // Initial calculation
-    setElapsed(Math.floor((Date.now() - startTime) / 1000));
-
-    // Tick every second
     const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+      setNow(Date.now());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, []);
 
+  const elapsed = Math.floor((now - startTime) / 1000);
   const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
   const s = (elapsed % 60).toString().padStart(2, '0');
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNotification } from '../ui/NotificationProvider';
 import { CVSS40 } from '@pandatix/js-cvss';
 
@@ -73,13 +73,17 @@ export function CvssTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
     AV: 'N', AC: 'L', AT: 'N', PR: 'N', UI: 'N', VC: 'N', VI: 'N', VA: 'N', SC: 'N', SI: 'N', SA: 'N'
   });
 
-  const [inputString, setInputString] = useState('');
-  const [score, setScore] = useState({ value: 0.0, severity: 'None' });
+  const [inputString, setInputString] = useState(`CVSS:4.0/AV:${vector.AV}/AC:${vector.AC}/AT:${vector.AT}/PR:${vector.PR}/UI:${vector.UI}/VC:${vector.VC}/VI:${vector.VI}/VA:${vector.VA}/SC:${vector.SC}/SI:${vector.SI}/SA:${vector.SA}`);
+  const [prevVector, setPrevVector] = useState(vector);
 
-  useEffect(() => {
+  if (vector !== prevVector) {
+    setPrevVector(vector);
+    const cv = `CVSS:4.0/AV:${vector.AV}/AC:${vector.AC}/AT:${vector.AT}/PR:${vector.PR}/UI:${vector.UI}/VC:${vector.VC}/VI:${vector.VI}/VA:${vector.VA}/SC:${vector.SC}/SI:${vector.SI}/SA:${vector.SA}`;
+    setInputString(cv);
+  }
+
+  const score = useMemo(() => {
     const currentVector = `CVSS:4.0/AV:${vector.AV}/AC:${vector.AC}/AT:${vector.AT}/PR:${vector.PR}/UI:${vector.UI}/VC:${vector.VC}/VI:${vector.VI}/VA:${vector.VA}/SC:${vector.SC}/SI:${vector.SI}/SA:${vector.SA}`;
-    setInputString(currentVector);
-
     try {
       const vecObj = new CVSS40(currentVector);
       const scoreValue = vecObj.Score();
@@ -90,9 +94,9 @@ export function CvssTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
       else if (scoreValue >= 7.0 && scoreValue <= 8.9) severity = 'High';
       else if (scoreValue >= 9.0) severity = 'Critical';
 
-      setScore({ value: scoreValue, severity });
-    } catch (e) {
-      setScore({ value: 0.0, severity: 'Invalid' });
+      return { value: scoreValue, severity };
+    } catch (_e) {
+      return { value: 0.0, severity: 'Invalid' };
     }
   }, [vector]);
 

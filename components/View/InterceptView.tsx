@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { TrafficList } from '../Sidebar/TrafficList';
 import { HeaderEditor } from '../Editor/HeaderEditor';
 import { BodyEditor } from '../Editor/BodyEditor';
@@ -31,28 +31,29 @@ export function InterceptView() {
   const currentReq = pendingQueue.find((t) => t.id === selectedId) || pendingQueue[0];
   const isRes = currentReq?.phase === 'response';
 
-  useEffect(() => {
-    if (currentReq) {
-      if (currentReq.phase === 'response') {
-        setEditStatusCode(currentReq.status_code || 200);
-        setEditHeaders(currentReq.response_headers || {});
-      } else {
-        setEditMethod(currentReq.method);
-        setEditUrl(currentReq.url);
-        setEditHeaders(currentReq.request_headers || {});
-      }
+  const [prevReqId, setPrevReqId] = useState<string | null>(null);
 
-      const targetBody = currentReq.phase === 'response' ? currentReq.response_body : currentReq.request_body;
-      let formattedBody = targetBody || '';
-      try {
-        if (formattedBody.trim()) {
-          const parsed = JSON.parse(formattedBody);
-          formattedBody = JSON.stringify(parsed, null, 2);
-        }
-      } catch (e) { /* ignore */ }
-      setEditBody(formattedBody);
+  if (currentReq && currentReq.id !== prevReqId) {
+    setPrevReqId(currentReq.id);
+    if (currentReq.phase === 'response') {
+      setEditStatusCode(currentReq.status_code || 200);
+      setEditHeaders(currentReq.response_headers || {});
+    } else {
+      setEditMethod(currentReq.method);
+      setEditUrl(currentReq.url);
+      setEditHeaders(currentReq.request_headers || {});
     }
-  }, [currentReq]);
+
+    const targetBody = currentReq.phase === 'response' ? currentReq.response_body : currentReq.request_body;
+    let formattedBody = targetBody || '';
+    try {
+      if (formattedBody.trim()) {
+        const parsed = JSON.parse(formattedBody);
+        formattedBody = JSON.stringify(parsed, null, 2);
+      }
+    } catch (_e) { /* ignore */ }
+    setEditBody(formattedBody);
+  }
 
   const handleStageToWorkbench = async (raw: boolean = false) => {
     if (!currentReq) return;
@@ -181,7 +182,7 @@ export function InterceptView() {
               </div>
               {currentReq.intercepted_at && (
                 <div className="border-l border-zinc-800 bg-zinc-900/50">
-                  <InterceptTimer startTime={currentReq.intercepted_at} />
+                  <InterceptTimer key={currentReq.id} startTime={currentReq.intercepted_at} />
                 </div>
               )}
             </div>

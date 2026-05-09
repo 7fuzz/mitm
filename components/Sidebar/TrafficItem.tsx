@@ -40,19 +40,25 @@ export const TrafficItem = memo(({
   return (
     <div
       onClick={() => onClick(id)}
-      className={`cursor-pointer hover:bg-zinc-800/50 transition-colors border-l-2 group ${isActive ? `bg-zinc-800/50 ${activeBorder}` : 'border-l-transparent'
+      className={`cursor-pointer hover:bg-zinc-900/80 transition-all border-l-4 group relative ${isActive ? `bg-zinc-900 ${activeBorder}` : 'border-l-transparent hover:border-l-zinc-800'
         } ${isIntercepted ? 'border-l-rose-500 bg-rose-500/5' : ''}`}
     >
       <div className="p-3 space-y-1.5 flex flex-col min-w-0">
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-wider shrink-0">
-            <span className={getMethodColor(method)}>{method}</span>
-            <span className={getStatusColor(status)}>
+            <span className={`px-1.5 py-0.5 rounded bg-zinc-950/50 border border-zinc-800/50 ${getMethodColor(method)}`}>{method}</span>
+            <span className={`${getStatusColor(status)} font-mono`}>
               {status === 0 ? (isIntercepted ? 'PAUSED' : 'PENDING') : status}
             </span>
-            {/* Visual badge for Repeater Groups */}
+            {isIntercepted && (
+               <span className="relative flex h-2 w-2">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+               </span>
+            )}
+            {/* Visual badge for Groups */}
             {group && group !== 'Default' && (
-              <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/30 font-mono">
+              <span className="text-[8px] bg-purple-500/10 text-purple-400/80 px-1.5 py-0.5 rounded border border-purple-500/20 font-mono truncate max-w-24">
                 {group}
               </span>
             )}
@@ -70,7 +76,7 @@ export const TrafficItem = memo(({
             </button>
           )}
         </div>
-        <div className="text-zinc-300 text-xs truncate w-full" title={title}>
+        <div className="text-zinc-300 text-xs truncate w-full font-medium" title={title}>
           {title}
         </div>
       </div>

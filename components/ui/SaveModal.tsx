@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { Traffic } from '@/types/traffic';
 
+interface SaveData {
+  name: string;
+  group: string;
+  request: { method: string; url: string; headers: Record<string, string> | undefined; body: string | undefined } | null;
+  response: { status_code: number | undefined; headers: Record<string, string> | undefined; body: string | undefined } | null;
+}
+
 interface Props {
-  req: Traffic | null; // <-- 1. Allow null here
+  req: Traffic | null;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: SaveData) => void;
 }
 
 export function SaveModal({ req, onClose, onSave }: Props) {

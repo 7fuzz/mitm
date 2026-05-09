@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { HeaderEditor } from '../Editor/HeaderEditor';
 import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
@@ -37,7 +37,7 @@ export function RepeaterView() {
   const [editExtract, setEditExtract] = useState<Record<string, string>>({});
 
   // Modals
-  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
+  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (_val: string) => { } });
   const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => setPromptConfig({ isOpen: true, title, initialValue, action });
   const closePrompt = () => setPromptConfig(prev => ({ ...prev, isOpen: false }));
 
@@ -48,33 +48,36 @@ export function RepeaterView() {
 
   // Debounce for name updates
   const nameDebounceRef = useRef<NodeJS.Timeout | null>(null);
-  const debouncedUpdateName = (id: string, name: string) => {
+  const debouncedUpdateName = useCallback((id: string, name: string) => {
     if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     nameDebounceRef.current = setTimeout(() => {
       updateRequest(id, { name });
     }, 300);
-  };
+  }, [updateRequest]);
 
   const currentReq = repeaterRequests.find(r => r.id === selectedId) || repeaterRequests[0];
+
+  const [prevReqId, setPrevReqId] = useState<string | null>(null);
+
+  if (currentReq && currentReq.id !== prevReqId) {
+    setPrevReqId(currentReq.id);
+    setEditName(currentReq.name);
+    setEditGroupId(currentReq.groupId || null);
+    setEditMethod(currentReq.method);
+    setEditUrl(currentReq.url);
+    setEditHeaders(currentReq.headers || {});
+    setEditBody(currentReq.body || '');
+    setEditExtract(currentReq.extract || {});
+    // Auto-update selectedId if we defaulted to repeaterRequests[0]
+    if (currentReq.id !== selectedId && setSelectedId) {
+      setSelectedId(currentReq.id);
+    }
+  }
 
   const trafficMapped: Traffic[] = repeaterRequests.map(req => {
     const groupName = req.groupId ? repeaterGroups.find(g => g.id === req.groupId)?.name : 'Default';
     return { id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0, host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '', is_intercepted: false, group: groupName || 'Default' };
   });
-
-  useEffect(() => {
-    if (currentReq) {
-      setEditName(currentReq.name);
-      setEditGroupId(currentReq.groupId || null);
-      setEditMethod(currentReq.method);
-      setEditUrl(currentReq.url);
-      setEditHeaders(currentReq.headers || {});
-      setEditBody(currentReq.body || '');
-      setEditExtract(currentReq.extract || {});
-      if (currentReq.id !== selectedId) setSelectedId(currentReq.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentReq]);
 
   const handleAdd = async () => {
     const targetGroup = (activeGroupId !== 'All' && activeGroupId !== 'null') ? activeGroupId : null;
@@ -117,8 +120,8 @@ export function RepeaterView() {
               updateVariableAutoValue(varName, String(value));
             }
           });
-        } catch (e) {
-          console.error("Failed to parse response for extraction:", e);
+        } catch (_e) {
+          console.error("Failed to parse response for extraction");
         }
       }
 
