@@ -64,52 +64,6 @@ class Database:
             updated_at INTEGER DEFAULT (strftime('%s', 'now'))
         )""")
         self.conn.commit()
-        self.seed_replacements()
-
-    def seed_replacements(self):
-        """Seed replacements from JSON config if table is empty"""
-        count = self.execute("SELECT COUNT(*) FROM replacements").fetchone()[0]
-        if count > 0:
-            return
-
-        import uuid
-        import os
-
-        json_path = os.path.join(os.path.dirname(__file__), "replacements.json")
-        if not os.path.exists(json_path):
-            return
-
-        try:
-            with open(json_path, 'r') as f:
-                data = json.load(f)
-            
-            # Map legacy format to new format
-            mappings = {
-                "URL_REPLACEMENTS": "URL_REPLACEMENTS",
-                "HEADER_VALUE_REPLACEMENTS": "HEADER_REPLACEMENTS",
-                "HEADER_HOST_REPLACEMENTS": "HEADER_REPLACEMENTS", # Note: these might conflict, but it's a seed
-                "BODY_KEY_REPLACEMENTS": "BODY_KEY_REPLACEMENTS",
-                "URL_PARAM_REPLACEMENTS": "URL_PARAM_REPLACEMENTS"
-            }
-
-            for legacy_type, new_type in mappings.items():
-                items = data.get(legacy_type, {})
-                for idx, (pattern, replacement) in enumerate(items.items()):
-                    # Special case for legacy "Bearer " pattern -> Map to "Authorization" key
-                    if legacy_type == "HEADER_VALUE_REPLACEMENTS" and pattern == "Bearer ":
-                        self.save_replacement(str(uuid.uuid4()), "HEADER_REPLACEMENTS", "Authorization", "Bearer {{token}}", "Initial Seed", idx)
-                        continue
-                    
-                    # For HEADER_HOST_REPLACEMENTS, map to "Host" key
-                    if legacy_type == "HEADER_HOST_REPLACEMENTS":
-                         self.save_replacement(str(uuid.uuid4()), "HEADER_REPLACEMENTS", "Host", replacement, "Initial Seed", idx)
-                         continue
-
-                    self.save_replacement(str(uuid.uuid4()), new_type, pattern, replacement, "Initial Seed", idx)
-            
-            self.commit()
-        except Exception as e:
-            print(f"Failed to seed replacements: {e}")
 
     def execute(self, query, params=()):
         return self.conn.execute(query, params)
