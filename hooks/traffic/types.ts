@@ -33,3 +33,12 @@ export interface RepeaterRequest {
     time?: number;
   };
 }
+
+export type ReplacementCategory = 'URL_REPLACEMENTS' | 'HEADER_REPLACEMENTS' | 'BODY_KEY_REPLACEMENTS' | 'URL_PARAM_REPLACEMENTS' | 'TEXT_REPLACEMENTS';
+
+export interface ReplacementEntry {
+  id: string;
+  pattern: string;
+  replacement: string;
+}
+
