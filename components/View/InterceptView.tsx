@@ -143,8 +143,8 @@ export function InterceptView() {
     <WorkspaceLayout
       uiLayout={uiLayout}
       onUpdateLayout={updateUILayout}
-      listComponent={(layout) => (
-        <TrafficList items={pendingQueue} activeId={currentReq?.id || null} onSelect={setSelectedId} layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
+      listComponent={() => (
+        <TrafficList items={pendingQueue} activeId={currentReq?.id || null} onSelect={setSelectedId} layout="sidebar" />
       )}
       toolbarRight={
         <>

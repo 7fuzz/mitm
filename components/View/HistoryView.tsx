@@ -116,8 +116,8 @@ export function HistoryView() {
       <WorkspaceLayout
         uiLayout={uiLayout}
         onUpdateLayout={updateUILayout}
-        listComponent={(layout) => (
-          <TrafficList items={traffic} activeId={selectedId} onSelect={setSelectedId} onDelete={handleDeleteHistoryRequest} layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
+        listComponent={() => (
+          <TrafficList items={traffic} activeId={selectedId} onSelect={setSelectedId} onDelete={handleDeleteHistoryRequest} layout="sidebar" />
         )}
 
         toolbarRight={

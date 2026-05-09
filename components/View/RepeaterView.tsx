@@ -195,8 +195,16 @@ export function RepeaterView() {
       <WorkspaceLayout
         uiLayout={uiLayout}
         onUpdateLayout={updateUILayout}
-        listComponent={(layout) => (
-          <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} onReorder={reorderRequests} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
+        listComponent={() => (
+          <TrafficList
+            items={trafficMapped}
+            activeId={selectedId}
+            onSelect={setSelectedId}
+            onDelete={deleteRequest}
+            onReorder={reorderRequests}
+            activeColor="purple"
+            layout="sidebar"
+          />
         )}
 
         toolbarLeft={!simpleMode ? (

@@ -8,7 +8,7 @@ export function useConfig() {
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);
   const [isLimitEnabled, setIsLimitEnabled] = useState(true);
   const [historyLimit, setHistoryLimit] = useState(100);
-  const [uiLayout, setUiLayout] = useState<UILayout>({ isListOpen: true, listLayout: 'sidebar', splitMode: 'vertical' });
+  const [uiLayout, setUiLayout] = useState<UILayout>({ isListOpen: true, sidebarWidth: 350, splitMode: 'vertical' });
 
   const limitRef = useRef({ enabled: isLimitEnabled, value: historyLimit });
   const prefsRef = useRef(prefs);

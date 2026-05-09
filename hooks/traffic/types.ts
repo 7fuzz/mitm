@@ -1,5 +1,5 @@
 export interface EnvVariant { name: string; value: string; }
-export interface UILayout { isListOpen: boolean; listLayout: 'sidebar' | 'bottom'; splitMode: 'vertical' | 'horizontal'; }
+export interface UILayout { isListOpen: boolean; splitMode: 'vertical' | 'horizontal'; sidebarWidth: number; }
 export interface Environment { id: string; name: string; }
 export interface GlobalVariableValue { id: string; name: string; value: string; }
 export interface GlobalVariable {
