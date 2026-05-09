@@ -82,22 +82,26 @@ function useTrafficState() {
         if (rep && rep.length > 0) repeater._setRawRepeater(rep);
       });
 
-      setIsStateLoaded(true);
-    });
+      // === 2. PARALLEL BACKGROUND LOADS (Only if NOT in Simple Mode) ===
+      const isSimple = state.preferences?.simpleMode !== false;
+      
+      fetch('/api/history').then(r => r.json()).then(hist => {
+        if (hist && hist.length > 0) trafficData.setTraffic(prev => [...prev, ...hist.reverse()]);
+      });
 
-    // === 2. PARALLEL BACKGROUND LOADS ===
-    fetch('/api/history').then(r => r.json()).then(hist => {
-      if (hist && hist.length > 0) trafficData.setTraffic(prev => [...prev, ...hist.reverse()]);
-    });
+      if (!isSimple) {
+        fetch('/api/repeater-groups').then(r => r.json()).then(groups => {
+          if (groups && groups.length > 0) repeater._setRawGroups(groups);
+        });
 
-    fetch('/api/repeater-groups').then(r => r.json()).then(groups => {
-      if (groups && groups.length > 0) repeater._setRawGroups(groups);
-    });
-
-    fetch('/api/variables').then(r => r.json()).then(data => {
-      if (data.variables) {
-        variables.loadVariables(data.variables, data.environments, data.activeEnvironmentId);
+        fetch('/api/variables').then(r => r.json()).then(data => {
+          if (data.variables) {
+            variables.loadVariables(data.variables, data.environments, data.activeEnvironmentId);
+          }
+        });
       }
+
+      setIsStateLoaded(true);
     });
 
     // === 3. SSE CONNECTION ===
@@ -123,8 +127,8 @@ function useTrafficState() {
     ...variables,
     // Strip out internal config tools
     ...(({ initConfig, prefsRef, limitRef, ...rest }) => rest)(config),
-    // Strip out internal repeater boot tools so the UI component can't mess them up!
-    ...(({ _setRawRepeater, _setRawGroups, initActiveGroup, ...rest }) => rest)(repeater),
+    // Export internal repeater boot tools for optimistic updates
+    ...repeater,
     ...(({ _initToolkitJson, ...rest }) => rest)(jsonToolkit),
     ...trafficData,
     ...replacements,

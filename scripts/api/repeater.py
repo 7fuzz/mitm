@@ -306,6 +306,19 @@ class RepeaterHandlers:
         except Exception as e:
             return web.json_response({"success": False, "error": str(e)}, status=500)
 
+    async def handle_group_reorder(self, request):
+        try:
+            data = await request.json()
+            if not isinstance(data, list):
+                return web.json_response({"error": "Expected list of IDs"}, status=400)
+            
+            for idx, group_id in enumerate(data):
+                self.db.update_group_order(group_id, idx)
+            
+            return web.json_response({"success": True})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
+
     async def handle_repeat(self, request):
         data = await request.json()
         try:

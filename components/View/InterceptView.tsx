@@ -12,7 +12,9 @@ export function InterceptView() {
   const {
     traffic, isIntercepting, interceptMode, ignoredMethods,
     updateConfig, resumeRequest, uiLayout, updateUILayout,
-    refreshRepeater, setRepeaterSelectedId, variables, activeEnvId
+    refreshRepeater, setRepeaterSelectedId, variables, activeEnvId,
+    applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements,
+    simpleMode
   } = useTraffic();
 
   const { notify } = useNotification();
@@ -52,26 +54,33 @@ export function InterceptView() {
     }
   }, [currentReq]);
 
-  const handleStageToWorkbench = async () => {
+  const handleStageToWorkbench = async (raw: boolean = false) => {
     if (!currentReq) return;
     try {
       let path = currentReq.url;
       try { path = new URL(currentReq.url).pathname; } catch { }
 
-      const response = await fetch('/api/repeater-request', {
+      const isRaw = simpleMode || raw;
+
+      // Apply replacements only if not raw
+      const finalUrl = isRaw ? (editUrl || currentReq.url) : applyUrlReplacements(editUrl || currentReq.url);
+      const finalHeaders = isRaw ? editHeaders : applyHeaderReplacements(editHeaders);
+      const finalBody = isRaw ? editBody : applyBodyReplacements(editBody);
+
+      const response = await fetch(`/api/repeater-request${isRaw ? '?raw=true' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: `${currentReq.method} ${path} (Intercept)`,
           groupId: null, // FIXED: Safely lands in the Default Collection
           method: editMethod || currentReq.method,
-          url: editUrl || currentReq.url,
-          headers: editHeaders,
-          body: editBody,
+          url: finalUrl,
+          headers: finalHeaders,
+          body: finalBody,
           response: isRes ? {
             status: editStatusCode,
-            headers: editHeaders,
-            body: editBody
+            headers: finalHeaders,
+            body: finalBody
           } : undefined
         })
       });
@@ -80,7 +89,7 @@ export function InterceptView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        notify.success('Staged in Workbench');
+        notify.success(isRaw ? 'Staged Raw to Workbench' : 'Staged in Workbench');
       }
     } catch (error) {
       notify.error(`Failed to stage: ${error}`);
@@ -190,12 +199,22 @@ export function InterceptView() {
                 <span className={`text-xs font-black ${isRes ? 'text-amber-500' : 'text-emerald-500'}`}>{currentReq.method}</span>
                 <span className="text-zinc-300 text-xs font-mono break-all">{currentReq.url}</span>
               </div>
-              <button
-                onClick={handleStageToWorkbench}
-                className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
-              >
-                Stage_to_Workbench
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleStageToWorkbench(false)}
+                  className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
+                >
+                  Stage_to_Workbench
+                </button>
+                {!simpleMode && (
+                  <button
+                    onClick={() => handleStageToWorkbench(true)}
+                    className="px-4 py-1.5 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold"
+                  >
+                    Raw
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3">

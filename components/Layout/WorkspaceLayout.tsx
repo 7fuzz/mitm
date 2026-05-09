@@ -17,7 +17,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
   const { isListOpen, listLayout, splitMode } = uiLayout;
 
   const {
-    environments, activeEnvId, setActiveEnvironment
+    environments, activeEnvId, setActiveEnvironment, simpleMode
   } = useTraffic();
 
   return (
@@ -81,16 +81,18 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
           </div>
 
           {/* ZONE B: GLOBAL CONTEXT (Environment Switcher) */}
-          <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
-            <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Env:</span>
-            <select
-              value={activeEnvId}
-              onChange={(e) => setActiveEnvironment(e.target.value)}
-              className="bg-transparent text-amber-400 text-[10px] uppercase font-bold outline-none cursor-pointer max-w-40 truncate"
-            >
-              {environments.map(e => <option key={e.id} value={e.id} className="bg-zinc-900 text-zinc-300">{e.name}</option>)}
-            </select>
-          </div>
+          {!simpleMode && (
+            <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
+              <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Env:</span>
+              <select
+                value={activeEnvId}
+                onChange={(e) => setActiveEnvironment(e.target.value)}
+                className="bg-transparent text-amber-400 text-[10px] uppercase font-bold outline-none cursor-pointer max-w-40 truncate"
+              >
+                {environments.map(e => <option key={e.id} value={e.id} className="bg-zinc-900 text-zinc-300">{e.name}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* ZONE C: VIEW SPECIFIC CONTEXT (The toolbarLeft slot) */}
           <div className="flex-1 flex items-center justify-center">

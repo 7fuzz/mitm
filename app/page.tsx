@@ -24,7 +24,7 @@ export default function Page() {
 // 2. THE INNER APP (Safe to use Context!)
 // ==========================================
 function TrafficApp() {
-  const { traffic, repeaterRequests } = useTraffic();
+  const { traffic, repeaterRequests, simpleMode } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
 
@@ -74,19 +74,23 @@ function TrafficApp() {
             Proxy_Vault
           </button>
 
-          <button
-            onClick={() => setActiveTab('workspace')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'workspace' ? 'border-blue-500 text-blue-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
-          >
-            Workspace
-          </button>
+          {!simpleMode && (
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'workspace' ? 'border-blue-500 text-blue-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+            >
+              Workspace
+            </button>
+          )}
 
-          <button
-            onClick={() => setActiveTab('utilities')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'utilities' ? 'border-fuchsia-500 text-fuchsia-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
-          >
-            Utilities
-          </button>
+          {!simpleMode && (
+            <button
+              onClick={() => setActiveTab('utilities')}
+              className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'utilities' ? 'border-fuchsia-500 text-fuchsia-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
+            >
+              Utilities
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('options')}
@@ -111,8 +115,8 @@ function TrafficApp() {
         {activeTab === 'intercept' && <InterceptView />}
         {activeTab === 'saved' && <SavedView />}
         {activeTab === 'repeater' && <RepeaterView />}
-        {activeTab === 'workspace' && <WorkspaceView />}
-        {activeTab === 'utilities' && <UtilitiesView />}
+        {!simpleMode && activeTab === 'workspace' && <WorkspaceView />}
+        {!simpleMode && activeTab === 'utilities' && <UtilitiesView />}
         {activeTab === 'options' && <OptionsView />}
       </main>
     </div>

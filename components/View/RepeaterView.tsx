@@ -22,7 +22,8 @@ export function RepeaterView() {
     createGroup, renameGroup, deleteGroup, reorderRequests,
     variables, activeEnvId, updateVariableAutoValue,
     uiLayout, updateUILayout,
-    repeaterSelectedId: selectedId, setRepeaterSelectedId: setSelectedId
+    repeaterSelectedId: selectedId, setRepeaterSelectedId: setSelectedId,
+    simpleMode
   } = useTraffic();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -198,7 +199,7 @@ export function RepeaterView() {
           <TrafficList items={trafficMapped} activeId={selectedId} onSelect={setSelectedId} onDelete={deleteRequest} onReorder={reorderRequests} activeColor="purple" layout={layout === 'sidebar' ? 'sidebar' : 'table'} />
         )}
 
-        toolbarLeft={
+        toolbarLeft={!simpleMode ? (
           <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
             <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Collection:</span>
             <select
@@ -239,7 +240,7 @@ export function RepeaterView() {
               </button>
             </div>
           </div>
-        }
+        ) : undefined}
 
         toolbarRight={
           <>
@@ -259,7 +260,7 @@ export function RepeaterView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <div className="space-y-3">
                 <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Metadata</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className={`grid ${simpleMode ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
                   <div>
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
                     <input
@@ -268,41 +269,45 @@ export function RepeaterView() {
                       className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors"
                     />
                   </div>
-                  <div>
-                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Collection Assignment</label>
-                    <div className="flex gap-2">
-                      <select
-                        value={editGroupId || 'null'}
-                        onChange={(e) => {
-                          const newGroupId = e.target.value === 'null' ? null : e.target.value;
-                          setEditGroupId(newGroupId);
-                          updateRequest(currentReq.id, { groupId: newGroupId });
-                        }}
-                        className="flex-1 bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors cursor-pointer"
-                      >
-                        <option value="null">Default (Uncategorized)</option>
-                        {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                      </select>
+                  {!simpleMode && (
+                    <div>
+                      <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Collection Assignment</label>
+                      <div className="flex gap-2">
+                        <select
+                          value={editGroupId || 'null'}
+                          onChange={(e) => {
+                            const newGroupId = e.target.value === 'null' ? null : e.target.value;
+                            setEditGroupId(newGroupId);
+                            updateRequest(currentReq.id, { groupId: newGroupId });
+                          }}
+                          className="flex-1 bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-zinc-300 text-[11px] font-mono focus:border-purple-500 outline-none transition-colors cursor-pointer"
+                        >
+                          <option value="null">Default (Uncategorized)</option>
+                          {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                        </select>
+                        <button
+                          onClick={() => openPrompt('New Collection Name', '', async (name) => {
+                            const newId = await createGroup(name);
+                            if (newId) { setEditGroupId(newId); updateRequest(currentReq.id, { groupId: newId }); }
+                          })}
+                          className="px-3 border border-zinc-700 bg-zinc-900 hover:bg-purple-900/30 text-purple-400 rounded transition-colors text-[10px] font-bold uppercase tracking-wider"
+                        >
+                          + New
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!simpleMode && (
+                    <div>
+                      <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Variable Extractions</label>
                       <button
-                        onClick={() => openPrompt('New Collection Name', '', async (name) => {
-                          const newId = await createGroup(name);
-                          if (newId) { setEditGroupId(newId); updateRequest(currentReq.id, { groupId: newId }); }
-                        })}
-                        className="px-3 border border-zinc-700 bg-zinc-900 hover:bg-purple-900/30 text-purple-400 rounded transition-colors text-[10px] font-bold uppercase tracking-wider"
+                        onClick={() => setExtractionModalOpen(true)}
+                        className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-amber-400 text-[11px] font-mono text-left hover:border-amber-500 transition-colors truncate"
                       >
-                        + New
+                        {Object.keys(editExtract).length > 0 ? `${Object.keys(editExtract).length} Rules Configured` : 'Configure Extractions...'}
                       </button>
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Variable Extractions</label>
-                    <button
-                      onClick={() => setExtractionModalOpen(true)}
-                      className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-amber-400 text-[11px] font-mono text-left hover:border-amber-500 transition-colors truncate"
-                    >
-                      {Object.keys(editExtract).length > 0 ? `${Object.keys(editExtract).length} Rules Configured` : 'Configure Extractions...'}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
 

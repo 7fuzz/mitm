@@ -35,6 +35,7 @@ export function HistoryView() {
     refreshRepeater, setRepeaterSelectedId,
     // NEW: Get replacement apply functions
     applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements,
+    simpleMode
   } = useTraffic();
 
   const { notify } = useNotification();
@@ -66,23 +67,26 @@ export function HistoryView() {
     fetch('/api/history', { method: 'DELETE' }).catch(console.error);
   };
 
-  // === UPGRADED: Network-safe Repeater Injection ===
+  // === UPGRADED: Network-safe Workbench Injection ===
   const handleAddToRepeater = async (req: Traffic, raw: boolean = false) => {
     try {
       let path = req.url;
       try { path = new URL(req.url).pathname; } catch { }
 
-      // Apply replacements to URL, headers, and body only if not raw mode
-      const transformedUrl = raw ? req.url : applyUrlReplacements(req.url);
-      const transformedHeaders = raw ? (req.request_headers || {}) : applyHeaderReplacements(req.request_headers || {});
-      const transformedBody = raw ? (req.request_body || '') : applyBodyReplacements(req.request_body || '');
+      // Simple Mode: ALWAYS raw send
+      const isRaw = simpleMode || raw;
 
-      const response = await fetch(`/api/repeater-request${raw ? '?raw=true' : ''}`, {
+      // Apply replacements to URL, headers, and body only if not raw mode
+      const transformedUrl = isRaw ? req.url : applyUrlReplacements(req.url);
+      const transformedHeaders = isRaw ? (req.request_headers || {}) : applyHeaderReplacements(req.request_headers || {});
+      const transformedBody = isRaw ? (req.request_body || '') : applyBodyReplacements(req.request_body || '');
+
+      const response = await fetch(`/api/repeater-request${isRaw ? '?raw=true' : ''}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: `${req.method} ${path}`,
-          group: raw ? 'Raw Imports' : 'History Imports', // Groups it cleanly!
+          group: isRaw ? 'Raw Imports' : 'History Imports', // Groups it cleanly!
           method: req.method,
           url: transformedUrl,
           headers: transformedHeaders,
@@ -94,10 +98,10 @@ export function HistoryView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        notify.success(raw ? 'Staged raw to workbench!' : 'Staged to workbench!');
+        notify.success(isRaw ? 'Staged Raw to Workbench!' : 'Staged to Workbench!');
       }
     } catch (error) {
-      notify.error('Error sending to repeater: ' + error);
+      notify.error('Error sending to Workbench: ' + error);
     }
   };
 
@@ -163,7 +167,7 @@ export function HistoryView() {
                 <div className="ml-auto flex gap-3 mb-4">
                   <button onClick={() => setShowSaveModal(true)} className="px-4 py-2 bg-sky-900/30 hover:bg-sky-600 text-sky-400 hover:text-white text-[10px] rounded border border-sky-800 transition-all uppercase font-bold">Save_to_Vault</button>
                   <button onClick={() => handleAddToRepeater(selectedReq, false)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_Workbench</button>
-                  <button onClick={() => handleAddToRepeater(selectedReq, true)} className="px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Raw</button>
+                  {!simpleMode && <button onClick={() => handleAddToRepeater(selectedReq, true)} className="px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Raw</button>}
                   <button onClick={copyAsCurl} className="px-3 py-1 bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Copy_as_cURL</button>
                 </div>
                 <div className="w-full">

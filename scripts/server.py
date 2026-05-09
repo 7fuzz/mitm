@@ -87,6 +87,7 @@ class APIServer:
         # Repeater Groups
         app.router.add_get("/repeater-groups", repeater.handle_group_get_all)
         app.router.add_post("/repeater-groups", repeater.handle_group_create)
+        app.router.add_post("/repeater-groups-reorder", repeater.handle_group_reorder)
         app.router.add_put("/repeater-groups/{id}", repeater.handle_group_put)
         app.router.add_delete("/repeater-groups/{id}", repeater.handle_group_delete)
 

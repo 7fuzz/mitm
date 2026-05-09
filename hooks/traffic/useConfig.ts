@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { UILayout } from './types';
 
 export function useConfig() {
-  const [prefs, setPrefs] = useState({ history: true, repeater: true, bindings: true, limits: true, intercept: true });
+  const [prefs, setPrefs] = useState({ history: true, repeater: true, bindings: true, limits: true, intercept: true, simpleMode: true });
   const [isIntercepting, setIsIntercepting] = useState(false);
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);
@@ -33,6 +33,7 @@ export function useConfig() {
 
   return {
     prefs, updatePrefs, prefsRef,
+    simpleMode: prefs.simpleMode,
     isIntercepting, interceptMode, ignoredMethods, updateConfig,
     isLimitEnabled, setIsLimitEnabled, historyLimit, setHistoryLimit, limitRef,
     uiLayout, updateUILayout, initConfig

@@ -228,9 +228,29 @@ export function OptionsView() {
     <div className="flex-1 flex overflow-y-auto bg-zinc-950 p-8 justify-center">
       <div className="max-w-2xl w-full space-y-8 animate-in fade-in pb-24">
 
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">Proxy_Options</h1>
-          <p className="text-zinc-500 text-xs font-mono">Configure local network bindings and install SSL certificates for HTTPS interception.</p>
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-6 mb-8">
+          <div>
+            <h1 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">Proxy_Options</h1>
+            <p className="text-zinc-500 text-xs font-mono">Configure local network bindings and install SSL certificates for HTTPS interception.</p>
+          </div>
+          
+          <div className="flex flex-col items-end gap-2">
+            <label className="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-700 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all shadow-lg">
+              <div className="flex flex-col items-end mr-2">
+                <span className="text-[10px] text-zinc-300 font-black uppercase tracking-widest">Simple_Mode</span>
+                <span className="text-[8px] text-zinc-500 font-mono">Lightweight UI</span>
+              </div>
+              <div className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-zinc-700">
+                <input 
+                  type="checkbox" 
+                  checked={prefs.simpleMode} 
+                  onChange={() => togglePref('simpleMode')} 
+                  className="sr-only peer"
+                />
+                <div className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${prefs.simpleMode ? 'translate-x-5 bg-emerald-500' : 'translate-x-0 bg-zinc-400'}`}></div>
+              </div>
+            </label>
+          </div>
         </div>
 
         {/* Listen Settings */}
@@ -339,7 +359,7 @@ export function OptionsView() {
             <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
               <input type="checkbox" checked={prefs.repeater} onChange={() => togglePref('repeater')} className="accent-purple-500 w-4 h-4" />
               <div className="flex flex-col">
-                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Repeater Workspace</span>
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Workbench Workspace</span>
                 <span className="text-[10px] text-zinc-600 font-mono">Saves tabs & payloads</span>
               </div>
             </label>

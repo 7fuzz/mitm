@@ -16,10 +16,11 @@ class ReplacementHandlers:
             return web.json_response({"error": str(e)}, status=500)
 
     async def handle_replacements_post(self, request):
-        """Save replacements (bulk replace) with order"""
+        """Save replacements (bulk or incremental)"""
         try:
+            incremental = request.query.get("incremental", "false").lower() == "true"
             data = await request.json()
-            result = self.db.save_replacements_bulk_api(data)
+            result = self.db.save_replacements_bulk_api(data, incremental=incremental)
             return web.json_response(result)
         except Exception as e:
             print(f"Error saving replacements: {e}")

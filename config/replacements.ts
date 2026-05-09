@@ -11,26 +11,26 @@
 // Default fallback values (used when database is unavailable)
 const DEFAULT_REPLACEMENTS = {
   URL_REPLACEMENTS: {},
-  HEADER_VALUE_REPLACEMENTS: {},
-  HEADER_HOST_REPLACEMENTS: {},
+  HEADER_REPLACEMENTS: {},
   BODY_KEY_REPLACEMENTS: {},
-  URL_PARAM_REPLACEMENTS: {}
+  URL_PARAM_REPLACEMENTS: {},
+  TEXT_REPLACEMENTS: {}
 };
 
 // URL replacements - prefix matching domains with environment variable
 export let URL_REPLACEMENTS: Record<string, string> = {};
 
-// Header key replacements - maps old header values to variable placeholders
-export let HEADER_VALUE_REPLACEMENTS: Record<string, string> = {};
-
-// Header host replacements - maps host header to use environment variable
-export let HEADER_HOST_REPLACEMENTS: Record<string, string> = {};
+// Unified Header replacements - maps header key to replacement value
+export let HEADER_REPLACEMENTS: Record<string, string> = {};
 
 // Body key replacements - replaces specific keys with variable placeholders
 export let BODY_KEY_REPLACEMENTS: Record<string, string> = {};
 
 // URL query parameter replacements - replaces param values with variable placeholders
 export let URL_PARAM_REPLACEMENTS: Record<string, string> = {};
+
+// Global Text replacements - replaces any occurrence in URL, Headers, or Body
+export let TEXT_REPLACEMENTS: Record<string, string> = {};
 
 // Fetch replacements from the database API
 export async function fetchReplacements(): Promise<typeof DEFAULT_REPLACEMENTS> {
@@ -42,10 +42,14 @@ export async function fetchReplacements(): Promise<typeof DEFAULT_REPLACEMENTS> 
     const grouped = data.grouped || {};
     
     URL_REPLACEMENTS = grouped.URL_REPLACEMENTS || {};
-    HEADER_VALUE_REPLACEMENTS = grouped.HEADER_VALUE_REPLACEMENTS || {};
-    HEADER_HOST_REPLACEMENTS = grouped.HEADER_HOST_REPLACEMENTS || {};
+    // Migration: Merge legacy header replacements if they exist
+    HEADER_REPLACEMENTS = {
+      ...(grouped.HEADER_VALUE_REPLACEMENTS || {}),
+      ...(grouped.HEADER_REPLACEMENTS || {})
+    };
     BODY_KEY_REPLACEMENTS = grouped.BODY_KEY_REPLACEMENTS || {};
     URL_PARAM_REPLACEMENTS = grouped.URL_PARAM_REPLACEMENTS || {};
+    TEXT_REPLACEMENTS = grouped.TEXT_REPLACEMENTS || {};
     
     return data;
   } catch (e) {
@@ -61,16 +65,22 @@ if (typeof window !== 'undefined') {
 } else {
   // Server-side: just set defaults
   URL_REPLACEMENTS = DEFAULT_REPLACEMENTS.URL_REPLACEMENTS;
-  HEADER_VALUE_REPLACEMENTS = DEFAULT_REPLACEMENTS.HEADER_VALUE_REPLACEMENTS;
-  HEADER_HOST_REPLACEMENTS = DEFAULT_REPLACEMENTS.HEADER_HOST_REPLACEMENTS;
+  HEADER_REPLACEMENTS = DEFAULT_REPLACEMENTS.HEADER_REPLACEMENTS;
   BODY_KEY_REPLACEMENTS = DEFAULT_REPLACEMENTS.BODY_KEY_REPLACEMENTS;
   URL_PARAM_REPLACEMENTS = DEFAULT_REPLACEMENTS.URL_PARAM_REPLACEMENTS;
+  TEXT_REPLACEMENTS = DEFAULT_REPLACEMENTS.TEXT_REPLACEMENTS;
 }
 
 // Helper function to apply URL replacements (domain + query params)
 export function applyUrlReplacements(url: string): string {
   try {
-    const parsed = new URL(url);
+    let result = url;
+    // Apply global text replacements
+    for (const [pattern, replacement] of Object.entries(TEXT_REPLACEMENTS)) {
+      result = result.replaceAll(pattern, replacement);
+    }
+
+    const parsed = new URL(result);
 
     // Apply domain replacements
     let hostname = parsed.hostname;
@@ -95,6 +105,10 @@ export function applyUrlReplacements(url: string): string {
   } catch {
     // If URL parsing fails, fall back to simple string replacement
     let result = url;
+    // Apply global text replacements
+    for (const [pattern, replacement] of Object.entries(TEXT_REPLACEMENTS)) {
+      result = result.replaceAll(pattern, replacement);
+    }
     for (const [pattern, replacement] of Object.entries(URL_REPLACEMENTS)) {
       if (result.includes(pattern)) {
         result = result.replace(pattern, replacement);
@@ -110,23 +124,22 @@ export function applyHeaderReplacements(headers: Record<string, string>): Record
 
   for (const [key, value] of Object.entries(headers)) {
     let newValue = value;
-    let newKey = key;
+    const lowerKey = key.toLowerCase();
 
-    // Check for Bearer token replacement - replace entire token after "Bearer "
-    if (newValue.startsWith('Bearer ')) {
-      newValue = 'Bearer {{token}}';
-    }
-
-    // Check for host header replacements (case-insensitive)
-    if (key.toLowerCase() === 'host') {
-      for (const [pattern, replacement] of Object.entries(HEADER_HOST_REPLACEMENTS)) {
-        if (newValue.includes(pattern)) {
-          newValue = newValue.replace(pattern, replacement);
-        }
+    // Unified header replacement based on KEY
+    for (const [pattern, replacement] of Object.entries(HEADER_REPLACEMENTS)) {
+      if (lowerKey === pattern.toLowerCase()) {
+        newValue = replacement;
+        break;
       }
     }
 
-    result[newKey] = newValue;
+    // Apply global text replacements to value
+    for (const [pattern, replacement] of Object.entries(TEXT_REPLACEMENTS)) {
+      newValue = newValue.replaceAll(pattern, replacement);
+    }
+
+    result[key] = newValue;
   }
 
   return result;
@@ -135,12 +148,22 @@ export function applyHeaderReplacements(headers: Record<string, string>): Record
 // Helper function to apply body replacements (handles nested JSON)
 export function applyBodyReplacements(body: string): string {
   try {
-    const parsed = JSON.parse(body);
+    let transformedBody = body;
+    // Apply global text replacements
+    for (const [pattern, replacement] of Object.entries(TEXT_REPLACEMENTS)) {
+      transformedBody = transformedBody.replaceAll(pattern, replacement);
+    }
+
+    const parsed = JSON.parse(transformedBody);
     const transformed = transformObject(parsed);
     return JSON.stringify(transformed, null, 2);
   } catch {
-    // Not valid JSON, return as-is
-    return body;
+    let result = body;
+    // Apply global text replacements even if not valid JSON
+    for (const [pattern, replacement] of Object.entries(TEXT_REPLACEMENTS)) {
+      result = result.replaceAll(pattern, replacement);
+    }
+    return result;
   }
 }
 

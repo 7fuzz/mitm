@@ -1,11 +1,27 @@
-import { useState } from 'react';
-import { useTraffic, GlobalVariable, RepeaterGroup } from '@/hooks/traffic';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useTraffic, GlobalVariable, ReplacementsData } from '@/hooks/traffic';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { ConfirmModal, PromptModal, MultiGroupExportModal } from '../Modals';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { RepeaterRequest } from './RepeaterView';
+
+type ReplacementCategory = 'URL_REPLACEMENTS' | 'HEADER_REPLACEMENTS' | 'BODY_KEY_REPLACEMENTS' | 'URL_PARAM_REPLACEMENTS' | 'TEXT_REPLACEMENTS';
+
+interface ReplacementEntry {
+  id: string;
+  pattern: string;
+  replacement: string;
+}
+
+const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: string; color: string }> = {
+  URL_REPLACEMENTS: { label: 'URL Patterns', description: 'Domain prefix replacements for environment switching', color: 'sky' },
+  HEADER_REPLACEMENTS: { label: 'Header Replacements', description: 'Replace whole header values based on their KEY (e.g., Authorization)', color: 'emerald' },
+  BODY_KEY_REPLACEMENTS: { label: 'Body Keys', description: 'Replace JSON keys in request body', color: 'amber' },
+  URL_PARAM_REPLACEMENTS: { label: 'URL Params', description: 'Replace URL query parameter values', color: 'rose' },
+  TEXT_REPLACEMENTS: { label: 'Global Text', description: 'Global string replacement across URL, Headers, and Body (e.g., xyz -> {{var}})', color: 'indigo' },
+};
 
 function SortableGroupItem({ group, isActive, onSelect, onRename, onDelete }: any) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
@@ -38,10 +54,12 @@ export function WorkspaceView() {
     environments, activeEnvId, setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
     variables, addVariable, updateVariable, deleteVariable,
     repeaterGroups, createGroup, renameGroup, deleteGroup,
-    importPostman, importProject, _setRawGroups
+    importPostman, importProject, reorderGroups,
+    replacements, orderedReplacements, saveReplacements, deleteReplacement, isLoading: replacementsLoading,
+    simpleMode
   } = useTraffic();
 
-  const [activeTab, setActiveTab] = useState<'env' | 'collections'>('env');
+  const [activeTab, setActiveTab] = useState<'env' | 'collections' | 'replacements'>('env');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (val: string) => { } });
@@ -53,6 +71,137 @@ export function WorkspaceView() {
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
 
+  // Replacements UI State
+  const [expandedCategory, setExpandedCategory] = useState<ReplacementCategory | null>('URL_REPLACEMENTS');
+  const [localReplacements, setLocalReplacements] = useState<Record<ReplacementCategory, ReplacementEntry[]>>({
+    URL_REPLACEMENTS: [],
+    HEADER_REPLACEMENTS: [],
+    BODY_KEY_REPLACEMENTS: [],
+    URL_PARAM_REPLACEMENTS: [],
+    TEXT_REPLACEMENTS: [],
+  });
+  const [isSavingReplacements, setIsSavingReplacements] = useState(false);
+  const [saveReplacementsMessage, setSaveReplacementsMessage] = useState('');
+  
+  // Debounce ref for auto-save
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoad = useRef(true);
+  const lastSavedRef = useRef<string>('');
+
+  // Sync local replacements when loaded from DB
+  useEffect(() => {
+    if (orderedReplacements && orderedReplacements.length > 0) {
+      const converted: Record<ReplacementCategory, ReplacementEntry[]> = {
+        URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+        HEADER_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'HEADER_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+        BODY_KEY_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'BODY_KEY_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+        URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+        TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+      };
+      setLocalReplacements(converted);
+      
+      const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+      lastSavedRef.current = payloadString;
+      isInitialLoad.current = false;
+    }
+  }, [orderedReplacements]);
+
+  const saveReplacementsRef = useRef(saveReplacements);
+  saveReplacementsRef.current = saveReplacements;
+
+  const debouncedSave = useCallback((data: Record<ReplacementCategory, ReplacementEntry[]>) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    // Flatten data for comparison and incremental save
+    const currentItems = (Object.entries(data) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
+      entries.filter(e => e.pattern).map(e => ({ ...e, type }))
+    );
+    
+    const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+    if (lastSavedRef.current === currentPayloadString) return;
+
+    // Find ONLY changed or new items
+    const lastItems: any[] = JSON.parse(lastSavedRef.current || '[]');
+    const modifiedItems = currentItems.filter(curr => {
+      const prev = lastItems.find(l => l.id === curr.id);
+      return !prev || prev.pattern !== curr.pattern || prev.replacement !== curr.replacement;
+    });
+
+    if (modifiedItems.length === 0) return;
+
+    setSaveReplacementsMessage('Saving...');
+    debounceRef.current = setTimeout(async () => {
+      setIsSavingReplacements(true);
+      try {
+        // Send only modified items using incremental mode
+        const result = await saveReplacementsRef.current(modifiedItems, true);
+        if (result.success) {
+          lastSavedRef.current = currentPayloadString;
+          setSaveReplacementsMessage('Auto-saved ✓');
+        } else {
+          setSaveReplacementsMessage('Save failed');
+        }
+      } catch (e) {
+        setSaveReplacementsMessage('Save failed');
+      }
+      setIsSavingReplacements(false);
+      setTimeout(() => setSaveReplacementsMessage(''), 2000);
+    }, 800);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialLoad.current) {
+      debouncedSave(localReplacements);
+    }
+  }, [localReplacements, debouncedSave]);
+
+  const updateReplacementEntry = (category: ReplacementCategory, index: number, field: 'pattern' | 'replacement', value: string) => {
+    setLocalReplacements(prev => ({
+      ...prev,
+      [category]: prev[category].map((entry, i) => i === index ? { ...entry, [field]: value } : entry)
+    }));
+  };
+
+  const addReplacement = (category: ReplacementCategory) => {
+    setLocalReplacements(prev => ({
+      ...prev,
+      [category]: [...prev[category], { id: crypto.randomUUID(), pattern: '', replacement: '' }]
+    }));
+  };
+
+  const removeReplacement = (category: ReplacementCategory, index: number) => {
+    const entry = localReplacements[category][index];
+    if (entry && entry.id) {
+       deleteReplacement(entry.id);
+    }
+    setLocalReplacements(prev => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSaveReplacements = async () => {
+    setIsSavingReplacements(true);
+    setSaveReplacementsMessage('');
+    try {
+      const allItems = (Object.entries(localReplacements) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
+        entries.filter(e => e.pattern).map(e => ({ ...e, type }))
+      );
+
+      const result = await saveReplacements(allItems, true);
+      if (result.success) {
+        setSaveReplacementsMessage('Replacements updated successfully!');
+        lastSavedRef.current = JSON.stringify(allItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+      } else {
+        setSaveReplacementsMessage('Error: Failed to save replacements');
+      }
+    } catch (e) {
+      setSaveReplacementsMessage('Error: Failed to save replacements');
+    }
+    setIsSavingReplacements(false);
+    setTimeout(() => setSaveReplacementsMessage(''), 3000);
+  };
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   const handleGroupReorder = async (event: DragEndEvent) => {
@@ -62,11 +211,7 @@ export function WorkspaceView() {
       const newIndex = repeaterGroups.findIndex(g => g.id === over.id);
       const newGroups = arrayMove(repeaterGroups, oldIndex, newIndex);
       
-      _setRawGroups(newGroups);
-      
-      // Persist reorder
-      const reorderedIds = newGroups.map(g => g.id);
-      // Backend should support group reordering if needed
+      reorderGroups(newGroups.map(g => g.id));
     }
   };
 
@@ -228,14 +373,20 @@ export function WorkspaceView() {
             onClick={() => setActiveTab('collections')}
             className={`flex items-center text-left px-3 py-2.5 rounded text-[11px] font-bold tracking-wider transition-all border ${activeTab === 'collections' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900'}`}
           >
-            Repeater Collections
+            Workbench Collections
+          </button>
+          <button
+            onClick={() => setActiveTab('replacements')}
+            className={`flex items-center text-left px-3 py-2.5 rounded text-[11px] font-bold tracking-wider transition-all border ${activeTab === 'replacements' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900'}`}
+          >
+            Workbench Replacements
           </button>
         </div>
       )}
       toolbarLeft={
         <div className="flex items-center px-4">
           <span className="text-[12px] font-black uppercase tracking-[0.2em] text-zinc-300">
-            Workspace_Management / {activeTab === 'env' ? 'Environments' : 'Collections'}
+            Workspace_Management / {activeTab === 'env' ? 'Environments' : activeTab === 'collections' ? 'Collections' : 'Replacements'}
           </span>
         </div>
       }
@@ -248,7 +399,7 @@ export function WorkspaceView() {
       }
       mainContent={() => (
         <div className="w-full max-w-5xl mx-auto py-6 space-y-10">
-          {activeTab === 'env' ? (
+          {activeTab === 'env' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -361,11 +512,13 @@ export function WorkspaceView() {
                 </div>
               </section>
             </div>
-          ) : (
+          )}
+          
+          {activeTab === 'collections' && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest">Repeater Collections Management</h3>
+                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest">Workbench Collections Management</h3>
                   <button onClick={() => openPrompt('New Collection Name', '', createGroup)} className="px-3 py-1.5 bg-purple-600/10 border border-purple-600/30 text-purple-500 hover:bg-purple-600/20 rounded text-[9px] font-black uppercase tracking-widest transition-all">+ Create Collection</button>
                 </div>
                 
@@ -384,6 +537,107 @@ export function WorkspaceView() {
                       ))}
                     </SortableContext>
                   </DndContext>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeTab === 'replacements' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <section className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-rose-500 font-bold uppercase text-[10px] tracking-widest">Workbench Replacements</h3>
+                    <p className="text-zinc-500 text-[10px] font-mono mt-1">Configure variable placeholders applied when sending requests from History to Workbench.</p>
+                  </div>
+                </div>
+
+                {replacementsLoading ? (
+                  <div className="text-center py-12 border border-zinc-800 border-dashed rounded bg-zinc-900/20 text-zinc-600 font-mono text-[10px] uppercase tracking-widest">Loading replacements...</div>
+                ) : (
+                  <div className="space-y-3">
+                    {(Object.keys(CATEGORY_INFO) as ReplacementCategory[]).map(category => {
+                      const info = CATEGORY_INFO[category];
+                      const isExpanded = expandedCategory === category;
+                      const entries = localReplacements[category] || [];
+
+                      return (
+                        <div key={category} className="border border-zinc-800 rounded overflow-hidden bg-zinc-900/30">
+                          <button
+                            onClick={() => setExpandedCategory(isExpanded ? null : category)}
+                            className="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-800/50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={`w-2 h-2 rounded-full bg-${info.color}-500`} />
+                              <div className="text-left">
+                                <div className="text-xs text-zinc-300 font-bold uppercase tracking-widest">{info.label}</div>
+                                <div className="text-[10px] text-zinc-600 font-mono">{entries.length} rule{entries.length !== 1 ? 's' : ''}</div>
+                              </div>
+                            </div>
+                            <span className={`text-zinc-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="p-4 border-t border-zinc-800 space-y-3 bg-zinc-950/30">
+                              <p className="text-[10px] text-zinc-500 font-mono italic">{info.description}</p>
+                              
+                              {entries.length === 0 ? (
+                                <div className="text-center py-6 border border-zinc-800 border-dashed rounded text-zinc-700 text-[10px] font-mono uppercase tracking-widest">No replacements configured</div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {entries.map((entry, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 group">
+                                      <input
+                                        type="text"
+                                        value={entry.pattern}
+                                        onChange={(e) => updateReplacementEntry(category, idx, 'pattern', e.target.value)}
+                                        placeholder={category === 'HEADER_REPLACEMENTS' ? "Header Key (e.g. Authorization)" : category === 'BODY_KEY_REPLACEMENTS' ? "JSON Key (e.g. user_id)" : category === 'TEXT_REPLACEMENTS' ? "Any Text (e.g. xyz)" : "Pattern (e.g. api.)"}
+                                        className="flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded text-zinc-300 font-mono text-xs outline-none focus:border-rose-500/50 transition-all"
+                                      />
+                                      <span className="text-zinc-600 text-xs">→</span>
+                                      <input
+                                        type="text"
+                                        value={entry.replacement}
+                                        onChange={(e) => updateReplacementEntry(category, idx, 'replacement', e.target.value)}
+                                        placeholder={category === 'HEADER_REPLACEMENTS' ? "Value (e.g. Bearer {{token}})" : category === 'TEXT_REPLACEMENTS' ? "Replacement (e.g. {{something}})" : "Replacement (e.g. {{env}})"}
+                                        className="flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded text-amber-400 font-mono text-xs outline-none focus:border-rose-500/50 transition-all"
+                                      />
+                                      <button
+                                        onClick={() => removeReplacement(category, idx)}
+                                        className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <button
+                                onClick={() => addReplacement(category)}
+                                className="text-[10px] text-rose-400 hover:text-rose-300 font-bold uppercase tracking-widest flex items-center gap-1 mt-2"
+                              >
+                                + Add Rule
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-6 border-t border-zinc-800/50">
+                  <span className={`text-[10px] font-mono uppercase tracking-widest ${saveReplacementsMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {saveReplacementsMessage}
+                  </span>
+                  <button
+                    onClick={handleSaveReplacements}
+                    disabled={isSavingReplacements}
+                    className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
+                  >
+                    {isSavingReplacements ? 'Saving...' : 'Save Configuration'}
+                  </button>
                 </div>
               </section>
             </div>
