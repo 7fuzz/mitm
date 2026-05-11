@@ -164,9 +164,9 @@ export default function JsonViewer({
             </span>
           )}
           <span className={valueColor}>
-            {isString && !isRedacted && '&quot;'}
+            {isString && !isRedacted && '"'}
             <HighlightText text={formattedValue} query={searchTerm} />
-            {isString && !isRedacted && '&quot;'}
+            {isString && !isRedacted && '"'}
           </span>
           {!isLast && <span className="text-zinc-500">,</span>}
         </div>
