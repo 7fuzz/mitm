@@ -158,6 +158,51 @@ class VariableHandlers:
         self.db.commit()
         return web.json_response({"success": True})
 
+    async def handle_vars_bulk_put(self, request):
+        try:
+            data = await request.json()
+            if not isinstance(data, list):
+                return web.json_response({"success": False, "error": "Expected a list of variables"}, status=400)
+
+            for var_data in data:
+                var_id = var_data.get("id")
+                if not var_id:
+                    continue
+                
+                # Update variable record
+                update_fields = []
+                params = []
+                if "name" in var_data:
+                    update_fields.append("name=?")
+                    params.append(var_data["name"])
+                if "activeIndex" in var_data:
+                    update_fields.append("active_index=?")
+                    params.append(var_data["activeIndex"])
+                
+                if update_fields:
+                    query = f"UPDATE variables SET {', '.join(update_fields)} WHERE id=?"
+                    params.append(var_id)
+                    self.db.execute(query, params)
+
+                # Update values if provided
+                if "values" in var_data:
+                    self.db.execute("DELETE FROM variable_values WHERE variable_id=?", (var_id,))
+                    for val in var_data.get("values", []):
+                        self.db.execute(
+                            "INSERT INTO variable_values VALUES (?, ?, ?, ?)",
+                            (
+                                val.get("id", str(uuid.uuid4())),
+                                var_id,
+                                val.get("name", ""),
+                                val.get("value", ""),
+                            ),
+                        )
+            
+            self.db.commit()
+            return web.json_response({"success": True})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
     async def handle_env_post(self, request):
         data = await request.json()
         env_id = data.get("id", str(uuid.uuid4()))

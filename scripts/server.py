@@ -60,6 +60,7 @@ class APIServer:
         # Register Variables Routes
         app.router.add_get("/variables", variables.handle_vars_get)
         app.router.add_post("/variables", variables.handle_vars_post)
+        app.router.add_put("/variables-bulk", variables.handle_vars_bulk_put)
         app.router.add_put("/variables/{id}", variables.handle_vars_put)
         app.router.add_delete("/variables/{id}", variables.handle_vars_delete)
 

@@ -31,13 +31,13 @@ export function useVariables(prefs?: { autoSave: boolean }) {
 
   const saveAllVariables = async () => {
     const envVars = variables.filter(v => v.environmentId === activeEnvId);
-    await Promise.all(envVars.map(v => 
-      fetch(`/api/variables/${v.id}`, { 
-        method: 'PUT', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(v) 
-      }).catch(console.error)
-    ));
+    if (envVars.length === 0) return;
+    
+    await fetch('/api/variables/bulk', { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(envVars) 
+    }).catch(console.error);
   };
 
   const updateVariable = (id: string, updates: Partial<GlobalVariable>, immediate = false) => {
