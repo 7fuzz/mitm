@@ -40,5 +40,6 @@ export interface ReplacementEntry {
   id: string;
   pattern: string;
   replacement: string;
+  is_active: boolean;
 }
 

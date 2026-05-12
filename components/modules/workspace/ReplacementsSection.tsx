@@ -4,7 +4,7 @@ import { useTraffic, ReplacementCategory, ReplacementEntry } from '@/hooks/traff
 const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: string; color: string }> = {
   URL_REPLACEMENTS: { label: 'URL Patterns', description: 'Domain prefix replacements for environment switching', color: 'sky' },
   HEADER_REPLACEMENTS: { label: 'Header Replacements', description: 'Replace whole header values based on their KEY (e.g., Authorization)', color: 'emerald' },
-  BODY_KEY_REPLACEMENTS: { label: 'Body Keys', description: 'Replace JSON keys in request body', color: 'amber' },
+  BODY_KEY_REPLACEMENTS: { label: 'Body Keys', description: 'Replace JSON/Form keys in request body', color: 'amber' },
   URL_PARAM_REPLACEMENTS: { label: 'URL Params', description: 'Replace URL query parameter values', color: 'rose' },
   TEXT_REPLACEMENTS: { label: 'Global Text', description: 'Global string replacement across URL, Headers, and Body (e.g., xyz -> {{var}})', color: 'indigo' },
 };
@@ -35,11 +35,11 @@ export function ReplacementsSection() {
     setPrevOrdered(orderedReplacements);
     if (orderedReplacements && orderedReplacements.length > 0) {
       const converted: Record<ReplacementCategory, ReplacementEntry[]> = {
-        URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
-        HEADER_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'HEADER_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
-        BODY_KEY_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'BODY_KEY_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
-        URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
-        TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })),
+        URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+        HEADER_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'HEADER_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+        BODY_KEY_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'BODY_KEY_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+        URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+        TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
       };
       setLocalReplacements(converted);
     }
@@ -47,7 +47,7 @@ export function ReplacementsSection() {
 
   useEffect(() => {
     if (orderedReplacements && orderedReplacements.length > 0) {
-      const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+      const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
       lastSavedRef.current = payloadString;
       isInitialLoad.current = false;
     }
@@ -65,13 +65,13 @@ export function ReplacementsSection() {
       entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
     );
     
-    const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+    const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
     if (lastSavedRef.current === currentPayloadString) return;
 
-    const lastItems: { id: string; pattern: string; replacement: string }[] = JSON.parse(lastSavedRef.current || '[]');
+    const lastItems: { id: string; pattern: string; replacement: string, is_active: boolean }[] = JSON.parse(lastSavedRef.current || '[]');
     const modifiedItems = currentItems.filter(curr => {
       const prev = lastItems.find(l => l.id === curr.id);
-      return !prev || prev.pattern !== curr.pattern || prev.replacement !== curr.replacement;
+      return !prev || prev.pattern !== curr.pattern || prev.replacement !== curr.replacement || prev.is_active !== curr.is_active;
     });
 
     if (modifiedItems.length === 0) return;
@@ -101,7 +101,7 @@ export function ReplacementsSection() {
     }
   }, [localReplacements, debouncedSave]);
 
-  const updateEntry = (category: ReplacementCategory, index: number, field: 'pattern' | 'replacement', value: string) => {
+  const updateEntry = (category: ReplacementCategory, index: number, field: 'pattern' | 'replacement' | 'is_active', value: string | boolean) => {
     setLocalReplacements(prev => ({
       ...prev,
       [category]: prev[category].map((entry, i) => i === index ? { ...entry, [field]: value } : entry)
@@ -111,7 +111,7 @@ export function ReplacementsSection() {
   const addEntry = (category: ReplacementCategory) => {
     setLocalReplacements(prev => ({
       ...prev,
-      [category]: [...prev[category], { id: crypto.randomUUID(), pattern: '', replacement: '' }]
+      [category]: [...prev[category], { id: crypto.randomUUID(), pattern: '', replacement: '', is_active: true }]
     }));
   };
 
@@ -137,7 +137,7 @@ export function ReplacementsSection() {
       const result = await saveReplacements(allItems, true);
       if (result.success) {
         setSaveMessage('Replacements updated successfully!');
-        lastSavedRef.current = JSON.stringify(allItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
+        lastSavedRef.current = JSON.stringify(allItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
       } else {
         setSaveMessage('Error: Failed to save replacements');
       }
@@ -194,12 +194,23 @@ export function ReplacementsSection() {
                       <div className="space-y-2">
                         {entries.map((entry, idx) => (
                           <div key={idx} className="flex items-center gap-2 group">
+                            <button
+                              onClick={() => updateEntry(category, idx, 'is_active', !entry.is_active)}
+                              className={`p-2 rounded transition-colors ${entry.is_active ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 bg-zinc-950'}`}
+                              title={entry.is_active ? "Rule is Active" : "Rule is Inactive"}
+                            >
+                              {entry.is_active ? (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              )}
+                            </button>
                             <input
                               type="text"
                               value={entry.pattern}
                               onChange={(e) => updateEntry(category, idx, 'pattern', e.target.value)}
                               placeholder={category === 'HEADER_REPLACEMENTS' ? "Header Key (e.g. Authorization)" : category === 'BODY_KEY_REPLACEMENTS' ? "JSON Key (e.g. user_id)" : category === 'TEXT_REPLACEMENTS' ? "Any Text (e.g. xyz)" : "Pattern (e.g. api.)"}
-                              className="flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded text-zinc-300 font-mono text-xs outline-none focus:border-rose-500/50 transition-all"
+                              className={`flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded font-mono text-xs outline-none focus:border-rose-500/50 transition-all ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-zinc-300'}`}
                             />
                             <span className="text-zinc-600 text-xs">→</span>
                             <input
@@ -207,7 +218,7 @@ export function ReplacementsSection() {
                               value={entry.replacement}
                               onChange={(e) => updateEntry(category, idx, 'replacement', e.target.value)}
                               placeholder={category === 'HEADER_REPLACEMENTS' ? "Value (e.g. Bearer {{token}})" : category === 'TEXT_REPLACEMENTS' ? "Replacement (e.g. {{something}})" : "Replacement (e.g. {{env}})"}
-                              className="flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded text-amber-400 font-mono text-xs outline-none focus:border-rose-500/50 transition-all"
+                              className={`flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded font-mono text-xs outline-none focus:border-rose-500/50 transition-all ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-amber-400/70'}`}
                             />
                             <button
                               onClick={() => removeEntry(category, idx)}

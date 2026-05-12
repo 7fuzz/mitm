@@ -33,8 +33,8 @@ export function HistoryView() {
     uiLayout, updateUILayout,
     // NEW: Destructure the safe repeater functions instead of raw setters
     refreshRepeater, setRepeaterSelectedId,
-    // NEW: Get replacement apply functions
-    applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements,
+    // NEW: Get replacement apply function
+    applyAllReplacements,
     simpleMode
   } = useTraffic();
 
@@ -81,9 +81,9 @@ export function HistoryView() {
       const isRaw = simpleMode || raw;
 
       // Apply replacements to URL, headers, and body only if not raw mode
-      const transformedUrl = isRaw ? req.url : applyUrlReplacements(req.url);
-      const transformedHeaders = isRaw ? (req.request_headers || {}) : applyHeaderReplacements(req.request_headers || {});
-      const transformedBody = isRaw ? (req.request_body || '') : applyBodyReplacements(req.request_body || '');
+      const { url: transformedUrl, headers: transformedHeaders, body: transformedBody } = isRaw 
+        ? { url: req.url, headers: req.request_headers || {}, body: req.request_body || '' }
+        : applyAllReplacements({ url: req.url, headers: req.request_headers || {}, body: req.request_body || '' });
 
       const response = await fetch(`/api/repeater-request${isRaw ? '?raw=true' : ''}`, {
         method: 'POST',

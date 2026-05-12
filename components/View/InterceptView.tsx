@@ -13,7 +13,7 @@ export function InterceptView() {
     traffic, isIntercepting, interceptMode, ignoredMethods,
     updateConfig, resumeRequest, uiLayout, updateUILayout,
     refreshRepeater, setRepeaterSelectedId, variables, activeEnvId,
-    applyUrlReplacements, applyHeaderReplacements, applyBodyReplacements,
+    applyAllReplacements,
     simpleMode
   } = useTraffic();
 
@@ -64,9 +64,9 @@ export function InterceptView() {
       const isRaw = simpleMode || raw;
 
       // Apply replacements only if not raw
-      const finalUrl = isRaw ? (editUrl || currentReq.url) : applyUrlReplacements(editUrl || currentReq.url);
-      const finalHeaders = isRaw ? editHeaders : applyHeaderReplacements(editHeaders);
-      const finalBody = isRaw ? editBody : applyBodyReplacements(editBody);
+      const { url: finalUrl, headers: finalHeaders, body: finalBody } = isRaw 
+        ? { url: editUrl || currentReq.url, headers: editHeaders, body: editBody }
+        : applyAllReplacements({ url: editUrl || currentReq.url, headers: editHeaders, body: editBody });
 
       const response = await fetch(`/api/repeater-request${isRaw ? '?raw=true' : ''}`, {
         method: 'POST',

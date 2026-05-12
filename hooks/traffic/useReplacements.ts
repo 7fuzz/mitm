@@ -13,6 +13,7 @@ export interface OrderedReplacement {
   type: string;
   pattern: string;
   replacement: string;
+  is_active: boolean;
   order_index: number;
 }
 
@@ -54,19 +55,8 @@ export function useReplacements() {
       setError(null);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      // Handle new format with grouped and ordered
       if (data.grouped) {
-        const grouped = data.grouped as ReplacementsData & { HEADER_VALUE_REPLACEMENTS?: Record<string, string> };
-        // Migration: Merge legacy header replacements if they exist
-        const unifiedHeaders = {
-          ...(grouped.HEADER_VALUE_REPLACEMENTS || {}),
-          ...(grouped.HEADER_REPLACEMENTS || {})
-        };
-        
-        setReplacements({
-          ...grouped,
-          HEADER_REPLACEMENTS: unifiedHeaders
-        });
+        setReplacements(data.grouped);
         setOrderedReplacements(data.ordered || []);
       } else {
         setReplacements(data);
@@ -89,11 +79,7 @@ export function useReplacements() {
       if (!res.ok) throw new Error('Failed to save');
       const result = await res.json();
       if (result.success) {
-        if (incremental) {
-          await fetchReplacements();
-        } else {
-          setReplacements(data as ReplacementsData);
-        }
+        await fetchReplacements();
       }
       return result;
     } catch (err) {
@@ -143,88 +129,77 @@ export function useReplacements() {
   }, [fetchReplacements]);
 
   // Apply functions
-  const applyUrlReplacements = useCallback((url: string): string => {
+  const applyAllReplacements = useCallback((request: { url: string, headers: Record<string, string>, body: string }) => {
+    let { url, headers, body } = request;
+
+    // 1. Global Text Replacements (applied to URL, Headers, and Body as strings)
+    for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
+      url = url.replaceAll(pattern, replacement);
+      body = body.replaceAll(pattern, replacement);
+      const newHeaders: Record<string, string> = {};
+      for (const [k, v] of Object.entries(headers)) {
+        newHeaders[k] = v.replaceAll(pattern, replacement);
+      }
+      headers = newHeaders;
+    }
+
+    // 2. URL Replacements (String replacement on URL)
+    for (const [pattern, replacement] of Object.entries(replacements.URL_REPLACEMENTS)) {
+      url = url.replaceAll(pattern, replacement);
+    }
+
+    // 3. URL Param Replacements (Key-based)
     try {
-      let result = url;
-      for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
-        result = result.replaceAll(pattern, replacement);
-      }
-
-      const parsed = new URL(result);
-      let hostname = parsed.hostname;
-      for (const [pattern, replacement] of Object.entries(replacements.URL_REPLACEMENTS)) {
-        if (hostname.includes(pattern)) {
-          hostname = hostname.replace(pattern, replacement);
+      const parsedUrl = new URL(url);
+      let searchParamsChanged = false;
+      for (const [key, replacement] of Object.entries(replacements.URL_PARAM_REPLACEMENTS)) {
+        if (parsedUrl.searchParams.has(key)) {
+          parsedUrl.searchParams.set(key, replacement);
+          searchParamsChanged = true;
         }
       }
-      parsed.hostname = hostname;
+      if (searchParamsChanged) url = parsedUrl.toString();
+    } catch { /* skip if invalid URL */ }
 
-      const searchParams = parsed.search;
-      let newSearch = searchParams;
-      for (const [key, value] of Object.entries(replacements.URL_PARAM_REPLACEMENTS)) {
-        const regex = new RegExp(`([?&]${key}=)([^&]*)`, 'g');
-        newSearch = newSearch.replace(regex, `$1${value}`);
+    // 4. Header Replacements (Key-based)
+    const updatedHeaders = { ...headers };
+    for (const [k, v] of Object.entries(replacements.HEADER_REPLACEMENTS)) {
+      // Find matching key case-insensitively
+      const actualKey = Object.keys(updatedHeaders).find(key => key.toLowerCase() === k.toLowerCase());
+      if (actualKey) {
+        updatedHeaders[actualKey] = v;
       }
-      parsed.search = newSearch;
+    }
+    headers = updatedHeaders;
 
-      return parsed.toString();
-    } catch {
-      let result = url;
-      for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
-        result = result.replaceAll(pattern, replacement);
-      }
-      for (const [pattern, replacement] of Object.entries(replacements.URL_REPLACEMENTS)) {
-        if (result.includes(pattern)) {
-          result = result.replace(pattern, replacement);
+    // 5. Body Replacements (Key-based)
+    if (body) {
+      try {
+        // Handle JSON
+        const parsed = JSON.parse(body);
+        const transformed = transformObjectHelper(parsed, replacements.BODY_KEY_REPLACEMENTS);
+        body = JSON.stringify(transformed, null, 2);
+      } catch {
+        // Handle Form Data
+        if (body.includes('=') && (body.includes('&') || body.length > 0)) {
+           const params = new URLSearchParams(body);
+           let changed = false;
+           for (const [k, v] of Object.entries(replacements.BODY_KEY_REPLACEMENTS)) {
+             if (params.has(k)) {
+               params.set(k, v);
+               changed = true;
+             }
+           }
+           if (changed) body = params.toString();
         }
       }
-      return result;
     }
-  }, [replacements]);
 
-  const applyHeaderReplacements = useCallback((headers: Record<string, string>): Record<string, string> => {
-    const result: Record<string, string> = {};
-    for (const [key, value] of Object.entries(headers)) {
-      let newValue = value;
-      const lowerKey = key.toLowerCase();
-      
-      for (const [pattern, replacement] of Object.entries(replacements.HEADER_REPLACEMENTS)) {
-        if (lowerKey === pattern.toLowerCase()) {
-           newValue = replacement;
-           break;
-        }
-      }
-
-      for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
-        newValue = newValue.replaceAll(pattern, replacement);
-      }
-      
-      result[key] = newValue;
-    }
-    return result;
-  }, [replacements]);
-
-  const applyBodyReplacements = useCallback((body: string): string => {
-    try {
-      let transformedBody = body;
-      for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
-        transformedBody = transformedBody.replaceAll(pattern, replacement);
-      }
-
-      const parsed = JSON.parse(transformedBody);
-      const transformed = transformObjectHelper(parsed, replacements.BODY_KEY_REPLACEMENTS);
-      return JSON.stringify(transformed, null, 2);
-    } catch {
-      let result = body;
-      for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
-        result = result.replaceAll(pattern, replacement);
-      }
-      return result;
-    }
+    return { url, headers, body };
   }, [replacements]);
 
   useEffect(() => {
-    Promise.resolve().then(() => fetchReplacements());
+    fetchReplacements();
   }, [fetchReplacements]);
 
   return {
@@ -236,8 +211,6 @@ export function useReplacements() {
     saveReplacements,
     updateOrder,
     deleteReplacement,
-    applyUrlReplacements,
-    applyHeaderReplacements,
-    applyBodyReplacements,
+    applyAllReplacements,
   };
 }

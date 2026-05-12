@@ -77,7 +77,7 @@ class Database:
 
     # Replacements CRUD
     def get_all_replacements(self):
-        rows = self.execute("SELECT id, type, pattern, replacement, description, is_active, order_index FROM replacements WHERE is_active = 1 ORDER BY type, order_index").fetchall()
+        rows = self.execute("SELECT id, type, pattern, replacement, description, is_active, order_index FROM replacements ORDER BY type, order_index").fetchall()
         return [
             {"id": r[0], "type": r[1], "pattern": r[2], "replacement": r[3], "description": r[4], "is_active": bool(r[5]), "order_index": r[6]}
             for r in rows
@@ -87,16 +87,16 @@ class Database:
         rows = self.execute("SELECT id, type, pattern, replacement, description, is_active, order_index FROM replacements WHERE type = ? AND is_active = 1 ORDER BY order_index", (replacement_type,)).fetchall()
         return {r[2]: r[3] for r in rows}
 
-    def save_replacement(self, id, replacement_type, pattern, replacement, description="", order_index=0):
+    def save_replacement(self, id, replacement_type, pattern, replacement, description="", order_index=0, is_active=1):
         self.execute(
             """INSERT OR REPLACE INTO replacements (id, type, pattern, replacement, description, is_active, order_index, updated_at) 
-               VALUES (?, ?, ?, ?, ?, 1, ?, strftime('%s', 'now'))""",
-            (id, replacement_type, pattern, replacement, description, order_index)
+               VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))""",
+            (id, replacement_type, pattern, replacement, description, is_active, order_index)
         )
         self.commit()
 
     def delete_replacement(self, id):
-        self.execute("UPDATE replacements SET is_active = 0 WHERE id = ?", (id,))
+        self.execute("DELETE FROM replacements WHERE id = ?", (id,))
         self.commit()
 
     def update_replacement_order(self, id, order_index):
@@ -139,12 +139,16 @@ class Database:
         for r in replacements:
             r_type = r.get("type", "")
             if r_type in grouped:
-                grouped[r_type][r["pattern"]] = r["replacement"]
+                # Grouped only contains active patterns for the proxy application logic
+                if r.get("is_active"):
+                    grouped[r_type][r["pattern"]] = r["replacement"]
+                
                 ordered.append({
                     "id": r["id"],
                     "type": r_type,
                     "pattern": r["pattern"],
                     "replacement": r["replacement"],
+                    "is_active": r.get("is_active", True),
                     "order_index": r.get("order_index", 0)
                 })
         
@@ -155,11 +159,6 @@ class Database:
 
     def save_replacements_bulk_api(self, data, incremental=False):
         """Save replacements with support for incremental UPSERT and list format"""
-        if not incremental:
-            # Full sync mode: deactivate everything not in the update
-            # But for simplicity in auto-save, we usually want incremental UPSERT
-            self.execute("UPDATE replacements SET is_active = 0")
-        
         import uuid
         
         if isinstance(data, list):
@@ -171,11 +170,15 @@ class Database:
                     item.get("pattern"),
                     item.get("replacement"),
                     item.get("description", "Incremental update"),
-                    item.get("order_index", 0)
+                    item.get("order_index", 0),
+                    1 if item.get("is_active", True) else 0
                 )
             return {"success": True}
 
         # legacy/grouped format (dict)
+        if not incremental:
+             self.execute("UPDATE replacements SET is_active = 0")
+
         for r_type, patterns in data.items():
             if isinstance(patterns, dict):
                 # Sort by order_index if provided
@@ -189,7 +192,8 @@ class Database:
                             pattern,
                             value.get("replacement", ""),
                             f"Auto-saved {r_type}",
-                            value.get("order_index", idx)
+                            value.get("order_index", idx),
+                            1 if value.get("is_active", True) else 0
                         )
                     else:
                         # Legacy format (just string value)
@@ -199,7 +203,8 @@ class Database:
                             pattern,
                             value,
                             f"Auto-saved {r_type}",
-                            idx
+                            idx,
+                            1
                         )
         
         return {"success": True}
