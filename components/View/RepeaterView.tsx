@@ -358,7 +358,17 @@ export function RepeaterView() {
                       </div>
                       <div className="flex flex-col space-y-3">
                         <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Body</h3>
-                        <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-87.5"><BodyEditor body={editBody} headers={editHeaders} onChange={setEditBody} /></div>
+                        <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-87.5">
+                          <BodyEditor 
+                            body={editBody} 
+                            headers={editHeaders} 
+                            onChange={setEditBody} 
+                            onHeadersChange={(newHeaders) => {
+                              setEditHeaders(newHeaders);
+                              updateRequest(currentReq.id, { headers: newHeaders });
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (

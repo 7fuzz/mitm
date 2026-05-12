@@ -316,9 +316,11 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
           {/* STRICT HEIGHT: h-7 */}
           <div className="flex bg-zinc-950 p-0.5 rounded items-center border border-zinc-800 shrink-0 h-7">
-            <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
-              {isMediaOrFile ? "Preview" : "Pretty"}
-            </button>
+            {!isForm && (
+              <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+                {isMediaOrFile ? "Preview" : "Pretty"}
+              </button>
+            )}
             {isForm && (
               <button onClick={() => setViewMode("form")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "form" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
                 Form
