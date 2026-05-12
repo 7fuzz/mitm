@@ -29,29 +29,27 @@ export function ReplacementsSection() {
   const isInitialLoad = useRef(true);
   const lastSavedRef = useRef<string>('');
 
-  const [prevOrdered, setPrevOrdered] = useState(orderedReplacements);
+  const [prevOrdered, setPrevOrdered] = useState<ReplacementEntry[] | null>(null);
 
   if (orderedReplacements !== prevOrdered) {
     setPrevOrdered(orderedReplacements);
-    if (orderedReplacements && orderedReplacements.length > 0) {
-      const converted: Record<ReplacementCategory, ReplacementEntry[]> = {
-        URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
-        HEADER_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'HEADER_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
-        BODY_KEY_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'BODY_KEY_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
-        URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
-        TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
-      };
-      setLocalReplacements(converted);
-    }
+    const converted: Record<ReplacementCategory, ReplacementEntry[]> = {
+      URL_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+      HEADER_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'HEADER_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+      BODY_KEY_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'BODY_KEY_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+      URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+      TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
+    };
+    setLocalReplacements(converted);
   }
 
   useEffect(() => {
-    if (orderedReplacements && orderedReplacements.length > 0) {
+    if (!replacementsLoading) {
       const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
       lastSavedRef.current = payloadString;
       isInitialLoad.current = false;
     }
-  }, [orderedReplacements]);
+  }, [orderedReplacements, replacementsLoading]);
 
   const saveRef = useRef(saveReplacements);
   useEffect(() => {

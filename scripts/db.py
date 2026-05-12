@@ -111,8 +111,9 @@ class Database:
         for item in replacements_list:
             self.execute(
                 """INSERT OR REPLACE INTO replacements (id, type, pattern, replacement, description, is_active, order_index, updated_at) 
-                   VALUES (?, ?, ?, ?, ?, 1, ?, strftime('%s', 'now'))""",
-                (item.get("id"), item.get("type"), item.get("pattern"), item.get("replacement"), item.get("description", ""), item.get("order_index", 0))
+                   VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now'))""",
+                (item.get("id"), item.get("type"), item.get("pattern"), item.get("replacement"), item.get("description", ""), 
+                 1 if item.get("is_active", True) else 0, item.get("order_index", 0))
             )
         self.commit()
 
