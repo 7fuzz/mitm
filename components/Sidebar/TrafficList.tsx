@@ -5,6 +5,7 @@ import { TrafficItem } from './TrafficItem';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { DebouncedInput } from '../ui/DebouncedInput';
 
 interface TrafficListProps {
   items: Traffic[];
@@ -110,12 +111,12 @@ export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, ac
       <div className="p-3 border-b border-zinc-800 space-y-3 bg-zinc-900/30 shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1">
-            <input
-              type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono"
+            <DebouncedInput
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search..."
+              className="w-full"
             />
-            <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>}
           </div>
           <button onClick={() => setShowFilters(!showFilters)} className="px-2 py-1.5 text-[9px] uppercase font-bold tracking-widest rounded bg-zinc-900 text-zinc-400 border border-zinc-700 hover:text-zinc-200 hover:border-zinc-600 transition-all whitespace-nowrap">
             {showFilters ? 'Hide' : 'Show'} Filter

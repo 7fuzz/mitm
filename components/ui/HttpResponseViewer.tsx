@@ -3,43 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import JsonViewer from "./JsonViewer";
 import { useTraffic } from '@/hooks/traffic';
 import { useNotification } from "./NotificationProvider";
-
-// === Isolated Search Component ===
-const DebouncedSearchInput = ({ onSearch }: { onSearch: (val: string) => void }) => {
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      onSearch(input);
-      setIsTyping(false);
-    }, 400); // 400ms debounce
-    return () => clearTimeout(handler);
-  }, [input, onSearch]);
-
-  const handleInputChange = (val: string) => {
-    setInput(val);
-    if (val !== input) setIsTyping(true);
-  };
-
-  return (
-    <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0 h-7">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-colors ${isTyping ? 'text-amber-500 animate-pulse' : 'text-zinc-500'}`}>
-        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-      <input
-        type="text"
-        placeholder="Search..."
-        value={input}
-        onChange={(e) => handleInputChange(e.target.value)}
-        className="w-20 md:w-24 focus:w-32 transition-all bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600"
-      />
-      {input && (
-        <button onClick={() => { handleInputChange(""); onSearch(""); }} className="text-zinc-500 hover:text-rose-400 mr-1 flex items-center justify-center">✕</button>
-      )}
-    </div>
-  );
-};
+import { DebouncedInput } from "./DebouncedInput";
 
 const formatMarkup = (val: string) => {
   let formatted = '';
@@ -358,7 +322,12 @@ export default function HttpResponseViewer({ text }: { text: string }) {
           {/* JSON Controls */}
           {parsed.json && viewMode === "pretty" && (
             <div className="flex flex-wrap items-center gap-1 shrink-0">
-              <DebouncedSearchInput onSearch={setSearchTerm} />
+              <DebouncedInput 
+                value={searchTerm} 
+                onChange={setSearchTerm} 
+                placeholder="Search..."
+                className="h-7 w-28 md:w-32 focus-within:w-40 transition-all"
+              />
 
               {/* STRICT HEIGHT/WIDTH: h-7 w-7 */}
               <button

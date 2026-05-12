@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { MultiSelectFilter, FilterState } from '../ui/MultiSelectFilter';
+import { DebouncedInput } from '../ui/DebouncedInput';
 
 interface SavedRequest {
   method: string;
@@ -133,19 +134,12 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
         <div className="p-3 border-b border-zinc-800 space-y-3 bg-zinc-900/30 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search..."
+              <DebouncedInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-700 p-2 pl-8 rounded text-zinc-300 outline-none focus:border-sky-500 transition-colors text-[11px] font-mono"
+                onChange={setSearchTerm}
+                placeholder="Search..."
+                className="w-full"
               />
-              <svg className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-zinc-300">✕</button>
-              )}
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
