@@ -119,8 +119,8 @@ function useTrafficState() {
   }, []);
 
   const replacements = useReplacements();
-
-  const { initConfig: _ic, prefsRef: _pr, limitRef: _lr, ...configRest } = config; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const { setTraffic } = trafficData;
+  const { initConfig: _initConfig, prefsRef: _prefsRef, limitRef: _limitRef, ...configRest } = config; // eslint-disable-line @typescript-eslint/no-unused-vars
   const { _initToolkitJson: _itj, ...jsonToolkitRest } = jsonToolkit; // eslint-disable-line @typescript-eslint/no-unused-vars
 
   return {

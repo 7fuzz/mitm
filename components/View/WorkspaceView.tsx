@@ -164,7 +164,7 @@ export function WorkspaceView() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-    } catch (err) { alert('Export failed: ' + err); }
+    } catch (_err) { alert('Export failed: ' + _err); }
   };
 
   return (

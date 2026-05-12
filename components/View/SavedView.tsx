@@ -79,11 +79,11 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
 
     // Method filtering logic
     const methodIncludes = Object.entries(methodFilter)
-      .filter(([_m, state]) => state === 'include')
-      .map(([method, _s]) => method);
+      .filter(([_, state]) => state === 'include') // eslint-disable-line @typescript-eslint/no-unused-vars
+      .map(([method]) => method);
     const methodExcludes = Object.entries(methodFilter)
-      .filter(([_m, state]) => state === 'exclude')
-      .map(([method, _s]) => method);
+      .filter(([_, state]) => state === 'exclude') // eslint-disable-line @typescript-eslint/no-unused-vars
+      .map(([method]) => method);
 
     let matchesMethod = true;
     if (methodIncludes.length > 0) {
@@ -96,11 +96,11 @@ export function SavedView({ onSendToRepeater }: { onSendToRepeater?: (item: Save
     // Status filtering logic
     const statusCat = getStatusCategory(item.response?.status_code);
     const statusIncludes = Object.entries(statusFilter)
-      .filter(([_st, state]) => state === 'include')
-      .map(([status, _s]) => status);
+      .filter(([_, state]) => state === 'include') // eslint-disable-line @typescript-eslint/no-unused-vars
+      .map(([status]) => status);
     const statusExcludes = Object.entries(statusFilter)
-      .filter(([_st, state]) => state === 'exclude')
-      .map(([status, _s]) => status);
+      .filter(([_, state]) => state === 'exclude') // eslint-disable-line @typescript-eslint/no-unused-vars
+      .map(([status]) => status);
 
     let matchesStatus = true;
     if (statusIncludes.length > 0) {

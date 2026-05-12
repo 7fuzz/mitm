@@ -55,7 +55,7 @@ export const formToJson = (body: string, contentType: string): string | null => 
         const hasFiles = (parsed.__form_data as FormEntry[]).some(e => e.type === 'file');
         if (hasFiles) throw new Error("Cannot convert form with files to JSON");
         
-        const result: Record<string, any> = {};
+        const result: Record<string, unknown> = {};
         (parsed.__form_data as FormEntry[]).forEach(e => {
           if (e.k) result[e.k] = e.v;
         });
@@ -66,7 +66,7 @@ export const formToJson = (body: string, contentType: string): string | null => 
     // 2. Handle urlencoded
     if (contentType.includes('x-www-form-urlencoded')) {
       const params = new URLSearchParams(body);
-      const result: Record<string, any> = {};
+      const result: Record<string, unknown> = {};
       params.forEach((v, k) => {
         result[k] = v;
       });
@@ -79,7 +79,7 @@ export const formToJson = (body: string, contentType: string): string | null => 
         const boundary = boundaryMatch ? (boundaryMatch[1] || boundaryMatch[2]) : '';
         if (!boundary) return null;
 
-        const result: Record<string, any> = {};
+        const result: Record<string, unknown> = {};
         const parts = body.split(`--${boundary}`);
         
         for (const part of parts) {

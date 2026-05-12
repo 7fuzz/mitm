@@ -35,7 +35,7 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
         try {
           const data = JSON.parse(initialBody);
           if (data.__form_data) {
-             setEntries(data.__form_data.map((e: any) => ({ ...e, id: e.id || crypto.randomUUID() })));
+             setEntries(data.__form_data.map((e: FormEntry) => ({ ...e, id: e.id || crypto.randomUUID() })));
              return;
           }
         } catch { /* ignore */ }
@@ -116,7 +116,7 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
       } else {
         updateEntry(id, { v: 'Upload Failed', fileName: '', contentType: '' });
       }
-    } catch (error) {
+    } catch (_error) {
       updateEntry(id, { v: 'Upload Error', fileName: '', contentType: '' });
     }
   };

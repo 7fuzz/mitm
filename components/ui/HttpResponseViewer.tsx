@@ -202,26 +202,28 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
   const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render" | "form">("pretty");
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterMode, setFilterMode] = useState(false);
-
   // Auto-switch to form view if it's a form and not JSON
   useEffect(() => {
     if (isForm && !parsed.json && viewMode === "pretty") {
       setViewMode("form");
     }
-  }, [isForm, parsed.json, viewMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isForm, parsed.json]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterMode, setFilterMode] = useState(false);
 
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedFull, setCopiedFull] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-  const [prevText, setPrevText] = useState(text);
 
-  if (text !== prevText) {
-    setPrevText(text);
-    setMediaUrl(null);
+  // Clear media URL when text changes
+  const prevTextRef = useRef(text);
+  if (text !== prevTextRef.current) {
+    prevTextRef.current = text;
+    if (mediaUrl) setMediaUrl(null);
   }
 
   const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());

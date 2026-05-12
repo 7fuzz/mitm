@@ -9,7 +9,8 @@ export function useConfig() {
     limits: true, 
     intercept: true, 
     simpleMode: true, 
-    autoSave: true 
+    autoSave: true,
+    replacementsAutoSave: true 
   });
   const [isIntercepting, setIsIntercepting] = useState(false);
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');

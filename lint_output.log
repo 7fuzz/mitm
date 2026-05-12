@@ -1,0 +1,38 @@
+ESLint: 11 errors, 44 warnings in 25 files
+═══════════════════════════════════════
+Top rules:
+  @typescript-eslint/no-unused-vars (41x)
+  @typescript-eslint/no-explicit-any (7x)
+  react-hooks/set-state-in-effect (4x)
+  react-hooks/exhaustive-deps (2x)
+  @next/next/no-img-element (1x)
+
+Top files:
+  SavedView.tsx (8 issues)
+    @typescript-eslint/no-unused-vars (8)
+  FormEditor.tsx (5 issues)
+    @typescript-eslint/no-unused-vars (3)
+    react-hooks/exhaustive-deps (1)
+    react-hooks/set-state-in-effect (1)
+  TrafficList.tsx (4 issues)
+    @typescript-eslint/no-unused-vars (4)
+  WorkspaceView.tsx (4 issues)
+    @typescript-eslint/no-unused-vars (4)
+  route.ts (3 issues)
+    @typescript-eslint/no-unused-vars (3)
+  RepeaterView.tsx (3 issues)
+    @typescript-eslint/no-unused-vars (2)
+    @typescript-eslint/no-explicit-any (1)
+  HttpResponseViewer.tsx (3 issues)
+    react-hooks/set-state-in-effect (2)
+    @next/next/no-img-element (1)
+  useReplacements.ts (3 issues)
+    @typescript-eslint/no-explicit-any (2)
+    react-hooks/set-state-in-effect (1)
+  lib/utils/converter.ts (3 issues)
+    @typescript-eslint/no-explicit-any (3)
+  route.ts (2 issues)
+    @typescript-eslint/no-unused-vars (2)
+
+... +15 more files
+[full output: ~/.local/share/rtk/tee/1778565532_lint.log]

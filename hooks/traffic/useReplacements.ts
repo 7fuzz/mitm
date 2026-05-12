@@ -137,11 +137,11 @@ export function useReplacements() {
       url = url.replaceAll(pattern, replacement);
       
       // Handle structured body separately to avoid breaking JSON
-      if (body.startsWith('{') && body.includes('"__form_data"')) {
+      if (body.startsWith('{') && body.includes('\"__form_data\"')) {
         try {
           const parsed = JSON.parse(body);
           if (parsed.__form_data) {
-            parsed.__form_data = parsed.__form_data.map((item: any) => ({
+            parsed.__form_data = (parsed.__form_data as any[]).map((item) => ({
               ...item,
               k: (item.k || "").replaceAll(pattern, replacement),
               v: (item.v || "").replaceAll(pattern, replacement)
@@ -199,7 +199,7 @@ export function useReplacements() {
         
         if (parsed.__form_data && Array.isArray(parsed.__form_data)) {
            // SPECIAL CASE: Structured form data
-           parsed.__form_data = parsed.__form_data.map((item: any) => {
+           parsed.__form_data = (parsed.__form_data as any[]).map((item) => {
              const lowerK = (item.k || "").toLowerCase();
              if (replacements.BODY_KEY_REPLACEMENTS[lowerK]) {
                return { ...item, v: replacements.BODY_KEY_REPLACEMENTS[lowerK] };
@@ -233,7 +233,8 @@ export function useReplacements() {
 
   useEffect(() => {
     fetchReplacements();
-  }, [fetchReplacements]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     replacements,
