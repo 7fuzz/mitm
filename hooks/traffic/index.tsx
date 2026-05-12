@@ -87,7 +87,7 @@ function useTrafficState() {
         if (hist && hist.length > 0) {
           trafficData.setTraffic(prev => {
             const next = [...prev, ...hist.reverse()];
-            if (state.limits && state.preferences?.limits !== false && state.limits.enabled) {
+            if (state.limits?.enabled) {
               return next.slice(0, state.limits.value);
             }
             return next;

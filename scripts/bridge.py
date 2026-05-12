@@ -69,8 +69,8 @@ class InterceptBridge:
         limit_enabled = self.limits_config.get("enabled", True)
         max_history = self.limits_config.get("value", 1000)
 
-        # Only run the rolling buffer vacuum if limits are ON in global prefs AND in limits config
-        if self.prefs.get("limits", True) and limit_enabled:
+        # Apply limit if enabled
+        if limit_enabled:
             self.db.execute(
                 """
                 DELETE FROM history_log 
