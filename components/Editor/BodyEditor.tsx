@@ -58,6 +58,13 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
     }
   };
 
+  const isBodyJson = (() => {
+    if (!body.trim()) return true;
+    try { JSON.parse(body); return true; } catch { return false; }
+  })();
+
+  const isBodyForm = body.includes('__form_data') || contentType.includes('form-urlencoded') || contentType.includes('multipart/form-data') || (!body.trim());
+
   return (
     <div className="flex flex-col h-full bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-37.5">
 
@@ -65,11 +72,19 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Body Format:</span>
           <div className="flex bg-zinc-950 p-0.5 rounded items-center">
-            {(['raw', 'json', 'form'] as const).map((m) => (
-              <button key={m} onClick={() => setMode(m)} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === m ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                {m}
+            <button onClick={() => setMode('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              raw
+            </button>
+            {(isBodyJson || mode === 'json') && (
+              <button onClick={() => setMode('json')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'json' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                json
               </button>
-            ))}
+            )}
+            {(isBodyForm || mode === 'form') && (
+              <button onClick={() => setMode('form')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'form' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+                form
+              </button>
+            )}
           </div>
         </div>
 
