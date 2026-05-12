@@ -93,6 +93,13 @@ Configure transformation rules that automatically tokenize your traffic in real-
 - **Body Keys**: Automatically tokenize specific JSON keys in request bodies.
 - **Global Text**: High-power replacement across the entire request (URL, Headers, and Body).
 
+### 📝 Advanced Form Data Handling
+The project features a specialized engine for managing complex `multipart/form-data` and `application/x-www-form-urlencoded` payloads:
+- **Structured Editing**: Form data is automatically converted into a structured JSON format (`__form_data`) for easy editing and variable interpolation.
+- **File Persistence**: Uploaded files are securely stored in the backend and automatically reconstructed into outgoing multipart requests.
+- **Auto-Extraction**: Raw intercepted form data is automatically tokenized when staged to the Workbench.
+- **Type Conversion**: Seamlessly convert between JSON, URL-Encoded, and Multipart formats with integrated conversion utilities.
+
 ### 🧰 Utilities
 - **JSON Toolkit**: Format, minify, and recursively filter large JSON payloads. Supports "Send to Toolkit" from any response viewer.
 - **CVSS Calculator**: Calculate vulnerability severity scores using the industry-standard CVSS 3.1 framework.

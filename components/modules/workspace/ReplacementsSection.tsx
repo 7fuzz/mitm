@@ -9,7 +9,7 @@ const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: s
   HEADER_REPLACEMENTS: { label: 'Header Replacements', description: 'Replace whole header values based on their KEY (e.g., Authorization)', color: 'emerald' },
   BODY_KEY_REPLACEMENTS: { label: 'Body Keys', description: 'Replace JSON/Form keys in request body', color: 'amber' },
   URL_PARAM_REPLACEMENTS: { label: 'URL Params', description: 'Replace URL query parameter values', color: 'rose' },
-  TEXT_REPLACEMENTS: { label: 'Global Text', description: 'Global string replacement across URL, Headers, and Body (e.g., xyz -> {{var}})', color: 'indigo' },
+  TEXT_REPLACEMENTS: { label: 'Global Text', description: 'Global string replacement across URL, Headers, and Body (e.g., xyz -> {{var}})', color: 'purple' },
 };
 
 function SortableReplacementItem({
@@ -87,7 +87,7 @@ export function ReplacementsSection() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  
+
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
   const lastSavedRef = useRef<string>('');
@@ -127,10 +127,10 @@ export function ReplacementsSection() {
   const debouncedSave = useCallback((data: Record<ReplacementCategory, ReplacementEntry[]>) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const currentItems = (Object.entries(data) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
+    const currentItems = (Object.entries(data) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) =>
       entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
     );
-    
+
     const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
     if (lastSavedRef.current === currentPayloadString) return;
 
@@ -141,13 +141,13 @@ export function ReplacementsSection() {
     });
 
     if (modifiedItems.length === 0) {
-       // Check for reorder only if no patterns changed
-       if (currentItems.length > 0 && currentPayloadString !== lastSavedRef.current) {
-          // If the payload matches but the reference is different, it might be a reorder that didn't change patterns
-          // But our current payload string doesn't include order info. Let's force save on reorder.
-       } else {
-          return;
-       }
+      // Check for reorder only if no patterns changed
+      if (currentItems.length > 0 && currentPayloadString !== lastSavedRef.current) {
+        // If the payload matches but the reference is different, it might be a reorder that didn't change patterns
+        // But our current payload string doesn't include order info. Let's force save on reorder.
+      } else {
+        return;
+      }
     }
 
     setSaveMessage('Saving...');
@@ -192,7 +192,7 @@ export function ReplacementsSection() {
   const removeEntry = (category: ReplacementCategory, index: number) => {
     const entry = localReplacements[category][index];
     if (entry && entry.id) {
-       deleteReplacement(entry.id);
+      deleteReplacement(entry.id);
     }
     setLocalReplacements(prev => ({
       ...prev,
@@ -219,7 +219,7 @@ export function ReplacementsSection() {
     setIsSaving(true);
     setSaveMessage('');
     try {
-      const allItems = (Object.entries(localReplacements) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
+      const allItems = (Object.entries(localReplacements) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) =>
         entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
       );
 
@@ -251,9 +251,9 @@ export function ReplacementsSection() {
           </div>
           {!prefs.autoSave && (
             <label className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded cursor-pointer hover:bg-zinc-800 transition-colors shadow-lg">
-              <input 
-                type="checkbox" 
-                checked={autoSaveEnabled} 
+              <input
+                type="checkbox"
+                checked={autoSaveEnabled}
                 onChange={() => updatePrefs({ ...prefs, replacementsAutoSave: !autoSaveEnabled })}
                 className="accent-rose-500 w-3 h-3 cursor-pointer"
               />
@@ -287,7 +287,7 @@ export function ReplacementsSection() {
                 {isExpanded && (
                   <div className="p-4 border-t border-zinc-800 space-y-3 bg-zinc-950/30">
                     <p className="text-[10px] text-zinc-500 font-mono italic">{info.description}</p>
-                    
+
                     {entries.length === 0 ? (
                       <div className="text-center py-6 border border-zinc-800 border-dashed rounded text-zinc-700 text-[10px] font-mono uppercase tracking-widest">No replacements configured</div>
                     ) : (

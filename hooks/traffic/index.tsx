@@ -103,18 +103,32 @@ function useTrafficState() {
     });
 
     // === 3. SSE CONNECTION ===
-    const eventSource = new EventSource('/api/traffic');
-    eventSource.onmessage = (e) => {
-      const data: Traffic = JSON.parse(e.data);
-      trafficData.setTraffic((prev) => {
-        const filtered = prev.filter(t => t.id !== data.id);
-        const next = [data, ...filtered];
-        if (config.limitRef.current.enabled) return next.slice(0, config.limitRef.current.value);
-        return next;
-      });
+    const connectSSE = () => {
+      const eventSource = new EventSource('/api/traffic');
+      
+      eventSource.onmessage = (e) => {
+        const data: Traffic = JSON.parse(e.data);
+        trafficData.setTraffic((prev) => {
+          const filtered = prev.filter(t => t.id !== data.id);
+          const next = [data, ...filtered];
+          if (config.limitRef.current.enabled) return next.slice(0, config.limitRef.current.value);
+          return next;
+        });
+      };
+
+      eventSource.onerror = () => {
+        console.error("SSE Connection interrupted. Browser will attempt to reconnect automatically.");
+        eventSource.close();
+        // Manually trigger a reconnect after a short delay if the browser's native retry isn't enough
+        setTimeout(connectSSE, 3000);
+      };
+
+      return eventSource;
     };
 
-    return () => eventSource.close();
+    const es = connectSSE();
+
+    return () => es.close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,37 +1,57 @@
 // app/api/traffic/route.ts
 import { NextRequest } from 'next/server';
 
-// This is a simple in-memory stream controller
-let clientController: ReadableStreamDefaultController | null = null;
+// Manage multiple connected clients
+const clients = new Set<ReadableStreamDefaultController>();
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
 
-  // If a frontend is connected, push the data to it
-  if (clientController) {
-    const encoder = new TextEncoder();
-    clientController.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-  }
+  const encoder = new TextEncoder();
+  const message = encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
+
+  // Push to all connected clients
+  clients.forEach(controller => {
+    try {
+      controller.enqueue(message);
+    } catch (_e) {
+      clients.delete(controller);
+    }
+  });
 
   return new Response('OK', { status: 200 });
 }
 
 export async function GET() {
-  // This creates a persistent connection for the frontend (SSE)
+  const encoder = new TextEncoder();
+  let heartbeatTimer: any;
+
   const stream = new ReadableStream({
     start(controller) {
-      clientController = controller;
+      clients.add(controller);
+      
+      // Keep-alive heartbeat every 20 seconds
+      heartbeatTimer = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(': heartbeat\n\n'));
+        } catch (_e) {
+          clients.delete(controller);
+          clearInterval(heartbeatTimer);
+        }
+      }, 20000);
     },
-    cancel() {
-      clientController = null;
+    cancel(controller) {
+      clients.delete(controller);
+      clearInterval(heartbeatTimer);
     },
   });
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no', // Disable buffering in Nginx if applicable
     },
   });
 }
