@@ -99,6 +99,74 @@ const parseHttpMessage = (text: string) => {
   catch { return { firstLine, headersStr, headerList, contentType, json: null, rawBody }; }
 };
 
+const FormViewer = ({ body, contentType }: { body: string; contentType: string }) => {
+  const isUrlEncoded = contentType.includes('x-www-form-urlencoded');
+  const [entries, setEntries] = useState<{ k: string; v: string; type: 'text' | 'file'; fileName?: string }[]>([]);
+
+  useEffect(() => {
+    const parsed: typeof entries = [];
+    if (isUrlEncoded) {
+      const params = new URLSearchParams(body);
+      params.forEach((v, k) => parsed.push({ k, v, type: 'text' }));
+    } else {
+      const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      const boundary = boundaryMatch ? (boundaryMatch[1] || boundaryMatch[2]) : '';
+      if (boundary && body) {
+        const parts = body.split(`--${boundary}`);
+        parts.forEach(part => {
+          if (part.includes('name=')) {
+            const nameMatch = part.match(/name="([^"]+)"/);
+            const filenameMatch = part.match(/filename="([^"]+)"/);
+            const valueParts = part.split('\r\n\r\n');
+            const valueMatch = valueParts.length > 1 ? valueParts[1] : '';
+            
+            if (nameMatch) {
+              const k = nameMatch[1];
+              const v = valueMatch.replace(/\r\n--.*$/, '').replace(/\r\n$/, '');
+              if (filenameMatch) {
+                parsed.push({ k, v: '[BINARY DATA]', type: 'file', fileName: filenameMatch[1] });
+              } else {
+                parsed.push({ k, v, type: 'text' });
+              }
+            }
+          }
+        });
+      }
+    }
+    setEntries(parsed);
+  }, [body, contentType, isUrlEncoded]);
+
+  if (entries.length === 0) return <div className="text-zinc-600 italic text-xs">Empty form data</div>;
+
+  return (
+    <div className="border border-zinc-800 rounded bg-zinc-950/30 overflow-hidden">
+      <table className="w-full text-xs font-mono">
+        <thead>
+          <tr className="bg-zinc-900/50 text-zinc-500 border-b border-zinc-800">
+            <th className="px-3 py-2 text-left w-1/3">Key</th>
+            <th className="px-3 py-2 text-left">Value</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-800/50">
+          {entries.map((e, i) => (
+            <tr key={i} className="hover:bg-zinc-800/20 transition-colors">
+              <td className="px-3 py-2 text-sky-400 font-bold align-top break-all">{e.k}</td>
+              <td className="px-3 py-2 text-zinc-300 align-top break-all">
+                {e.type === 'file' ? (
+                  <span className="text-amber-500 flex items-center gap-2">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                    {e.fileName}
+                  </span>
+                ) : e.v}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export default function HttpResponseViewer({ text }: { text: string }) {
   const parsed = parseHttpMessage(text);
   const { setToolkitJson } = useTraffic();
@@ -109,12 +177,23 @@ export default function HttpResponseViewer({ text }: { text: string }) {
   const isAudio = parsed.contentType.startsWith('audio/');
   const isXml = parsed.contentType.includes('xml');
   const isHtml = parsed.contentType.includes('html');
-  const isMediaOrFile = isImage || isVideo || isAudio || (parsed.contentType.includes('application/') && !parsed.json && !isXml && !isHtml);
+  const isUrlEncoded = parsed.contentType.includes('x-www-form-urlencoded');
+  const isMultipart = parsed.contentType.includes('multipart/form-data');
+  const isForm = isUrlEncoded || isMultipart;
 
-  const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render">("pretty");
+  const isMediaOrFile = isImage || isVideo || isAudio || (parsed.contentType.includes('application/') && !parsed.json && !isXml && !isHtml && !isUrlEncoded);
+
+  const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render" | "form">("pretty");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterMode, setFilterMode] = useState(false);
+
+  // Auto-switch to form view if it's a form and not JSON
+  useEffect(() => {
+    if (isForm && !parsed.json && viewMode === "pretty") {
+      setViewMode("form");
+    }
+  }, [isForm, parsed.json, viewMode]);
 
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedFull, setCopiedFull] = useState(false);
@@ -240,6 +319,11 @@ export default function HttpResponseViewer({ text }: { text: string }) {
             <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
               {isMediaOrFile ? "Preview" : "Pretty"}
             </button>
+            {isForm && (
+              <button onClick={() => setViewMode("form")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "form" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+                Form
+              </button>
+            )}
             {isHtml && (
               <button onClick={() => setViewMode("render")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "render" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
                 Render
@@ -319,6 +403,8 @@ export default function HttpResponseViewer({ text }: { text: string }) {
       <div className="p-4 overflow-auto flex-1 bg-zinc-950/50 relative" ref={containerRef}>
         {viewMode === "raw" ? (
           <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">{formattedBody || "No Response Body"}</pre>
+        ) : viewMode === "form" ? (
+          <FormViewer body={parsed.rawBody} contentType={parsed.contentType} />
         ) : viewMode === "render" && isHtml ? (
           <iframe srcDoc={parsed.rawBody} className="w-full h-full bg-white rounded" title="HTML Preview" sandbox="allow-same-origin" />
         ) : isImage && mediaUrl ? (
