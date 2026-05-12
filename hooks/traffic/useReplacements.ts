@@ -135,7 +135,26 @@ export function useReplacements() {
     // 1. Global Text Replacements (applied to URL, Headers, and Body as strings)
     for (const [pattern, replacement] of Object.entries(replacements.TEXT_REPLACEMENTS)) {
       url = url.replaceAll(pattern, replacement);
-      body = body.replaceAll(pattern, replacement);
+      
+      // Handle structured body separately to avoid breaking JSON
+      if (body.startsWith('{') && body.includes('"__form_data"')) {
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed.__form_data) {
+            parsed.__form_data = parsed.__form_data.map((item: any) => ({
+              ...item,
+              k: (item.k || "").replaceAll(pattern, replacement),
+              v: (item.v || "").replaceAll(pattern, replacement)
+            }));
+            body = JSON.stringify(parsed);
+          }
+        } catch {
+          body = body.replaceAll(pattern, replacement);
+        }
+      } else {
+        body = body.replaceAll(pattern, replacement);
+      }
+
       const newHeaders: Record<string, string> = {};
       for (const [k, v] of Object.entries(headers)) {
         newHeaders[k] = v.replaceAll(pattern, replacement);
@@ -175,10 +194,24 @@ export function useReplacements() {
     // 5. Body Replacements (Key-based)
     if (body) {
       try {
-        // Handle JSON
+        // Handle JSON (including our internal __form_data structure)
         const parsed = JSON.parse(body);
-        const transformed = transformObjectHelper(parsed, replacements.BODY_KEY_REPLACEMENTS);
-        body = JSON.stringify(transformed, null, 2);
+        
+        if (parsed.__form_data && Array.isArray(parsed.__form_data)) {
+           // SPECIAL CASE: Structured form data
+           parsed.__form_data = parsed.__form_data.map((item: any) => {
+             const lowerK = (item.k || "").toLowerCase();
+             if (replacements.BODY_KEY_REPLACEMENTS[lowerK]) {
+               return { ...item, v: replacements.BODY_KEY_REPLACEMENTS[lowerK] };
+             }
+             return item;
+           });
+           body = JSON.stringify(parsed, null, 2);
+        } else {
+           // Normal JSON
+           const transformed = transformObjectHelper(parsed, replacements.BODY_KEY_REPLACEMENTS);
+           body = JSON.stringify(transformed, null, 2);
+        }
       } catch {
         // Handle Form Data
         if (body.includes('=') && (body.includes('&') || body.length > 0)) {

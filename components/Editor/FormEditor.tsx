@@ -8,11 +8,12 @@ interface FormEntry {
   fileName?: string;
   fileContent?: string; // Store path or reference
 }
-
 export function FormEditor({ initialBody, contentType, onChange }: { initialBody: string; contentType: string; onChange: (v: string) => void }) {
   const [entries, setEntries] = useState<FormEntry[]>([]);
   const lastEmitted = useRef<string | null>(null);
   const isInternalUpdate = useRef(false);
+
+  const isUrlEncoded = contentType.includes('x-www-form-urlencoded');
 
   useEffect(() => {
     if (initialBody === lastEmitted.current) return;
@@ -22,10 +23,12 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
     }
 
     const parsed: FormEntry[] = [];
-    if (contentType.includes('x-www-form-urlencoded')) {
+    if (isUrlEncoded) {
       const params = new URLSearchParams(initialBody);
       params.forEach((v, k) => parsed.push({ id: crypto.randomUUID(), k, v, type: 'text' }));
     } else if (contentType.includes('multipart/form-data')) {
+      // ... same as before
+
       // Basic parsing for multipart if it exists (very simplified)
       if (initialBody.startsWith('{') && initialBody.endsWith('}')) {
         try {
@@ -131,10 +134,11 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
              <select 
                value={e.type} 
                onChange={(ev) => updateEntry(e.id, { type: ev.target.value as 'text' | 'file', v: '' })}
-               className="bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-500 uppercase font-bold p-1 rounded outline-none"
+               disabled={isUrlEncoded}
+               className="bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-500 uppercase font-bold p-1 rounded outline-none disabled:opacity-50"
              >
                <option value="text">Text</option>
-               <option value="file">File</option>
+               {!isUrlEncoded && <option value="file">File</option>}
              </select>
           </div>
           
