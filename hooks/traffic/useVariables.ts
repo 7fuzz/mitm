@@ -29,6 +29,17 @@ export function useVariables(prefs?: { autoSave: boolean }) {
     }).catch(console.error);
   };
 
+  const saveAllVariables = async () => {
+    const envVars = variables.filter(v => v.environmentId === activeEnvId);
+    await Promise.all(envVars.map(v => 
+      fetch(`/api/variables/${v.id}`, { 
+        method: 'PUT', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(v) 
+      }).catch(console.error)
+    ));
+  };
+
   const updateVariable = (id: string, updates: Partial<GlobalVariable>, immediate = false) => {
     setVariables(prev => {
       const next = prev.map(v => v.id === id ? { ...v, ...updates } : v);
@@ -126,7 +137,7 @@ export function useVariables(prefs?: { autoSave: boolean }) {
   return {
     variables, environments, activeEnvId,
     loadVariables,
-    addVariable, updateVariable, deleteVariable, saveVariable,
+    addVariable, updateVariable, deleteVariable, saveVariable, saveAllVariables,
     setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
     updateVariableAutoValue
   };

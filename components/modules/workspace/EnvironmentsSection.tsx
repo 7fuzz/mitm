@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTraffic } from '@/hooks/traffic';
 
 interface EnvironmentsSectionProps {
@@ -8,9 +9,25 @@ interface EnvironmentsSectionProps {
 export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSectionProps) {
   const {
     environments, activeEnvId, setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
-    variables, addVariable, updateVariable, deleteVariable, saveVariable,
+    variables, addVariable, updateVariable, deleteVariable, saveVariable, saveAllVariables,
     prefs, updatePrefs
   } = useTraffic();
+
+  const [isSavingAll, setIsSavingAll] = React.useState(false);
+  const [saveMessage, setSaveMessage] = React.useState('');
+
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
+    setSaveMessage('Saving variables...');
+    try {
+      await saveAllVariables();
+      setSaveMessage('All variables saved ✓');
+    } catch (e) {
+      setSaveMessage('Failed to save variables');
+    }
+    setIsSavingAll(false);
+    setTimeout(() => setSaveMessage(''), 3000);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -144,6 +161,19 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
             ))
           )}
         </div>
+
+        {!prefs.autoSave && variables.filter(v => v.environmentId === activeEnvId).length > 0 && (
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-500">{saveMessage}</span>
+            <button 
+              onClick={handleSaveAll}
+              disabled={isSavingAll}
+              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
+            >
+              {isSavingAll ? 'Saving...' : 'Save All Variables'}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
