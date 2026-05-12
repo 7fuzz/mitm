@@ -33,6 +33,17 @@ class Database:
             FOREIGN KEY(group_id) REFERENCES repeater_groups(id) ON DELETE SET NULL
         )""")
 
+        # Migration: Add missing columns if they don't exist
+        try:
+            self.conn.execute("ALTER TABLE repeater_workspace ADD COLUMN order_index INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass # already exists
+        
+        try:
+            self.conn.execute("ALTER TABLE repeater_workspace ADD COLUMN extract TEXT")
+        except sqlite3.OperationalError:
+            pass # already exists
+
         self.conn.execute("""CREATE TABLE IF NOT EXISTS app_state (
             key TEXT PRIMARY KEY, value TEXT
         )""")
@@ -63,6 +74,18 @@ class Database:
             created_at INTEGER DEFAULT (strftime('%s', 'now')),
             updated_at INTEGER DEFAULT (strftime('%s', 'now'))
         )""")
+        
+        # Migration: Add missing columns if they don't exist
+        try:
+            self.conn.execute("ALTER TABLE replacements ADD COLUMN is_active INTEGER DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass # already exists
+            
+        try:
+            self.conn.execute("ALTER TABLE replacements ADD COLUMN order_index INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass # already exists
+
         self.conn.commit()
 
     def execute(self, query, params=()):
