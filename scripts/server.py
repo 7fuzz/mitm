@@ -7,6 +7,7 @@ from api.repeater import RepeaterHandlers
 from api.core import CoreHandlers
 from api.vault import VaultHandlers
 from api.replacements import ReplacementHandlers
+from api.upload import UploadHandlers
 
 
 class APIServer:
@@ -47,12 +48,14 @@ class APIServer:
         repeater = RepeaterHandlers(self.bridge, self.db)
         vault = VaultHandlers(self.bridge, self.db)
         replacements = ReplacementHandlers(self.bridge, self.db)
+        upload = UploadHandlers(self.db)
 
         # Register Core & State Routes
         app.router.add_post("/resume/{id}", core.handle_resume)
         app.router.add_get("/cert", core.handle_get_cert)
         app.router.add_get("/state", core.handle_state_get)
         app.router.add_post("/state", core.handle_state_post)
+        app.router.add_post("/upload", upload.handle_upload)
 
         # Register Variables Routes
         app.router.add_get("/variables", variables.handle_vars_get)

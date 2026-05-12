@@ -166,7 +166,20 @@ export function RepeaterView() {
     });
 
     if (host && !hasHost) headerStr += `Host: ${host}\n`;
-    return `${headerStr}\n${interpolate(editBody)}`;
+
+    let finalBody = editBody;
+    if (editBody.startsWith('{') && editBody.includes('"__form_data"')) {
+      try {
+        const parsed = JSON.parse(editBody);
+        if (parsed.__form_data) {
+          finalBody = parsed.__form_data.map((e: any) => `${interpolate(e.k)}: ${e.type === 'file' ? `[FILE: ${e.fileName}]` : interpolate(e.v)}`).join('\n');
+        }
+      } catch { /* fallback to raw */ }
+    } else {
+      finalBody = interpolate(editBody);
+    }
+
+    return `${headerStr}\n${finalBody}`;
   };
 
   const getRawResponseText = () => {

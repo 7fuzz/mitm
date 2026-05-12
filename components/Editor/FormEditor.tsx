@@ -1,54 +1,174 @@
 import { useState, useEffect, useRef } from 'react';
 
-// === FORM EDITOR (Scroll Fixes) ===
+interface FormEntry {
+  id: string;
+  k: string;
+  v: string;
+  type: 'text' | 'file';
+  fileName?: string;
+  fileContent?: string; // Store path or reference
+}
+
 export function FormEditor({ initialBody, contentType, onChange }: { initialBody: string; contentType: string; onChange: (v: string) => void }) {
-  const [entries, setEntries] = useState<{ id: string; k: string; v: string }[]>([]);
+  const [entries, setEntries] = useState<FormEntry[]>([]);
   const lastEmitted = useRef<string | null>(null);
+  const isInternalUpdate = useRef(false);
 
   useEffect(() => {
     if (initialBody === lastEmitted.current) return;
-    const parsed: typeof entries = [];
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+
+    const parsed: FormEntry[] = [];
     if (contentType.includes('x-www-form-urlencoded')) {
       const params = new URLSearchParams(initialBody);
-      params.forEach((v, k) => parsed.push({ id: crypto.randomUUID(), k, v }));
-    } else if (contentType.includes('multipart/form-data') && initialBody) {
+      params.forEach((v, k) => parsed.push({ id: crypto.randomUUID(), k, v, type: 'text' }));
+    } else if (contentType.includes('multipart/form-data')) {
+      // Basic parsing for multipart if it exists (very simplified)
+      if (initialBody.startsWith('{') && initialBody.endsWith('}')) {
+        try {
+          const data = JSON.parse(initialBody);
+          if (data.__form_data) {
+             setEntries(data.__form_data.map((e: any) => ({ ...e, id: e.id || crypto.randomUUID() })));
+             return;
+          }
+        } catch { /* ignore */ }
+      }
+      
       const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
       const boundary = boundaryMatch ? (boundaryMatch[1] || boundaryMatch[2]) : '';
-      if (boundary) {
+      if (boundary && initialBody && !initialBody.includes("Form Editor modified")) {
         const parts = initialBody.split(`--${boundary}`);
         parts.forEach(part => {
           if (part.includes('name=')) {
             const nameMatch = part.match(/name="([^"]+)"/);
+            const filenameMatch = part.match(/filename="([^"]+)"/);
             const valueMatch = part.split('\r\n\r\n')[1];
-            if (nameMatch && valueMatch) parsed.push({ id: crypto.randomUUID(), k: nameMatch[1], v: valueMatch.replace(/\r\n$/, '') });
+            
+            if (nameMatch && valueMatch) {
+              const k = nameMatch[1];
+              const v = valueMatch.replace(/\r\n$/, '');
+              if (filenameMatch) {
+                parsed.push({ id: crypto.randomUUID(), k, v: '[FILE]', type: 'file', fileName: filenameMatch[1] });
+              } else {
+                parsed.push({ id: crypto.randomUUID(), k, v, type: 'text' });
+              }
+            }
           }
         });
       }
     }
-    setEntries(parsed.length > 0 ? parsed : [{ id: crypto.randomUUID(), k: '', v: '' }]);
+    setEntries(parsed.length > 0 ? parsed : [{ id: crypto.randomUUID(), k: '', v: '', type: 'text' }]);
   }, [initialBody, contentType]);
 
-  const updateBody = (newEntries: typeof entries) => {
+  const updateBody = (newEntries: FormEntry[]) => {
     let newBodyString = "";
     if (contentType.includes('x-www-form-urlencoded')) {
       const params = new URLSearchParams();
       newEntries.forEach(e => { if (e.k) params.append(e.k, e.v); });
       newBodyString = params.toString();
-    } else newBodyString = "Form Editor modified. (Complex multipart reconstruction requires raw mode).";
+    } else {
+      // For multipart, we use a special JSON marker that the backend/proxy will understand
+      // or we just mark it as modified and store the structured data
+      newBodyString = JSON.stringify({
+        __form_data: newEntries.map(({ id, ...rest }) => rest),
+        _hint: "Form Editor modified. (Multipart will be reconstructed on send)"
+      });
+    }
     lastEmitted.current = newBodyString;
+    isInternalUpdate.current = true;
     onChange(newBodyString);
   };
 
-  const updateEntry = (id: string, k: string, v: string) => { const updated = entries.map(e => e.id === id ? { ...e, k, v } : e); setEntries(updated); updateBody(updated); };
-  const addRow = () => setEntries([...entries, { id: crypto.randomUUID(), k: '', v: '' }]);
-  const deleteRow = (id: string) => { const updated = entries.filter(e => e.id !== id); setEntries(updated); updateBody(updated); };
+  const updateEntry = (id: string, updates: Partial<FormEntry>) => {
+    const updated = entries.map(e => e.id === id ? { ...e, ...updates } : e);
+    setEntries(updated);
+    updateBody(updated);
+  };
+
+  const addRow = () => setEntries([...entries, { id: crypto.randomUUID(), k: '', v: '', type: 'text' }]);
+  
+  const deleteRow = (id: string) => {
+    const updated = entries.filter(e => e.id !== id);
+    setEntries(updated);
+    updateBody(updated);
+  };
+
+  const handleFileUpload = async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      updateEntry(id, { fileName: file.name, v: 'Uploading...' });
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        updateEntry(id, { v: data.path, fileName: file.name });
+      } else {
+        updateEntry(id, { v: 'Upload Failed', fileName: '' });
+      }
+    } catch (error) {
+      updateEntry(id, { v: 'Upload Error', fileName: '' });
+    }
+  };
 
   return (
     <div className="space-y-2">
       {entries.map(e => (
         <div key={e.id} className="flex gap-2 group items-start">
-          <input value={e.k} onChange={(ev) => updateEntry(e.id, ev.target.value, e.v)} placeholder="Key" className="w-1/3 bg-zinc-950 border border-zinc-800 p-2 rounded text-sky-400 outline-none focus:border-sky-500 text-xs font-mono" />
-          <input value={e.v} onChange={(ev) => updateEntry(e.id, e.k, ev.target.value)} placeholder="Value" className="flex-1 bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-300 outline-none focus:border-sky-500 text-xs font-mono break-all" />
+          <div className="flex flex-col gap-1 w-1/3">
+             <input 
+               value={e.k} 
+               onChange={(ev) => updateEntry(e.id, { k: ev.target.value })} 
+               placeholder="Key" 
+               className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-sky-400 outline-none focus:border-sky-500 text-xs font-mono" 
+             />
+             <select 
+               value={e.type} 
+               onChange={(ev) => updateEntry(e.id, { type: ev.target.value as 'text' | 'file', v: '' })}
+               className="bg-zinc-900 border border-zinc-800 text-[9px] text-zinc-500 uppercase font-bold p-1 rounded outline-none"
+             >
+               <option value="text">Text</option>
+               <option value="file">File</option>
+             </select>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-1">
+            {e.type === 'text' ? (
+              <textarea 
+                value={e.v} 
+                onChange={(ev) => updateEntry(e.id, { v: ev.target.value })} 
+                placeholder="Value" 
+                rows={1}
+                className="w-full bg-zinc-950 border border-zinc-800 p-2 rounded text-zinc-300 outline-none focus:border-sky-500 text-xs font-mono break-all resize-none min-h-[34px]" 
+              />
+            ) : (
+              <div className="flex flex-col gap-2 p-2 bg-zinc-950 border border-zinc-800 rounded min-h-[34px]">
+                <div className="flex items-center justify-between">
+                   <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[150px]">
+                     {e.fileName || 'No file selected'}
+                   </span>
+                   {e.v && e.v !== 'Uploading...' && e.v !== 'Upload Failed' && e.v !== 'Upload Error' && (
+                     <span className="text-[9px] text-emerald-500 font-bold uppercase">Ready</span>
+                   )}
+                </div>
+                <input 
+                  type="file" 
+                  onChange={(ev) => {
+                    const file = ev.target.files?.[0];
+                    if (file) handleFileUpload(e.id, file);
+                  }}
+                  className="text-[10px] text-zinc-400 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700 cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
+          
           <button onClick={() => deleteRow(e.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>
         </div>
       ))}

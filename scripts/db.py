@@ -3,7 +3,10 @@ import json
 
 
 class Database:
-    def __init__(self, db_path="master_database.sqlite"):
+    def __init__(self, db_path="data/master_database.sqlite"):
+        # Ensure directory exists
+        import os
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         # Enable foreign keys for cascading deletes
         self.conn.execute("PRAGMA foreign_keys = ON")

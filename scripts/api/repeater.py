@@ -3,6 +3,7 @@ import uuid
 import time
 import re
 import aiohttp
+import os
 from urllib.parse import unquote, urlencode
 from aiohttp import web
 
@@ -354,9 +355,37 @@ class RepeaterHandlers:
                 if interp_k.lower() != "content-length":
                     headers[interp_k] = interpolate(v)
 
+            # --- NEW: Form Data Reconstruction Support ---
+            form_data = None
+            if isinstance(body, str) and body.startswith('{') and '"__form_data"' in body:
+                try:
+                    parsed_body = json.loads(body)
+                    if "__form_data" in parsed_body:
+                        form_data = aiohttp.FormData()
+                        for entry in parsed_body["__form_data"]:
+                            k = interpolate(entry.get("k", ""))
+                            v = interpolate(entry.get("v", ""))
+                            if entry.get("type") == "file" and v:
+                                file_path = os.path.join("data/file", v)
+                                if os.path.exists(file_path):
+                                    # Use fileName if available, else original v
+                                    filename = entry.get("fileName", v)
+                                    form_data.add_field(k, open(file_path, 'rb'), filename=filename)
+                                else:
+                                    form_data.add_field(k, v) # Fallback to path string if missing
+                            else:
+                                form_data.add_field(k, v)
+                except Exception as e:
+                    print(f"Error parsing form data: {e}")
+
             async with aiohttp.ClientSession() as session:
                 kwargs = {"headers": headers, "ssl": False}
-                if body and method != "GET":
+                if form_data:
+                    kwargs["data"] = form_data
+                    # aiohttp will set the correct multipart Content-Type header
+                    if "content-type" in headers:
+                        del headers["content-type"]
+                elif body and method != "GET":
                     kwargs["data"] = body
                 async with session.request(method, url, **kwargs) as resp:
                     return web.json_response(
