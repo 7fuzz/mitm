@@ -121,9 +121,55 @@ class RepeaterHandlers:
             item_id = str(uuid.uuid4())
             group_id = data.get("groupId")
 
+            headers = data.get("headers", {})
+            body = data.get("body", "")
+            
+            # --- AUTO-CONVERT FORM DATA & EXTRACT FILES ---
+            ct = ""
+            for k, v in headers.items():
+                if k.lower() == 'content-type':
+                    ct = v.lower()
+                    break
+            
+            if not is_raw and 'multipart/form-data' in ct and body:
+                boundary_match = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', ct, re.I)
+                boundary = boundary_match.group(1) or boundary_match.group(2) if boundary_match else None
+                if boundary:
+                    parts = body.split('--' + boundary)
+                    form_entries = []
+                    for part in parts:
+                        if 'name=' in part:
+                            name_match = re.search(r'name="([^"]+)"', part)
+                            filename_match = re.search(r'filename="([^"]+)"', part)
+                            value_parts = part.split('\r\n\r\n')
+                            
+                            if name_match and len(value_parts) > 1:
+                                k = name_match.group(1)
+                                v_raw = value_parts[1].rstrip('\r\n').rstrip('--').rstrip('\r\n')
+                                
+                                if filename_match:
+                                    filename = filename_match.group(1)
+                                    ext = os.path.splitext(filename)[1]
+                                    unique_name = f"{uuid.uuid4()}{ext}"
+                                    os.makedirs("data/file", exist_ok=True)
+                                    with open(os.path.join("data/file", unique_name), 'wb') as f:
+                                        if isinstance(v_raw, str):
+                                            f.write(v_raw.encode('utf-8', errors='ignore'))
+                                        else:
+                                            f.write(v_raw)
+                                    form_entries.append({"k": k, "v": unique_name, "type": "file", "fileName": filename})
+                                else:
+                                    form_entries.append({"k": k, "v": v_raw, "type": "text"})
+                    
+                    if form_entries:
+                        body = json.dumps({
+                            "__form_data": form_entries,
+                            "_hint": "Auto-extracted from multipart"
+                        })
+
             req_data = {
-                "headers": data.get("headers", {}),
-                "body": data.get("body", ""),
+                "headers": headers,
+                "body": body,
             }
 
             # Find next order index
