@@ -180,10 +180,32 @@ export function useRepeater() {
     }
   };
 
+  const reorderGroups = async (reorderedIds: string[]) => {
+    // Optimistically update UI
+    setRepeaterGroups(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        const idxA = reorderedIds.indexOf(a.id);
+        const idxB = reorderedIds.indexOf(b.id);
+        return idxA - idxB;
+      });
+      return sorted;
+    });
+
+    try {
+      await fetch('/api/repeater-groups/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reorderedIds)
+      });
+    } catch (error) {
+      console.error("Failed to save group reorder:", error);
+    }
+  };
+
   return {
     repeaterRequests, repeaterGroups, activeGroupId, switchGroup,
     _setRawRepeater: setRepeaterRequests, _setRawGroups: setRepeaterGroups, initActiveGroup,
     refreshRepeater, addEmptyRequest, duplicateRequest, deleteRequest, updateRequest, importPostman,
-    importProject, createGroup, renameGroup, deleteGroup, reorderRequests
+    importProject, createGroup, renameGroup, deleteGroup, reorderRequests, reorderGroups
   };
 }

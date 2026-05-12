@@ -62,7 +62,7 @@ export function ReplacementsSection() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const currentItems = (Object.entries(data) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
-      entries.filter(e => e.pattern).map(e => ({ ...e, type }))
+      entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
     );
     
     const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement })));
@@ -131,7 +131,7 @@ export function ReplacementsSection() {
     setSaveMessage('');
     try {
       const allItems = (Object.entries(localReplacements) as [ReplacementCategory, ReplacementEntry[]][]).flatMap(([type, entries]) => 
-        entries.filter(e => e.pattern).map(e => ({ ...e, type }))
+        entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
       );
 
       const result = await saveReplacements(allItems, true);

@@ -93,7 +93,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
         <div className="flex justify-between items-center group/node">
           <div className="flex items-center flex-1">
             {label !== null && onKeyChange && (
-              <EditableKey initialKey={label} onCommit={onKeyChange} />
+              <EditableKey initialKey={label} onCommit={onKeyChange || (() => {})} />
             )}
             <span className="text-[10px] text-zinc-500 font-bold uppercase ml-2">
               {isArray ? `Array [${keys.length}]` : `Object {${keys.length}}`}
@@ -113,7 +113,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
               value={(value as Record<string, unknown>)[k]}
               onChange={(newVal: unknown) => handleChildChange(k, newVal)}
               onDelete={() => handleChildDelete(k)}
-              onKeyChange={isArray ? null : handleChildKeyChange}
+              onKeyChange={isArray ? undefined : handleChildKeyChange}
             />
           </div>
         ))}
@@ -136,7 +136,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
   return (
     <div className="flex gap-2 items-center group/leaf">
       {label !== null ? (
-        <EditableKey initialKey={label} onCommit={onKeyChange} />
+        <EditableKey initialKey={label} onCommit={onKeyChange || (() => {})} />
       ) : (
         <div className="w-4 shrink-0 text-zinc-600 text-[10px] flex justify-end pr-2">-</div>
       )}
@@ -170,7 +170,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
           {valueType === 'string' && <span className="text-zinc-600 pl-2">&quot;</span>}
           <input
             type={valueType === 'number' ? 'number' : 'text'}
-            value={value}
+            value={value as string | number}
             onChange={(e) => onChange(valueType === 'number' ? Number(e.target.value) : e.target.value)}
             className={`w-full bg-transparent p-1.5 outline-none text-[11px] font-mono ${valueType === 'number' ? 'text-sky-400' : 'text-emerald-400'}`}
           />

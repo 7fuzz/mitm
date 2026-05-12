@@ -152,7 +152,7 @@ export function InterceptView() {
           <button onClick={toggleIntercept} className={`px-4 py-1.5 rounded font-black text-[10px] uppercase tracking-widest transition-all border ${isIntercepting ? 'bg-rose-500/20 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'bg-zinc-900 border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}>
             {isIntercepting ? 'Intercept_On' : 'Intercept_Off'}
           </button>
-          <select value={interceptMode} onChange={(e) => updateConfig(isIntercepting, e.target.value, ignoredMethods)} className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 ml-2">
+          <select value={interceptMode} onChange={(e) => updateConfig(isIntercepting, e.target.value as "both" | "request" | "response", ignoredMethods)} className="bg-zinc-950 border border-zinc-700 text-zinc-300 text-[10px] uppercase font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 ml-2">
             <option value="both">Req & Res</option><option value="request">Request Only</option><option value="response">Response Only</option>
           </select>
           <div className="w-px h-4 bg-zinc-800 mx-2"></div>

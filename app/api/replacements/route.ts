@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const data = await res.json();
     return NextResponse.json(data);
   } catch (_error) {
-    console.error("Replacements API Error:", error);
+    console.error("Replacements API Error:", _error);
     return NextResponse.json({ success: false, error: 'Failed to save replacements' }, { status: 400 });
   }
 }
