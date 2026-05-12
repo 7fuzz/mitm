@@ -93,10 +93,11 @@ const parseHttpMessage = (text: string) => {
   });
 
   const ctHeader = headerList.find(h => h.key.toLowerCase() === 'content-type');
-  const contentType = ctHeader ? ctHeader.value.split(';')[0].trim().toLowerCase() : '';
+  const fullContentType = ctHeader ? ctHeader.value : '';
+  const contentType = fullContentType.split(';')[0].trim().toLowerCase();
 
-  try { return { firstLine, headersStr, headerList, contentType, json: JSON.parse(rawBody), rawBody }; }
-  catch { return { firstLine, headersStr, headerList, contentType, json: null, rawBody }; }
+  try { return { firstLine, headersStr, headerList, contentType, fullContentType, json: JSON.parse(rawBody), rawBody }; }
+  catch { return { firstLine, headersStr, headerList, contentType, fullContentType, json: null, rawBody }; }
 };
 
 const FormViewer = ({ body, contentType }: { body: string; contentType: string }) => {
@@ -125,13 +126,18 @@ const FormViewer = ({ body, contentType }: { body: string; contentType: string }
             const filenameMatch = part.match(/filename="([^"]+)"/);
             
             // Find the blank line that separates headers from value
+            // More resilient check for double newlines
             const headerBodySplit = part.split(/\r?\n\r?\n/);
+            
             if (nameMatch && headerBodySplit.length > 1) {
               const k = nameMatch[1];
-              // Join the rest back in case the body itself contains double newlines
-              let v = headerBodySplit.slice(1).join('\n\n');
               
-              // Clean up trailing newline and potential boundary markers
+              // The value starts after the headers (index 0)
+              // We need to join the rest in case the body itself contains \r\n\r\n
+              let v = headerBodySplit.slice(1).join('\r\n\r\n');
+              
+              // Cleanup: remove the trailing boundary dashes and potential trailing newline
+              v = v.replace(/\r?\n?--?$/, '');
               v = v.replace(/\r?\n?$/, '');
               
               if (filenameMatch) {
@@ -417,7 +423,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
         {viewMode === "raw" ? (
           <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">{formattedBody || "No Response Body"}</pre>
         ) : viewMode === "form" ? (
-          <FormViewer body={parsed.rawBody} contentType={parsed.contentType} />
+          <FormViewer body={parsed.rawBody} contentType={parsed.fullContentType || ""} />
         ) : viewMode === "render" && isHtml ? (
           <iframe srcDoc={parsed.rawBody} className="w-full h-full bg-white rounded" title="HTML Preview" sandbox="allow-same-origin" />
         ) : isImage && mediaUrl ? (
