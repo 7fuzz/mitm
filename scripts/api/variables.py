@@ -118,21 +118,35 @@ class VariableHandlers:
     async def handle_vars_put(self, request):
         var_id = request.match_info["id"]
         data = await request.json()
-        self.db.execute(
-            "UPDATE variables SET name=?, active_index=? WHERE id=?",
-            (data.get("name", ""), data.get("activeIndex", 0), var_id),
-        )
-        self.db.execute("DELETE FROM variable_values WHERE variable_id=?", (var_id,))
-        for val in data.get("values", []):
-            self.db.execute(
-                "INSERT INTO variable_values VALUES (?, ?, ?, ?)",
-                (
-                    val.get("id", str(uuid.uuid4())),
-                    var_id,
-                    val.get("name", ""),
-                    val.get("value", ""),
-                ),
-            )
+        
+        # Build update query for variables table
+        update_fields = []
+        params = []
+        if "name" in data:
+            update_fields.append("name=?")
+            params.append(data["name"])
+        if "activeIndex" in data:
+            update_fields.append("active_index=?")
+            params.append(data["activeIndex"])
+        
+        if update_fields:
+            query = f"UPDATE variables SET {', '.join(update_fields)} WHERE id=?"
+            params.append(var_id)
+            self.db.execute(query, params)
+
+        # Only update values if provided in the request
+        if "values" in data:
+            self.db.execute("DELETE FROM variable_values WHERE variable_id=?", (var_id,))
+            for val in data.get("values", []):
+                self.db.execute(
+                    "INSERT INTO variable_values VALUES (?, ?, ?, ?)",
+                    (
+                        val.get("id", str(uuid.uuid4())),
+                        var_id,
+                        val.get("name", ""),
+                        val.get("value", ""),
+                    ),
+                )
         self.db.commit()
         return web.json_response({"success": True})
 

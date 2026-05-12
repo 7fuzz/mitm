@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { GlobalVariable, Environment } from './types';
 
-export function useVariables() {
+export function useVariables(prefs?: { autoSave: boolean }) {
   const [variables, setVariables] = useState<GlobalVariable[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([{ id: 'default-env-id', name: 'Default' }]);
   const [activeEnvId, setActiveEnvId] = useState('default-env-id');
+  const debounceTimers = useRef<Record<string, any>>({});
 
   const loadVariables = (vars: GlobalVariable[], envs: Environment[], activeId: string) => {
     setVariables(vars);
@@ -17,9 +18,38 @@ export function useVariables() {
     fetch('/api/variables', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(v) }).catch(console.error);
   };
 
-  const updateVariable = (id: string, updates: Partial<GlobalVariable>) => {
-    setVariables(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
-    fetch(`/api/variables/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) }).catch(console.error);
+  const saveVariable = (id: string, variable?: GlobalVariable) => {
+    const v = variable || variables.find(v => v.id === id);
+    if (!v) return;
+    
+    fetch(`/api/variables/${id}`, { 
+      method: 'PUT', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(v) 
+    }).catch(console.error);
+  };
+
+  const updateVariable = (id: string, updates: Partial<GlobalVariable>, immediate = false) => {
+    setVariables(prev => {
+      const next = prev.map(v => v.id === id ? { ...v, ...updates } : v);
+      
+      if (prefs?.autoSave || immediate) {
+        if (debounceTimers.current[id]) clearTimeout(debounceTimers.current[id]);
+        
+        if (immediate) {
+          const updatedVar = next.find(v => v.id === id);
+          if (updatedVar) saveVariable(id, updatedVar);
+        } else {
+          debounceTimers.current[id] = setTimeout(() => {
+            const updatedVar = next.find(v => v.id === id);
+            if (updatedVar) saveVariable(id, updatedVar);
+            delete debounceTimers.current[id];
+          }, 1000);
+        }
+      }
+      
+      return next;
+    });
   };
 
   const deleteVariable = (id: string) => {
@@ -72,12 +102,20 @@ export function useVariables() {
         const autoVal = v.values.find(val => val.name === '(auto)');
         if (autoVal) {
           const newValues = v.values.map(val => val.name === '(auto)' ? { ...val, value } : val);
-          // Sync to backend
-          fetch(`/api/variables/${v.id}`, { 
-            method: 'PUT', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ values: newValues }) 
-          }).catch(console.error);
+          
+          if (prefs?.autoSave) {
+            const timerId = `auto-${v.id}`;
+            if (debounceTimers.current[timerId]) clearTimeout(debounceTimers.current[timerId]);
+            debounceTimers.current[timerId] = setTimeout(() => {
+              fetch(`/api/variables/${v.id}`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ values: newValues }) 
+              }).catch(console.error);
+              delete debounceTimers.current[timerId];
+            }, 2000);
+          }
+          
           return { ...v, values: newValues };
         }
       }
@@ -88,8 +126,9 @@ export function useVariables() {
   return {
     variables, environments, activeEnvId,
     loadVariables,
-    addVariable, updateVariable, deleteVariable,
+    addVariable, updateVariable, deleteVariable, saveVariable,
     setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
     updateVariableAutoValue
   };
 }
+

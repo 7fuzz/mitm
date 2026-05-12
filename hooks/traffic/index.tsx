@@ -18,8 +18,8 @@ export * from './types';
 // ============================================================================
 function useTrafficState() {
   const selections = useSelection();
-  const variables = useVariables();
   const config = useConfig();
+  const variables = useVariables(config.prefs);
   const repeater = useRepeater();
   const trafficData = useTrafficLog();
   const isFirstSync = useRef(true);

@@ -8,14 +8,26 @@ interface EnvironmentsSectionProps {
 export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSectionProps) {
   const {
     environments, activeEnvId, setActiveEnvironment, createEnvironment, renameEnvironment, deleteEnvironment,
-    variables, addVariable, updateVariable, deleteVariable,
+    variables, addVariable, updateVariable, deleteVariable, saveVariable,
+    prefs, updatePrefs
   } = useTraffic();
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest">Available Environments</h3>
+          <div className="flex items-center gap-4">
+            <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest">Available Environments</h3>
+            <div className="flex items-center gap-2 px-2 py-1 bg-zinc-900/50 border border-zinc-800 rounded">
+              <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Auto-Save</span>
+              <button 
+                onClick={() => updatePrefs({ ...prefs, autoSave: !prefs.autoSave })}
+                className={`w-8 h-4 rounded-full relative transition-colors ${prefs.autoSave ? 'bg-emerald-500/50' : 'bg-zinc-800'}`}
+              >
+                <div className={`absolute top-1 w-2 h-2 rounded-full transition-all ${prefs.autoSave ? 'right-1 bg-emerald-400' : 'left-1 bg-zinc-600'}`} />
+              </button>
+            </div>
+          </div>
           <button onClick={() => openPrompt('New Environment Name', '', createEnvironment)} className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/30 text-amber-500 hover:bg-amber-600/20 rounded text-[9px] font-black uppercase tracking-widest transition-all">+ Create Environment</button>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -73,7 +85,17 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
                     className="bg-transparent text-amber-400 font-bold text-xs outline-none focus:text-amber-300 transition-colors"
                     placeholder="KEY_NAME"
                   />
-                  <span className="text-[9px] text-zinc-600 font-mono uppercase">ID: {v.id.substring(0, 8)}...</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] text-zinc-600 font-mono uppercase">ID: {v.id.substring(0, 8)}...</span>
+                    {!prefs.autoSave && (
+                      <button 
+                        onClick={() => saveVariable(v.id, v)}
+                        className="text-[8px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
+                      >
+                        [Save]
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1 flex flex-col gap-3">
                   {v.values.map((val, idx) => (
