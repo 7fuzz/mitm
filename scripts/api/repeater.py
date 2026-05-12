@@ -135,17 +135,28 @@ class RepeaterHandlers:
                 boundary_match = re.search(r'boundary=(?:"([^"]+)"|([^;]+))', ct, re.I)
                 boundary = boundary_match.group(1) or boundary_match.group(2) if boundary_match else None
                 if boundary:
-                    parts = body.split('--' + boundary)
+                    # Split by boundary
+                    separator = '--' + boundary
+                    parts = body.split(separator)
                     form_entries = []
+                    
                     for part in parts:
+                        # Skip empty parts or terminal markers
+                        if not part.strip() or part.strip() == '--':
+                            continue
+                            
                         if 'name=' in part:
                             name_match = re.search(r'name="([^"]+)"', part)
                             filename_match = re.search(r'filename="([^"]+)"', part)
-                            value_parts = part.split('\r\n\r\n')
                             
-                            if name_match and len(value_parts) > 1:
+                            # Standard multipart uses \r\n\r\n to separate headers from value
+                            header_body_split = re.split(r'\r?\n\r?\n', part, 1)
+                            
+                            if name_match and len(header_body_split) > 1:
                                 k = name_match.group(1)
-                                v_raw = value_parts[1].rstrip('\r\n').rstrip('--').rstrip('\r\n')
+                                v_raw = header_body_split[1]
+                                # Clean up potential trailing newline from the split
+                                v_final = v_raw.rstrip('\r\n')
                                 
                                 if filename_match:
                                     filename = filename_match.group(1)
@@ -153,23 +164,19 @@ class RepeaterHandlers:
                                     unique_name = f"{uuid.uuid4()}{ext}"
                                     os.makedirs("data/file", exist_ok=True)
                                     
-                                    # More robust value extraction:
-                                    # The value is between \r\n\r\n and the next \r\n--boundary
-                                    # Since we already split by --boundary, it's just stripping the trailing \r\n
-                                    v_final = value_parts[1]
-                                    if v_final.endswith('\r\n'):
-                                        v_final = v_final[:-2]
-                                    
-                                    with open(os.path.join("data/file", unique_name), 'wb') as f:
+                                    file_path = os.path.join("data/file", unique_name)
+                                    with open(file_path, 'wb') as f:
                                         if isinstance(v_final, str):
-                                            f.write(v_final.encode('utf-8', errors='ignore'))
+                                            # Recover binary data from string using latin-1
+                                            try:
+                                                f.write(v_final.encode('latin-1'))
+                                            except UnicodeEncodeError:
+                                                f.write(v_final.encode('utf-8', errors='ignore'))
                                         else:
                                             f.write(v_final)
+                                            
                                     form_entries.append({"k": k, "v": unique_name, "type": "file", "fileName": filename})
                                 else:
-                                    v_final = value_parts[1]
-                                    if v_final.endswith('\r\n'):
-                                        v_final = v_final[:-2]
                                     form_entries.append({"k": k, "v": v_final, "type": "text"})
                     
                     if form_entries:

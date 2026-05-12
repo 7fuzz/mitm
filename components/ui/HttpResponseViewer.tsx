@@ -112,17 +112,28 @@ const FormViewer = ({ body, contentType }: { body: string; contentType: string }
       const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
       const boundary = boundaryMatch ? (boundaryMatch[1] || boundaryMatch[2]) : '';
       if (boundary && body) {
-        const parts = body.split(`--${boundary}`);
+        // Use a more robust split that handles potential line ending issues
+        const separator = `--${boundary}`;
+        const parts = body.split(separator);
+        
         parts.forEach(part => {
+          // Skip empty parts and the terminal "--" part
+          if (!part.trim() || part.trim() === '--') return;
+          
           if (part.includes('name=')) {
             const nameMatch = part.match(/name="([^"]+)"/);
             const filenameMatch = part.match(/filename="([^"]+)"/);
-            const valueParts = part.split('\r\n\r\n');
-            const valueMatch = valueParts.length > 1 ? valueParts[1] : '';
             
-            if (nameMatch) {
+            // Find the blank line that separates headers from value
+            const headerBodySplit = part.split(/\r?\n\r?\n/);
+            if (nameMatch && headerBodySplit.length > 1) {
               const k = nameMatch[1];
-              const v = valueMatch.replace(/\r\n--.*$/, '').replace(/\r\n$/, '');
+              // Join the rest back in case the body itself contains double newlines
+              let v = headerBodySplit.slice(1).join('\n\n');
+              
+              // Clean up trailing newline and potential boundary markers
+              v = v.replace(/\r?\n?$/, '');
+              
               if (filenameMatch) {
                 parsed.push({ k, v: '[BINARY DATA]', type: 'file', fileName: filenameMatch[1] });
               } else {
