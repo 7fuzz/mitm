@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { UILayout } from './types';
 
 export function useConfig() {
-  const [prefs, setPrefs] = useState({ history: true, repeater: true, bindings: true, limits: true, intercept: true, simpleMode: true });
+  const [prefs, setPrefs] = useState({ history: true, repeater: true, bindings: true, limits: true, intercept: true, simpleMode: true, replacementsAutoSave: true });
   const [isIntercepting, setIsIntercepting] = useState(false);
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');
   const [ignoredMethods, setIgnoredMethods] = useState<string[]>(['OPTIONS']);

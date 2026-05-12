@@ -227,6 +227,14 @@ export function OptionsView() {
                 <span className="text-[10px] text-zinc-600 font-mono">Saves max history size</span>
               </div>
             </label>
+
+            <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
+              <input type="checkbox" checked={prefs.replacementsAutoSave} onChange={() => togglePref('replacementsAutoSave')} className="accent-purple-500 w-4 h-4" />
+              <div className="flex flex-col">
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Replacements Auto-Save</span>
+                <span className="text-[10px] text-zinc-600 font-mono">Automatically save rule changes</span>
+              </div>
+            </label>
           </div>
         </div>
 
