@@ -6,6 +6,7 @@ interface FormEntry {
   v: string;
   type: 'text' | 'file';
   fileName?: string;
+  contentType?: string;
   fileContent?: string; // Store path or reference
 }
 export function FormEditor({ initialBody, contentType, onChange }: { initialBody: string; contentType: string; onChange: (v: string) => void }) {
@@ -76,7 +77,7 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
       // For multipart, we use a special JSON marker that the backend/proxy will understand
       // or we just mark it as modified and store the structured data
       newBodyString = JSON.stringify({
-        __form_data: newEntries.map(({ id, ...rest }) => rest),
+        __form_data: newEntries.map(({ id, fileContent, ...rest }) => rest),
         _hint: "Form Editor modified. (Multipart will be reconstructed on send)"
       });
     }
@@ -104,19 +105,19 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
     formData.append('file', file);
 
     try {
-      updateEntry(id, { fileName: file.name, v: 'Uploading...' });
+      updateEntry(id, { fileName: file.name, contentType: file.type, v: 'Uploading...' });
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       const data = await res.json();
       if (data.success) {
-        updateEntry(id, { v: data.path, fileName: file.name });
+        updateEntry(id, { v: data.path, fileName: file.name, contentType: file.type });
       } else {
-        updateEntry(id, { v: 'Upload Failed', fileName: '' });
+        updateEntry(id, { v: 'Upload Failed', fileName: '', contentType: '' });
       }
     } catch (error) {
-      updateEntry(id, { v: 'Upload Error', fileName: '' });
+      updateEntry(id, { v: 'Upload Error', fileName: '', contentType: '' });
     }
   };
 
@@ -153,12 +154,20 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
               />
             ) : (
               <div className="flex flex-col gap-2 p-2 bg-zinc-950 border border-zinc-800 rounded min-h-[34px]">
-                <div className="flex items-center justify-between">
-                   <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[150px]">
-                     {e.fileName || 'No file selected'}
-                   </span>
+                <div className="flex items-center justify-between gap-2">
+                   <div className="flex flex-col gap-1 flex-1 min-w-0">
+                      <span className="text-[10px] text-zinc-500 font-mono truncate">
+                        {e.fileName || 'No file selected'}
+                      </span>
+                      <input 
+                        value={e.contentType || ''} 
+                        onChange={(ev) => updateEntry(e.id, { contentType: ev.target.value })}
+                        placeholder="Content-Type (e.g. image/jpeg)"
+                        className="w-full bg-zinc-900 border border-zinc-800 px-2 py-1 rounded text-[9px] text-emerald-500 outline-none focus:border-emerald-500 font-mono"
+                      />
+                   </div>
                    {e.v && e.v !== 'Uploading...' && e.v !== 'Upload Failed' && e.v !== 'Upload Error' && (
-                     <span className="text-[9px] text-emerald-500 font-bold uppercase">Ready</span>
+                     <span className="text-[9px] text-emerald-500 font-bold uppercase shrink-0">Ready</span>
                    )}
                 </div>
                 <input 

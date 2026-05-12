@@ -148,12 +148,14 @@ class RepeaterHandlers:
                         if 'name=' in part:
                             name_match = re.search(r'name="([^"]+)"', part)
                             filename_match = re.search(r'filename="([^"]+)"', part)
+                            content_type_match = re.search(r'content-type:\s*([^\s\r\n]+)', part, re.I)
                             
                             # Standard multipart uses \r\n\r\n to separate headers from value
                             header_body_split = re.split(r'\r?\n\r?\n', part, 1)
                             
                             if name_match and len(header_body_split) > 1:
                                 k = name_match.group(1)
+                                ct_inner = content_type_match.group(1) if content_type_match else ""
                                 v_raw = header_body_split[1]
                                 # Clean up potential trailing newline from the split
                                 v_final = v_raw.rstrip('\r\n')
@@ -175,9 +177,9 @@ class RepeaterHandlers:
                                         else:
                                             f.write(v_final)
                                             
-                                    form_entries.append({"k": k, "v": unique_name, "type": "file", "fileName": filename})
+                                    form_entries.append({"k": k, "v": unique_name, "type": "file", "fileName": filename, "contentType": ct_inner})
                                 else:
-                                    form_entries.append({"k": k, "v": v_final, "type": "text"})
+                                    form_entries.append({"k": k, "v": v_final, "type": "text", "contentType": ct_inner})
                     
                     if form_entries:
                         body = json.dumps({
@@ -429,16 +431,25 @@ class RepeaterHandlers:
                         for entry in parsed_body["__form_data"]:
                             k = interpolate(entry.get("k", ""))
                             v = interpolate(entry.get("v", ""))
+                            entry_ct = entry.get("contentType")
+                            
                             if entry.get("type") == "file" and v:
                                 file_path = os.path.join("data/file", v)
                                 if os.path.exists(file_path):
-                                    # Use fileName if available, else original v
                                     filename = entry.get("fileName", v)
-                                    form_data.add_field(k, open(file_path, 'rb'), filename=filename)
+                                    # Pass explicit content_type if available
+                                    field_kwargs = {"filename": filename}
+                                    if entry_ct:
+                                        field_kwargs["content_type"] = entry_ct
+                                    
+                                    form_data.add_field(k, open(file_path, 'rb'), **field_kwargs)
                                 else:
-                                    form_data.add_field(k, v) # Fallback to path string if missing
+                                    form_data.add_field(k, v)
                             else:
-                                form_data.add_field(k, v)
+                                if entry_ct:
+                                    form_data.add_field(k, v, content_type=entry_ct)
+                                else:
+                                    form_data.add_field(k, v)
                 except Exception as e:
                     print(f"Error parsing form data: {e}")
 

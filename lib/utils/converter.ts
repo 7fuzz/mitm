@@ -8,6 +8,7 @@ export interface FormEntry {
   v: string;
   type: 'text' | 'file';
   fileName?: string;
+  contentType?: string;
 }
 
 export const jsonToUrlEncoded = (jsonString: string): string | null => {
