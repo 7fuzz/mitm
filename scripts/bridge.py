@@ -37,6 +37,10 @@ class InterceptBridge:
         self.intercept_mode = ic.get("mode", "both")
         self.ignored_methods = ic.get("ignored", ["OPTIONS"])
 
+        # Load limits configuration
+        self.limits_config = self.db.get_state_key("limits", {"enabled": True, "value": 1000})
+        self.enforce_limits()
+
         if self.prefs.get("bindings"):
             net = self.db.get_state_key("network", {"bindings": ["8080"]})
             modes = [
@@ -59,6 +63,26 @@ class InterceptBridge:
         if self.intercept_mode in ["both", phase]:
             return True
         return False
+
+    def enforce_limits(self):
+        """Manually trim the history log based on current settings"""
+        limit_enabled = self.limits_config.get("enabled", True)
+        max_history = self.limits_config.get("value", 1000)
+
+        # Only run the rolling buffer vacuum if limits are ON in global prefs AND in limits config
+        if self.prefs.get("limits", True) and limit_enabled:
+            self.db.execute(
+                """
+                DELETE FROM history_log 
+                WHERE id NOT IN (
+                    SELECT id FROM history_log 
+                    ORDER BY timestamp DESC 
+                    LIMIT ?
+                )
+            """,
+                (max_history,),
+            )
+            self.db.commit()
 
     async def send_to_dashboard(self, payload):
         try:
@@ -91,33 +115,8 @@ class InterceptBridge:
                 ),
             )
 
-            # 2. Check if limits are actually enabled in preferences
-            limits_pref = self.prefs.get("limits", True)
-            limit_enabled = True
-            max_history = 1000
-
-            # Handle both boolean toggles and object configs
-            if isinstance(limits_pref, dict):
-                limit_enabled = limits_pref.get("enabled", True)
-                max_history = limits_pref.get("maxHistory", 1000)
-            elif isinstance(limits_pref, bool):
-                limit_enabled = limits_pref
-
-            # 3. Only run the rolling buffer vacuum if limits are ON
-            if limit_enabled:
-                self.db.execute(
-                    """
-                    DELETE FROM history_log 
-                    WHERE id NOT IN (
-                        SELECT id FROM history_log 
-                        ORDER BY timestamp DESC 
-                        LIMIT ?
-                    )
-                """,
-                    (max_history,),
-                )
-
-            self.db.commit()
+            # 2. rolling buffer vacuum
+            self.enforce_limits()
 
     async def request(self, flow):
         if self.should_intercept(flow, "request"):
