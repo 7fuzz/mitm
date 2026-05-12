@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTraffic } from '@/hooks/traffic';
+import { DebouncedInput } from '../../ui/DebouncedInput';
 
 interface EnvironmentsSectionProps {
   openPrompt: (title: string, initialValue: string, action: (val: string) => void) => void;
@@ -96,11 +97,13 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
             variables.filter(v => v.environmentId === activeEnvId).map(v => (
               <div key={v.id} className="p-4 flex items-start gap-6 hover:bg-zinc-900/20 transition-colors group">
                 <div className="flex flex-col gap-1 w-1/4">
-                  <input 
+                  <DebouncedInput 
                     value={v.name}
-                    onChange={(e) => updateVariable(v.id, { name: e.target.value })}
-                    className="bg-transparent text-amber-400 font-bold text-xs outline-none focus:text-amber-300 transition-colors"
+                    onChange={(val) => updateVariable(v.id, { name: val })}
+                    className="bg-transparent border-none !px-0 focus-within:!border-none"
+                    inputClassName="text-amber-400 font-bold text-xs !px-0"
                     placeholder="KEY_NAME"
+                    showIcon={false}
                   />
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] text-zinc-600 font-mono uppercase">ID: {v.id.substring(0, 8)}...</span>
@@ -117,24 +120,27 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
                 <div className="flex-1 flex flex-col gap-3">
                   {v.values.map((val, idx) => (
                     <div key={val.id} className="flex items-center gap-2">
-                      <input 
+                      <DebouncedInput 
                         value={val.name}
-                        onChange={(e) => {
-                          const newVals = v.values.map(vv => vv.id === val.id ? { ...vv, name: e.target.value } : vv);
+                        onChange={(newVal) => {
+                          const newVals = v.values.map(vv => vv.id === val.id ? { ...vv, name: newVal } : vv);
                           updateVariable(v.id, { values: newVals });
                         }}
-                        className={`w-24 bg-zinc-900/50 border border-zinc-800 p-1.5 rounded text-[10px] font-bold ${val.name === '(auto)' ? 'text-purple-400 border-purple-900/30' : 'text-sky-400'}`}
+                        className={`w-24 bg-zinc-900/50 border border-zinc-800 rounded`}
+                        inputClassName={`${val.name === '(auto)' ? 'text-purple-400' : 'text-sky-400'} font-bold`}
                         placeholder="Variant"
                         disabled={val.name === '(auto)'}
+                        showIcon={false}
                       />
-                      <input 
+                      <DebouncedInput 
                         value={val.value}
-                        onChange={(e) => {
-                          const newVals = v.values.map(vv => vv.id === val.id ? { ...vv, value: e.target.value } : vv);
+                        onChange={(newVal) => {
+                          const newVals = v.values.map(vv => vv.id === val.id ? { ...vv, value: newVal } : vv);
                           updateVariable(v.id, { values: newVals });
                         }}
-                        className="flex-1 bg-zinc-900/50 border border-zinc-800 p-1.5 rounded text-zinc-300 text-[10px] font-mono"
+                        className="flex-1 bg-zinc-900/50 border border-zinc-800 rounded"
                         placeholder="Value..."
+                        showIcon={false}
                       />
                       <div className="flex items-center gap-1 ml-2">
                         <button 

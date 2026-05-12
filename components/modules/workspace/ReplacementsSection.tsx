@@ -3,6 +3,7 @@ import { useTraffic, ReplacementCategory, ReplacementEntry } from '@/hooks/traff
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { DebouncedInput } from '../../ui/DebouncedInput';
 
 const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: string; color: string }> = {
   URL_REPLACEMENTS: { label: 'URL Patterns', description: 'Domain prefix replacements for environment switching', color: 'sky' },
@@ -44,20 +45,22 @@ function SortableReplacementItem({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         )}
       </button>
-      <input
-        type="text"
+      <DebouncedInput
         value={entry.pattern}
-        onChange={(e) => updateEntry(category, idx, 'pattern', e.target.value)}
+        onChange={(val) => updateEntry(category, idx, 'pattern', val)}
         placeholder={category === 'HEADER_REPLACEMENTS' ? "Header Key (e.g. Authorization)" : category === 'BODY_KEY_REPLACEMENTS' ? "JSON Key (e.g. user_id)" : category === 'TEXT_REPLACEMENTS' ? "Any Text (e.g. xyz)" : "Pattern (e.g. api.)"}
-        className={`flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded font-mono text-xs outline-none focus:border-rose-500/50 transition-all ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-zinc-300'}`}
+        className={`flex-1 bg-zinc-950 border border-zinc-800 rounded transition-all`}
+        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-zinc-300'}`}
+        showIcon={false}
       />
       <span className="text-zinc-600 text-xs">→</span>
-      <input
-        type="text"
+      <DebouncedInput
         value={entry.replacement}
-        onChange={(e) => updateEntry(category, idx, 'replacement', e.target.value)}
+        onChange={(val) => updateEntry(category, idx, 'replacement', val)}
         placeholder={category === 'HEADER_REPLACEMENTS' ? "Value (e.g. Bearer {{token}})" : category === 'TEXT_REPLACEMENTS' ? "Replacement (e.g. {{something}})" : "Replacement (e.g. {{env}})"}
-        className={`flex-1 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded font-mono text-xs outline-none focus:border-rose-500/50 transition-all ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-amber-400/70'}`}
+        className={`flex-1 bg-zinc-950 border border-zinc-800 rounded transition-all`}
+        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-amber-400/70'}`}
+        showIcon={false}
       />
       <button
         onClick={() => removeEntry(category, idx)}

@@ -7,6 +7,7 @@ interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputEl
   debounce?: number;
   showIcon?: boolean;
   onTypingChange?: (isTyping: boolean) => void;
+  inputClassName?: string;
 }
 
 export function DebouncedInput({
@@ -16,6 +17,7 @@ export function DebouncedInput({
   showIcon = true,
   onTypingChange,
   className,
+  inputClassName = '',
   ...props
 }: DebouncedInputProps) {
   const [value, setValue] = useState(initialValue);
@@ -70,7 +72,7 @@ export function DebouncedInput({
         {...props}
         value={value}
         onChange={e => setValue(e.target.value)}
-        className="w-full bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600"
+        className={`w-full bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600 ${inputClassName}`}
       />
       {value && (
         <button 
