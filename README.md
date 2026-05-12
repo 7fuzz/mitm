@@ -1,6 +1,6 @@
 # MITM Real - Proxy & Debugging Dashboard
 
-A powerful, developer-centric intercepting proxy and debugging dashboard.
+A powerful, developer-centric intercepting proxy and debugging dashboard designed for deep traffic analysis and workspace-based testing.
 
 ## 🚀 One-Time Setup
 
@@ -60,10 +60,11 @@ The **Workbench** is where you perform manual request testing.
 - Organize requests into **Collections**.
 - Hit **Execute** to send the request and view the response.
 
-### 4. Simple Mode vs. Full Mode
-Found in the **Options** tab, **Simple_Mode** is enabled by default for a lightweight experience.
-- **Simple Mode ON**: Hides advanced features like Environments, Variables, and Utilities. "Send to Workbench" always sends raw data.
-- **Simple Mode OFF**: Unlocks the full power of the app, including automated variable replacements and workspace management.
+### 4. Options & UI Modes
+Found in the **Options** tab, you can customize your experience:
+- **Simple Mode**: A lightweight experience that hides advanced workspace tools.
+- **Memory Limits**: Set a cap on the number of history items kept in the dashboard to maintain performance.
+- **Network Bindings**: Configure multiple IP/Port listeners for the proxy engine.
 
 ---
 
@@ -71,31 +72,30 @@ Found in the **Options** tab, **Simple_Mode** is enabled by default for a lightw
 
 When Simple Mode is disabled, the following advanced tools become available:
 
-### 🌍 Environments
-Manage multiple server environments (e.g., Development, Staging, Production). Switching an environment globally updates all associated variables.
+### 🌍 Environments & Variable System
+Manage multiple server environments (e.g., Development, Staging, Production) with a robust variable system:
+- **Variables**: Use `{{placeholder}}` in any Workbench request.
+- **Variable Variants**: Create multiple values for a single variable (e.g., "User A", "User B").
+- **Smart Persistence**:
+  - **Debounced Auto-Save**: Changes to variables are automatically saved to the database after 1 second of inactivity.
+  - **Auto-Capture Debounce**: Variables updated via response extraction are debounced for 2 seconds to prevent race conditions.
+  - **Auto-Save Toggle**: Globally enable/disable automatic persistence in the Environments section.
+  - **Manual Save**: When auto-save is off, use the **[Save]** or **Save All Variables** buttons to manually persist changes.
+  - **Bulk API**: Optimized persistence layer that saves entire environments in a single network request.
 
-### 🔑 Variables & Variants
-Define placeholders like `{{token}}` or `{{apiUrl}}` to use in your requests.
-- **Global Variables**: Each variable is tied to an environment.
-- **Variable Variants**: Create multiple values for a single variable (e.g., "User A", "User B", "Admin").
-- **Variants Selection**: Quickly switch between variants without re-typing values.
-- **Auto Variant**: Some variables can be updated automatically via response extraction.
+### 📁 Workbench Collections
+Keep your Workbench organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects for sharing or version control.
 
-### 📁 Workbench Collections (Groups)
-Keep your Workbench organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects.
-
-### 🔄 Workbench Replacements
-Configure transformation rules that automatically tokenize your traffic:
-- **URL Patterns**: Swap domain prefixes (e.g., `api.` -> `api{{env}}.`).
-- **Header Replacements**: Replace values based on header keys (e.g., `Authorization` -> `Bearer {{token}}`).
+### 🔄 Automated Replacements
+Configure transformation rules that automatically tokenize your traffic in real-time:
+- **URL & Param Patterns**: Swap domain prefixes or query parameters.
+- **Header Replacements**: Inject or replace values based on header keys (e.g., `Authorization`).
 - **Body Keys**: Automatically tokenize specific JSON keys in request bodies.
-- **Global Text**: Replace any string match across the entire request (URL, Headers, and Body).
+- **Global Text**: High-power replacement across the entire request (URL, Headers, and Body).
 
 ### 🧰 Utilities
-A dedicated toolbox for common developer tasks:
-- **JSON Toolkit**: Format, minify, and filter large JSON payloads.
-- **CVSS Calculator**: Calculate vulnerability severity scores.
-- **Encoding/Decoding**: (Coming soon) Base64, URL encoding, etc.
+- **JSON Toolkit**: Format, minify, and recursively filter large JSON payloads. Supports "Send to Toolkit" from any response viewer.
+- **CVSS Calculator**: Calculate vulnerability severity scores using the industry-standard CVSS 3.1 framework.
 
 ---
 
@@ -103,5 +103,5 @@ A dedicated toolbox for common developer tasks:
 To intercept HTTPS traffic:
 1. Go to the **Options** tab in the dashboard.
 2. Click **Download Root CA (.pem)**.
-3. Install this certificate on your target device (iOS/Android/Browser).
-4. **Crucial**: On mobile devices, you must manually go into settings and "Enable full trust for root certificate."
+3. Install this certificate on your target device.
+4. **Crucial**: On mobile devices, you must manually go into system settings and "Enable full trust for root certificate."
