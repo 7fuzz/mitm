@@ -152,14 +152,25 @@ class RepeaterHandlers:
                                     ext = os.path.splitext(filename)[1]
                                     unique_name = f"{uuid.uuid4()}{ext}"
                                     os.makedirs("data/file", exist_ok=True)
+                                    
+                                    # More robust value extraction:
+                                    # The value is between \r\n\r\n and the next \r\n--boundary
+                                    # Since we already split by --boundary, it's just stripping the trailing \r\n
+                                    v_final = value_parts[1]
+                                    if v_final.endswith('\r\n'):
+                                        v_final = v_final[:-2]
+                                    
                                     with open(os.path.join("data/file", unique_name), 'wb') as f:
-                                        if isinstance(v_raw, str):
-                                            f.write(v_raw.encode('utf-8', errors='ignore'))
+                                        if isinstance(v_final, str):
+                                            f.write(v_final.encode('utf-8', errors='ignore'))
                                         else:
-                                            f.write(v_raw)
+                                            f.write(v_final)
                                     form_entries.append({"k": k, "v": unique_name, "type": "file", "fileName": filename})
                                 else:
-                                    form_entries.append({"k": k, "v": v_raw, "type": "text"})
+                                    v_final = value_parts[1]
+                                    if v_final.endswith('\r\n'):
+                                        v_final = v_final[:-2]
+                                    form_entries.append({"k": k, "v": v_final, "type": "text"})
                     
                     if form_entries:
                         body = json.dumps({
