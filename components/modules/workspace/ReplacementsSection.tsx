@@ -93,6 +93,7 @@ export function ReplacementsSection() {
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoad = useRef(true);
+  const isSyncingRef = useRef(false);
   const lastSavedRef = useRef<string>('');
 
   const [prevOrdered, setPrevOrdered] = useState<ReplacementEntry[] | null>(null);
@@ -111,16 +112,21 @@ export function ReplacementsSection() {
       URL_PARAM_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'URL_PARAM_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
       TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
     };
+    
+    // Set syncing flag to true so the useEffect doesn't trigger a save
+    isSyncingRef.current = true;
     setLocalReplacements(converted);
+    
+    // Update lastSavedRef immediately to prevent race conditions in useEffect
+    const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
+    lastSavedRef.current = payloadString;
   }
 
   useEffect(() => {
     if (!replacementsLoading) {
-      const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
-      lastSavedRef.current = payloadString;
       isInitialLoad.current = false;
     }
-  }, [orderedReplacements, replacementsLoading]);
+  }, [replacementsLoading]);
 
   const saveRef = useRef(saveReplacements);
   useEffect(() => {
@@ -135,6 +141,13 @@ export function ReplacementsSection() {
     );
 
     const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
+    
+    // If this change was from a sync (top-down), don't save it back
+    if (isSyncingRef.current) {
+      isSyncingRef.current = false;
+      return;
+    }
+
     if (lastSavedRef.current === currentPayloadString) return;
 
     const lastItems: { id: string; pattern: string; replacement: string, is_active: boolean }[] = JSON.parse(lastSavedRef.current || '[]');
@@ -143,14 +156,8 @@ export function ReplacementsSection() {
       return !prev || prev.pattern !== curr.pattern || prev.replacement !== curr.replacement || prev.is_active !== curr.is_active;
     });
 
-    if (modifiedItems.length === 0) {
-      // Check for reorder only if no patterns changed
-      if (currentItems.length > 0 && currentPayloadString !== lastSavedRef.current) {
-        // If the payload matches but the reference is different, it might be a reorder that didn't change patterns
-        // But our current payload string doesn't include order info. Let's force save on reorder.
-      } else {
-        return;
-      }
+    if (modifiedItems.length === 0 && currentItems.length === lastItems.length) {
+      return;
     }
 
     setSaveMessage('Saving...');
@@ -179,6 +186,7 @@ export function ReplacementsSection() {
   }, [localReplacements, debouncedSave, autoSaveEnabled]);
 
   const updateEntry = (category: ReplacementCategory, index: number, field: 'pattern' | 'replacement' | 'is_active', value: string | boolean) => {
+    isSyncingRef.current = false; // User interaction, not a sync
     setLocalReplacements(prev => ({
       ...prev,
       [category]: prev[category].map((entry, i) => i === index ? { ...entry, [field]: value } : entry)
@@ -186,6 +194,7 @@ export function ReplacementsSection() {
   };
 
   const addEntry = (category: ReplacementCategory) => {
+    isSyncingRef.current = false;
     setLocalReplacements(prev => ({
       ...prev,
       [category]: [...prev[category], { id: crypto.randomUUID(), pattern: '', replacement: '', is_active: true }]
@@ -193,6 +202,7 @@ export function ReplacementsSection() {
   };
 
   const removeEntry = (category: ReplacementCategory, index: number) => {
+    isSyncingRef.current = false;
     const entry = localReplacements[category][index];
     if (entry && entry.id) {
       deleteReplacement(entry.id);
@@ -206,6 +216,7 @@ export function ReplacementsSection() {
   const handleReorder = (category: ReplacementCategory, event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
+      isSyncingRef.current = false;
       setLocalReplacements(prev => {
         const items = prev[category];
         const oldIndex = items.findIndex(i => i.id === active.id);
@@ -252,17 +263,15 @@ export function ReplacementsSection() {
             <h3 className="text-rose-500 font-bold uppercase text-[10px] tracking-widest">Workbench Replacements</h3>
             <p className="text-zinc-500 text-[10px] font-mono mt-1">Configure variable placeholders applied when sending requests from History to Workbench.</p>
           </div>
-          {!prefs.autoSave && (
-            <label className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded cursor-pointer hover:bg-zinc-800 transition-colors shadow-lg">
-              <input
-                type="checkbox"
-                checked={autoSaveEnabled}
-                onChange={() => updatePrefs({ ...prefs, replacementsAutoSave: !autoSaveEnabled })}
-                className="accent-rose-500 w-3 h-3 cursor-pointer"
-              />
-              <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 select-none">Auto-Save</span>
-            </label>
-          )}
+          <label className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded cursor-pointer hover:bg-zinc-800 transition-colors shadow-lg">
+            <input
+              type="checkbox"
+              checked={autoSaveEnabled}
+              onChange={() => updatePrefs({ ...prefs, replacementsAutoSave: !autoSaveEnabled })}
+              className="accent-rose-500 w-3 h-3 cursor-pointer"
+            />
+            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 select-none">Auto-Save</span>
+          </label>
         </div>
 
         <div className="space-y-3">
