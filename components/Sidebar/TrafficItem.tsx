@@ -6,6 +6,7 @@ interface TrafficItemProps {
   status: number; // 0 for pending/unsent
   title: string;
   group?: string;
+  hitCount?: number;
   isIntercepted?: boolean;
   isActive: boolean;
   activeColor?: 'emerald' | 'purple' | 'sky';
@@ -14,7 +15,7 @@ interface TrafficItemProps {
 }
 
 export const TrafficItem = memo(({
-  id, method, status, title, group, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
+  id, method, status, title, group, hitCount, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
 }: TrafficItemProps) => {
 
   const getMethodColor = (m: string) => {
@@ -60,6 +61,11 @@ export const TrafficItem = memo(({
             {group && group !== 'Default' && (
               <span className="text-[8px] bg-purple-500/10 text-purple-400/80 px-1.5 py-0.5 rounded border border-purple-500/20 font-mono truncate max-w-24">
                 {group}
+              </span>
+            )}
+            {hitCount !== undefined && hitCount > 0 && (
+              <span className="text-[8px] bg-emerald-500/10 text-emerald-400/80 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono shrink-0">
+                Hits: {hitCount}
               </span>
             )}
           </div>

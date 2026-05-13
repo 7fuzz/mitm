@@ -33,6 +33,7 @@ class Database:
             request TEXT, response TEXT, timestamp INTEGER,
             order_index INTEGER DEFAULT 0,
             extract TEXT,
+            hit_count INTEGER DEFAULT 0,
             FOREIGN KEY(group_id) REFERENCES repeater_groups(id) ON DELETE SET NULL
         )""")
 
@@ -56,6 +57,11 @@ class Database:
         
         try:
             self.conn.execute("ALTER TABLE repeater_workspace ADD COLUMN extract TEXT")
+        except sqlite3.OperationalError:
+            pass # already exists
+
+        try:
+            self.conn.execute("ALTER TABLE repeater_workspace ADD COLUMN hit_count INTEGER DEFAULT 0")
         except sqlite3.OperationalError:
             pass # already exists
 

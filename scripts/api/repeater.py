@@ -18,7 +18,7 @@ class RepeaterHandlers:
         group_id_param = request.query.get("groupId", "All")
 
         # Use order_index for sorting
-        query = """SELECT rw.id, rw.name, rw.group_id, rg.name, rw.method, rw.url, rw.request, rw.response, rw.timestamp, rw.order_index, rw.extract 
+        query = """SELECT rw.id, rw.name, rw.group_id, rg.name, rw.method, rw.url, rw.request, rw.response, rw.timestamp, rw.order_index, rw.extract, rw.hit_count 
                    FROM repeater_workspace rw 
                    LEFT JOIN repeater_groups rg ON rw.group_id = rg.id"""
         params = ()
@@ -48,7 +48,8 @@ class RepeaterHandlers:
                 "body": req.get("body", ""),
                 "timestamp": r[8],
                 "orderIndex": r[9] if len(r) > 9 else 0,
-                "extract": json.loads(r[10]) if len(r) > 10 and r[10] else {}
+                "extract": json.loads(r[10]) if len(r) > 10 and r[10] else {},
+                "hitCount": r[11] if len(r) > 11 else 0
             }
             if res:
                 item["response"] = {
@@ -97,7 +98,7 @@ class RepeaterHandlers:
             group_id = item.get("groupId")
 
             self.db.execute(
-                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract, hit_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item["id"],
                     item["name"],
@@ -108,7 +109,8 @@ class RepeaterHandlers:
                     json.dumps(res_data) if res_data else None,
                     item["timestamp"],
                     item.get("orderIndex", idx),
-                    json.dumps(item.get("extract", {}))
+                    json.dumps(item.get("extract", {})),
+                    item.get("hitCount", 0)
                 ),
             )
         self.db.commit()
@@ -199,7 +201,7 @@ class RepeaterHandlers:
                 order_index = row[0] + 1
 
             self.db.execute(
-                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract, hit_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     item_id,
                     data.get("name", "New Request"),
@@ -210,7 +212,8 @@ class RepeaterHandlers:
                     None,
                     int(time.time() * 1000),
                     order_index,
-                    json.dumps(data.get("extract", {}))
+                    json.dumps(data.get("extract", {})),
+                    0
                 ),
             )
             self.db.commit()
@@ -476,6 +479,11 @@ class RepeaterHandlers:
                             "INSERT INTO repeater_history (id, repeater_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (history_id, repeater_id, method, url, req_data, res_data, int(time.time() * 1000))
                         )
+                        # Increment hit count
+                        self.db.execute(
+                            "UPDATE repeater_workspace SET hit_count = hit_count + 1 WHERE id = ?",
+                            (repeater_id,)
+                        )
                         self.db.commit()
 
                     return web.json_response(
@@ -669,7 +677,7 @@ class RepeaterHandlers:
                         order_index = row[0] + 1
 
                     self.db.execute(
-                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract, hit_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
                             item_id,
                             item_name,
@@ -680,7 +688,8 @@ class RepeaterHandlers:
                             None,
                             int(time.time() * 1000),
                             order_index,
-                            json.dumps({})
+                            json.dumps({}),
+                            0
                         ),
                     )
                     imported_count += 1
@@ -774,8 +783,8 @@ class RepeaterHandlers:
                         extract["id"] = target["get_id_from_response"]
 
                     self.db.execute(
-                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        (item_id, item_name, group_id, method, full_url, json.dumps({"headers": headers, "body": body}), None, int(time.time() * 1000), order_index, json.dumps(extract))
+                        "INSERT INTO repeater_workspace (id, name, group_id, method, url, request, response, timestamp, order_index, extract, hit_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        (item_id, item_name, group_id, method, full_url, json.dumps({"headers": headers, "body": body}), None, int(time.time() * 1000), order_index, json.dumps(extract), 0)
                     )
                     imported_count += 1
             

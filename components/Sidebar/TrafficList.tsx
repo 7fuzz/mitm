@@ -22,7 +22,7 @@ function SortableTrafficItem({ req, activeId, activeColor, onSelect, onDelete }:
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : undefined, opacity: isDragging ? 0.5 : 1 };
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
-      <TrafficItem id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete} />
+      <TrafficItem id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} hitCount={req.hit_count} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete} />
     </div>
   );
 }
@@ -150,6 +150,7 @@ export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, ac
                 <th className="p-2 font-bold">Host</th>
                 <th className="p-2 font-bold">Path</th>
                 <th className="p-2 font-bold">Status</th>
+                <th className="p-2 font-bold">Hits</th>
                 <th className="p-2 pr-4 font-bold text-right">Actions</th>
               </tr>
             </thead>
@@ -165,6 +166,7 @@ export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, ac
                   <td className="p-2 text-zinc-400">{getSafeHostname(req.url, req.host)}</td>
                   <td className="p-2 truncate max-w-xl" title={req.url}>{req.url}</td>
                   <td className={`p-2 font-bold ${getStatusColor(req.status_code)}`}>{req.status_code === 0 ? 'PENDING' : req.status_code}</td>
+                  <td className="p-2 text-zinc-500">{req.hit_count || 0}</td>
                   <td className="p-2 pr-4 text-right">
                     {onDelete && (
                       <button
@@ -192,7 +194,7 @@ export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, ac
             ) : (
               filteredItems.map(req => (
                 <TrafficItem
-                  key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
+                  key={req.id} id={req.id} method={req.method} status={req.status_code} title={req.url} group={req.group} hitCount={req.hit_count} isIntercepted={req.is_intercepted} isActive={activeId === req.id} activeColor={activeColor} onClick={onSelect} onDelete={onDelete}
                 />
               ))
             )}

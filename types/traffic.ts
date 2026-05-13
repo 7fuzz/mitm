@@ -14,4 +14,5 @@ export interface Traffic {
   is_intercepted?: boolean;
   intercepted_at?: number;
   group?: string;
+  hit_count?: number;
 }

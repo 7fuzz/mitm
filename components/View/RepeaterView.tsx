@@ -12,6 +12,7 @@ import { PromptModal, ConfirmModal, ExtractionModal, RepeaterHistoryModal } from
 export interface RepeaterRequest {
   id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
   extract?: Record<string, string>;
+  hitCount?: number;
   response?: { status: number; headers: Record<string, string>; body: string; time?: number; };
 }
 
@@ -77,7 +78,7 @@ export function RepeaterView() {
 
   const trafficMapped: Traffic[] = repeaterRequests.map(req => {
     const groupName = req.groupId ? repeaterGroups.find(g => g.id === req.groupId)?.name : 'Default';
-    return { id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0, host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '', is_intercepted: false, group: groupName || 'Default' };
+    return { id: req.id, method: req.method, url: req.name, status_code: req.response?.status ?? 0, host: '', phase: 'history', request_headers: {}, response_headers: {}, request_body: '', response_body: '', is_intercepted: false, group: groupName || 'Default', hit_count: req.hitCount };
   });
 
   const handleAdd = async () => {
@@ -128,6 +129,7 @@ export function RepeaterView() {
 
       await updateRequest(currentReq.id, {
         method: editMethod, url: editUrl, headers: editHeaders, body: editBody, extract: editExtract,
+        hitCount: (currentReq.hitCount || 0) + 1,
         response: { status: data.status ?? 0, headers: data.headers || {}, body: data.body || '', time: Date.now() },
       });
     } catch (error) { alert('Error: ' + error); } finally { setIsLoading(false); }
@@ -300,7 +302,7 @@ export function RepeaterView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <div className="space-y-3">
                 <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Metadata</h3>
-                <div className={`grid ${simpleMode ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
+                <div className={`grid ${simpleMode ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
                   <div>
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
                     <input
@@ -348,6 +350,12 @@ export function RepeaterView() {
                       </button>
                     </div>
                   )}
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Execution Hits</label>
+                    <div className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-emerald-400 text-[11px] font-mono">
+                      {currentReq.hitCount || 0} times
+                    </div>
+                  </div>
                 </div>
               </div>
 
