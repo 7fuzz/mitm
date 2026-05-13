@@ -75,7 +75,7 @@ function SortableReplacementItem({
 export function ReplacementsSection() {
   const {
     orderedReplacements, saveReplacements, deleteReplacement, isLoading: replacementsLoading,
-    prefs, updatePrefs
+    prefs, updatePrefs, simpleMode
   } = useTraffic();
 
   const autoSaveEnabled = prefs.replacementsAutoSave !== false;

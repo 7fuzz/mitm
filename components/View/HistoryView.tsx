@@ -81,7 +81,7 @@ export function HistoryView() {
       const isRaw = simpleMode || raw;
 
       // Apply replacements to URL, headers, and body only if not raw mode
-      const { url: transformedUrl, headers: transformedHeaders, body: transformedBody } = isRaw 
+      const { url: transformedUrl, headers: transformedHeaders, body: transformedBody } = isRaw
         ? { url: req.url, headers: req.request_headers || {}, body: req.request_body || '' }
         : applyAllReplacements({ url: req.url, headers: req.request_headers || {}, body: req.request_body || '' });
 
