@@ -164,7 +164,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
   const isMediaOrFile = isImage || isVideo || isAudio || (parsed.contentType.includes('application/') && !parsed.json && !isXml && !isHtml && !isUrlEncoded);
 
-  const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render" | "form">("pretty");
+  const [viewMode, setViewMode] = useState<"pretty" | "raw" | "render" | "form" | "message">("pretty");
 
   // Auto-switch to form view if it's a form and not JSON
   useEffect(() => {
@@ -273,7 +273,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded overflow-hidden h-full flex flex-col relative">
 
-      {(parsed.headerList.length > 0 || parsed.firstLine) && (
+      {(parsed.headerList.length > 0 || parsed.firstLine) && viewMode !== "message" && (
         <div className="border-b border-zinc-800 bg-zinc-950 resize-y overflow-auto min-h-20 max-h-[60%] z-10" style={{ height: '160px' }}>
           <div className="p-4 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[11px] font-mono">
             {parsed.firstLine && (
@@ -316,6 +316,9 @@ export default function HttpResponseViewer({ text }: { text: string }) {
             )}
             <button onClick={() => setViewMode("raw")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "raw" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
               Raw
+            </button>
+            <button onClick={() => setViewMode("message")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "message" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              Message
             </button>
           </div>
 
@@ -391,7 +394,9 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
       {/* Body Section */}
       <div className="p-4 overflow-auto flex-1 bg-zinc-950/50 relative" ref={containerRef}>
-        {viewMode === "raw" ? (
+        {viewMode === "message" ? (
+          <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">{text || "No Content"}</pre>
+        ) : viewMode === "raw" ? (
           <pre className="text-[12px] font-mono text-zinc-300 whitespace-pre-wrap wrap-break-words">{formattedBody || "No Response Body"}</pre>
         ) : viewMode === "form" ? (
           <FormViewer body={parsed.rawBody} contentType={parsed.fullContentType || ""} />

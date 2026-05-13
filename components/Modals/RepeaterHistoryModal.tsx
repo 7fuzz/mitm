@@ -26,7 +26,6 @@ export function RepeaterHistoryModal({ isOpen, onClose, repeaterId, repeaterName
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [viewRawFull, setViewRawFull] = useState(false);
 
   useEffect(() => {
     if (isOpen && repeaterId) {
@@ -95,10 +94,6 @@ export function RepeaterHistoryModal({ isOpen, onClose, repeaterId, repeaterName
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex bg-zinc-950 p-0.5 rounded border border-zinc-800 mr-2">
-              <button onClick={() => setViewRawFull(false)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${!viewRawFull ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Split</button>
-              <button onClick={() => setViewRawFull(true)} className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewRawFull ? 'bg-purple-600/20 text-purple-400' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw Full</button>
-            </div>
             <button
               onClick={clearHistory}
               disabled={history.length === 0}
@@ -146,28 +141,20 @@ export function RepeaterHistoryModal({ isOpen, onClose, repeaterId, repeaterName
           {/* Main Viewer */}
           <div className="flex-1 overflow-hidden flex flex-col bg-zinc-900/20">
             {selectedItem ? (
-              viewRawFull ? (
-                <div className="flex-1 flex flex-col p-6 overflow-y-auto">
-                   <div className="flex-1 border border-zinc-800 rounded bg-zinc-950 shadow-inner shadow-black/50">
-                    <HttpResponseViewer text={`${buildRawRequest(selectedItem)}\n\n${'='.repeat(50)}\n\n${buildRawResponse(selectedItem)}`} />
+              <div className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
+                <div className="space-y-3">
+                  <h3 className="text-purple-500 font-bold uppercase text-[9px] tracking-widest"># Captured_Request</h3>
+                  <div className="border border-zinc-800 rounded bg-zinc-950 min-h-[200px] shadow-inner shadow-black/50">
+                    <HttpResponseViewer text={buildRawRequest(selectedItem)} />
                   </div>
                 </div>
-              ) : (
-                <div className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
-                  <div className="space-y-3">
-                    <h3 className="text-purple-500 font-bold uppercase text-[9px] tracking-widest"># Captured_Request</h3>
-                    <div className="border border-zinc-800 rounded bg-zinc-950 min-h-[200px] shadow-inner shadow-black/50">
-                      <HttpResponseViewer text={buildRawRequest(selectedItem)} />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-amber-500 font-bold uppercase text-[9px] tracking-widest"># Captured_Response</h3>
-                    <div className="border border-zinc-800 rounded bg-zinc-950 min-h-[200px] shadow-inner shadow-black/50">
-                      <HttpResponseViewer text={buildRawResponse(selectedItem)} />
-                    </div>
+                <div className="space-y-3">
+                  <h3 className="text-amber-500 font-bold uppercase text-[9px] tracking-widest"># Captured_Response</h3>
+                  <div className="border border-zinc-800 rounded bg-zinc-950 min-h-[200px] shadow-inner shadow-black/50">
+                    <HttpResponseViewer text={buildRawResponse(selectedItem)} />
                   </div>
                 </div>
-              )
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-zinc-700 uppercase font-black tracking-tighter text-2xl opacity-20 select-none">
                 Select an Item
