@@ -118,7 +118,11 @@ export function ReplacementsSection() {
     setLocalReplacements(converted);
     
     // Update lastSavedRef immediately to prevent race conditions in useEffect
-    const payloadString = JSON.stringify(orderedReplacements.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
+    const sortedItems = [...orderedReplacements].sort((a, b) => {
+      if (a.type !== b.type) return a.type.localeCompare(b.type);
+      return (a.order_index || 0) - (b.order_index || 0);
+    });
+    const payloadString = JSON.stringify(sortedItems.map(r => ({ id: r.id, type: r.type, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
     lastSavedRef.current = payloadString;
   }
 
@@ -140,7 +144,12 @@ export function ReplacementsSection() {
       entries.filter(e => e.pattern).map((e, index) => ({ ...e, type, order_index: index }))
     );
 
-    const currentPayloadString = JSON.stringify(currentItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
+    const sortedCurrent = [...currentItems].sort((a, b) => {
+      if (a.type !== b.type) return a.type.localeCompare(b.type);
+      return (a.order_index || 0) - (b.order_index || 0);
+    });
+
+    const currentPayloadString = JSON.stringify(sortedCurrent.map(r => ({ id: r.id, type: r.type, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
     
     // If this change was from a sync (top-down), don't save it back
     if (isSyncingRef.current) {
@@ -240,7 +249,11 @@ export function ReplacementsSection() {
       const result = await saveReplacements(allItems, true);
       if (result.success) {
         setSaveMessage('Replacements updated successfully!');
-        lastSavedRef.current = JSON.stringify(allItems.map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
+        const sortedItems = [...allItems].sort((a, b) => {
+          if (a.type !== b.type) return a.type.localeCompare(b.type);
+          return (a.order_index || 0) - (b.order_index || 0);
+        });
+        lastSavedRef.current = JSON.stringify(sortedItems.map(r => ({ id: r.id, type: r.type, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
       } else {
         setSaveMessage('Error: Failed to save replacements');
       }
