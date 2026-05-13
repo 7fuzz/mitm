@@ -36,6 +36,18 @@ class Database:
             FOREIGN KEY(group_id) REFERENCES repeater_groups(id) ON DELETE SET NULL
         )""")
 
+        # Repeater History table for historical sends
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS repeater_history (
+            id TEXT PRIMARY KEY,
+            repeater_id TEXT,
+            method TEXT,
+            url TEXT,
+            request TEXT,
+            response TEXT,
+            timestamp INTEGER,
+            FOREIGN KEY(repeater_id) REFERENCES repeater_workspace(id) ON DELETE CASCADE
+        )""")
+
         # Migration: Add missing columns if they don't exist
         try:
             self.conn.execute("ALTER TABLE repeater_workspace ADD COLUMN order_index INTEGER DEFAULT 0")

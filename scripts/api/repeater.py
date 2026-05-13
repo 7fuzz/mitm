@@ -388,6 +388,7 @@ class RepeaterHandlers:
 
     async def handle_repeat(self, request):
         data = await request.json()
+        repeater_id = data.get("id") # Optional: can be passed if we want to associate with a repeater item
         try:
             raw_method, raw_url, raw_headers, raw_body, variables = (
                 data.get("method", "GET").upper(),
@@ -463,14 +464,66 @@ class RepeaterHandlers:
                 elif body and method != "GET":
                     kwargs["data"] = body
                 async with session.request(method, url, **kwargs) as resp:
+                    resp_headers = dict(resp.headers)
+                    resp_body = await resp.text()
+
+                    # --- SAVE TO HISTORY ---
+                    if repeater_id:
+                        history_id = str(uuid.uuid4())
+                        req_data = json.dumps({"headers": headers, "body": body})
+                        res_data = json.dumps({"status": resp.status, "headers": resp_headers, "body": resp_body})
+                        self.db.execute(
+                            "INSERT INTO repeater_history (id, repeater_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            (history_id, repeater_id, method, url, req_data, res_data, int(time.time() * 1000))
+                        )
+                        self.db.commit()
+
                     return web.json_response(
                         {
                             "success": True,
                             "status": resp.status,
-                            "headers": dict(resp.headers),
-                            "body": await resp.text(),
+                            "headers": resp_headers,
+                            "body": resp_body,
                         }
                     )
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+    async def handle_history_get(self, request):
+        try:
+            repeater_id = request.match_info["id"]
+            rows = self.db.execute(
+                "SELECT id, method, url, request, response, timestamp FROM repeater_history WHERE repeater_id = ? ORDER BY timestamp DESC",
+                (repeater_id,)
+            ).fetchall()
+            
+            result = []
+            for r in rows:
+                req = json.loads(r[3]) if r[3] else {}
+                res = json.loads(r[4]) if r[4] else {}
+                result.append({
+                    "id": r[0],
+                    "method": r[1],
+                    "url": r[2],
+                    "headers": req.get("headers", {}),
+                    "body": req.get("body", ""),
+                    "response": {
+                        "status": res.get("status", 0),
+                        "headers": res.get("headers", {}),
+                        "body": res.get("body", ""),
+                    },
+                    "timestamp": r[5]
+                })
+            return web.json_response(result)
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+    async def handle_history_delete(self, request):
+        try:
+            repeater_id = request.match_info["id"]
+            self.db.execute("DELETE FROM repeater_history WHERE repeater_id = ?", (repeater_id,))
+            self.db.commit()
+            return web.json_response({"success": True})
         except Exception as e:
             return web.json_response({"success": False, "error": str(e)}, status=500)
 

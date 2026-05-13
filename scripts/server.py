@@ -87,6 +87,10 @@ class APIServer:
         app.router.add_post("/repeater", repeater.handle_repeater_create)
         app.router.add_put("/repeater/{id}", repeater.handle_repeater_update)
         app.router.add_delete("/repeater/{id}", repeater.handle_repeater_delete)
+        
+        # Repeater History
+        app.router.add_get("/repeater/{id}/history", repeater.handle_history_get)
+        app.router.add_delete("/repeater/{id}/history", repeater.handle_history_delete)
 
         # Repeater Groups
         app.router.add_get("/repeater-groups", repeater.handle_group_get_all)

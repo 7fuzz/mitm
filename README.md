@@ -70,39 +70,24 @@ Found in the **Options** tab, you can customize your experience:
 
 ## 🛠️ Advanced Features (Simple Mode OFF)
 
-When Simple Mode is disabled, the following advanced tools become available:
-
 ### 🌍 Environments & Variable System
 Manage multiple server environments (e.g., Development, Staging, Production) with a robust variable system:
 - **Variables**: Use `{{placeholder}}` in any Workbench request.
 - **Variable Variants**: Create multiple values for a single variable (e.g., "User A", "User B").
-- **Smart Persistence**:
-  - **Debounced Auto-Save**: Changes to variables are automatically saved to the database after 1 second of inactivity.
-  - **Auto-Capture Debounce**: Variables updated via response extraction are debounced for 2 seconds to prevent race conditions.
-  - **Auto-Save Toggle**: Globally enable/disable automatic persistence in the Environments section.
-  - **Manual Save**: When auto-save is off, use the **[Save]** or **Save All Variables** buttons to manually persist changes.
-  - **Bulk API**: Optimized persistence layer that saves entire environments in a single network request.
+- **Smart Persistence**: Debounced auto-save (1s) and auto-capture from responses.
 
 ### 📁 Workbench Collections
-Keep your Workbench organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects for sharing or version control.
+Keep your Workbench organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects.
 
 ### 🔄 Automated Replacements
-Configure transformation rules that automatically tokenize your traffic in real-time:
-- **URL & Param Patterns**: Swap domain prefixes or query parameters.
-- **Header Replacements**: Inject or replace values based on header keys (e.g., `Authorization`).
-- **Body Keys**: Automatically tokenize specific JSON keys in request bodies.
-- **Global Text**: High-power replacement across the entire request (URL, Headers, and Body).
+Configure transformation rules that automatically tokenize your traffic in real-time based on URL, Header, or Body patterns.
 
 ### 📝 Advanced Form Data Handling
-The project features a specialized engine for managing complex `multipart/form-data` and `application/x-www-form-urlencoded` payloads:
-- **Structured Editing**: Form data is automatically converted into a structured JSON format (`__form_data`) for easy editing and variable interpolation.
-- **File Persistence**: Uploaded files are securely stored in the backend and automatically reconstructed into outgoing multipart requests.
-- **Auto-Extraction**: Raw intercepted form data is automatically tokenized when staged to the Workbench.
-- **Type Conversion**: Seamlessly convert between JSON, URL-Encoded, and Multipart formats with integrated conversion utilities.
+Specialized engine for managing complex `multipart/form-data` and `application/x-www-form-urlencoded` payloads via the `__form_data` abstraction.
 
 ### 🧰 Utilities
-- **JSON Toolkit**: Format, minify, and recursively filter large JSON payloads. Supports "Send to Toolkit" from any response viewer.
-- **CVSS Calculator**: Calculate vulnerability severity scores using the industry-standard CVSS 3.1 framework.
+- **JSON Toolkit**: Format, minify, and recursively filter large JSON payloads.
+- **CVSS Calculator**: Calculate vulnerability severity scores using CVSS 3.1.
 
 ---
 
@@ -110,5 +95,68 @@ The project features a specialized engine for managing complex `multipart/form-d
 To intercept HTTPS traffic:
 1. Go to the **Options** tab in the dashboard.
 2. Click **Download Root CA (.pem)**.
-3. Install this certificate on your target device.
-4. **Crucial**: On mobile devices, you must manually go into system settings and "Enable full trust for root certificate."
+3. Install and **Enable full trust** for the certificate on your target device.
+
+---
+
+# 🏗️ Technical Reference & Context
+
+This section provides deep technical insights into the architecture and development patterns of MITM Real.
+
+## 🏛️ High-Level Architecture
+The application follows a dual-stack architecture:
+1.  **Proxy Engine (Backend)**: Python (`mitmproxy` + `aiohttp`).
+    -   `mitmproxy` handles traffic interception via `scripts/bridge.py`.
+    -   `aiohttp` serves the REST API at `127.0.0.1:3001`.
+2.  **Dashboard (Frontend)**: Next.js 15+ (App Router) using React 19.
+    -   Communicates with the Python backend via Next.js API routes (`app/api/`).
+    -   Uses **Server-Sent Events (SSE)** for real-time updates.
+
+## 📁 File Structure & Logic
+### 1. Frontend (`/app`, `/components`, `/hooks`)
+-   **`app/api/`**: Proxy routes bridging the frontend to the Python backend.
+-   **`hooks/traffic/`**: Segmented state management unified under `TrafficProvider`.
+-   **`components/View/`**: Main page modules (History, Intercept, Workbench, etc.).
+
+### 2. Backend (`/scripts`)
+-   **`server.py`**: The main API server.
+-   **`bridge.py`**: The mitmproxy addon for interception and capture logic.
+-   **`db.py`**: Interface for the SQLite master database.
+-   **`api/`**: Segmented Python handlers (core, history, variables, repeater, replacements).
+
+## 🔄 Core Data Flow
+1.  **Capture**: `bridge.py` -> `server.py` -> `/api/traffic` (SSE) -> `useTrafficLog` (React).
+2.  **Execution**: `RepeaterView` -> `/api/repeater-request` -> `server.py` (Python Client) -> Target.
+3.  **Persistence**: UI changes are debounced and persisted to SQLite via the Python API.
+
+## 💾 Data Persistence & Storage
+- **`data/master_database.sqlite`**: Primary database for all persistent state.
+- **`data/file/`**: Unique storage for files uploaded via the dashboard (referenced in multipart requests).
+
+## 📝 Structured Form Data Handling (`__form_data`)
+MITM Real abstracts `multipart/form-data` and `application/x-www-form-urlencoded` into a structured JSON array for easy editing and tokenization.
+- **Automatic Reconstruction**: The Python backend detects `__form_data` and builds a proper `aiohttp.FormData` object.
+- **File Persistence**: Preserves original names while storing files uniquely in `data/file/`.
+
+## 📡 API Endpoints (Python Backend - Port 3001)
+
+| Category | Endpoint | Description |
+| :--- | :--- | :--- |
+| **Core** | `/resume/{id}`, `/cert`, `/state` | Intercept control and global state. |
+| **Traffic** | `/history`, `/history/{id}` | Traffic log management. |
+| **Workbench** | `/repeat`, `/repeater-db`, `/repeater/{id}` | Request execution and persistence. |
+| **Collections** | `/repeater-groups`, `/repeater-import` | Group management and imports. |
+| **Variables** | `/variables`, `/variables-bulk`, `/environments` | Workspace configuration. |
+| **Rules** | `/replacements` | Automated traffic modification rules. |
+
+## 🎣 Core Frontend Hooks
+- **`useTraffic`**: Primary unified context hook.
+- **`useTrafficLog`**: Captured flows and history.
+- **`useVariables`**: Environment and variable resolution.
+- **`useRepeater`**: Workbench and collection orchestration.
+- **`useConfig`**: Global preferences and intercept modes.
+
+## 📝 Developer Patterns
+- **Variable Syntax**: Uses `{{variable_name}}` for dynamic interpolation.
+- **Persistence**: 1-2s debouncing to prevent database thrashing.
+- **Port Mappings**: Next.js (`3000`), Python API (`3001`), Proxy Listener (`8080`).

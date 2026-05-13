@@ -7,7 +7,7 @@ import { Traffic } from '@/types/traffic';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
-import { PromptModal, ConfirmModal, ExtractionModal } from '../Modals';
+import { PromptModal, ConfirmModal, ExtractionModal, RepeaterHistoryModal } from '../Modals';
 
 export interface RepeaterRequest {
   id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
@@ -45,6 +45,7 @@ export function RepeaterView() {
   const openConfirm = (title: string, message: string, action: () => void) => setConfirmConfig({ isOpen: true, title, message, action });
 
   const [extractionModalOpen, setExtractionModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   // Debounce for name updates
   const nameDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,7 +106,7 @@ export function RepeaterView() {
 
       const response = await fetch('/api/repeater', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: editMethod, url: editUrl, headers: editHeaders, body: editBody, variables: varDict }),
+        body: JSON.stringify({ id: currentReq.id, method: editMethod, url: editUrl, headers: editHeaders, body: editBody, variables: varDict }),
       });
       const data = await response.json();
       if (!data.success) return alert('Error: ' + (data.error || 'Unknown error'));
@@ -184,8 +185,9 @@ export function RepeaterView() {
 
   const getRawResponseText = () => {
     if (!currentReq?.response) return '';
+    const firstLine = `HTTP/1.1 ${currentReq.response.status}`;
     const headerText = Object.entries(currentReq.response.headers).map(([k, v]) => `${k}: ${v}`).join('\n');
-    return `${headerText}\n\n${currentReq.response.body}`;
+    return `${firstLine}\n${headerText}\n\n${currentReq.response.body}`;
   };
 
   const activeGroupObj = repeaterGroups.find(g => g.id === activeGroupId);
@@ -206,6 +208,12 @@ export function RepeaterView() {
         }}
         initialRules={editExtract}
         availableVariables={variables.filter(v => v.environmentId === activeEnvId)}
+      />
+      <RepeaterHistoryModal
+        isOpen={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+        repeaterId={currentReq?.id || ''}
+        repeaterName={currentReq?.name || ''}
       />
 
       <WorkspaceLayout
@@ -268,6 +276,14 @@ export function RepeaterView() {
 
         toolbarRight={
           <>
+            <button 
+              onClick={() => setHistoryModalOpen(true)} 
+              disabled={!currentReq} 
+              className="px-3 py-1.5 text-zinc-500 hover:text-purple-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2"
+              title="View Request History"
+            >
+              History
+            </button>
             <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-3 py-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2">Clear</button>
 
             <div className="flex items-center gap-px">
