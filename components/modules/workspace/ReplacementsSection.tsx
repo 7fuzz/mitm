@@ -78,7 +78,7 @@ export function ReplacementsSection() {
     prefs, updatePrefs
   } = useTraffic();
 
-  const autoSaveEnabled = prefs.autoSave || (prefs.replacementsAutoSave !== false);
+  const autoSaveEnabled = prefs.replacementsAutoSave !== false;
 
   const [expandedCategory, setExpandedCategory] = useState<ReplacementCategory | null>('URL_REPLACEMENTS');
   const [localReplacements, setLocalReplacements] = useState<Record<ReplacementCategory, ReplacementEntry[]>>({
@@ -263,15 +263,15 @@ export function ReplacementsSection() {
             <h3 className="text-rose-500 font-bold uppercase text-[10px] tracking-widest">Workbench Replacements</h3>
             <p className="text-zinc-500 text-[10px] font-mono mt-1">Configure variable placeholders applied when sending requests from History to Workbench.</p>
           </div>
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded cursor-pointer hover:bg-zinc-800 transition-colors shadow-lg">
-            <input
-              type="checkbox"
-              checked={autoSaveEnabled}
-              onChange={() => updatePrefs({ ...prefs, replacementsAutoSave: !autoSaveEnabled })}
-              className="accent-rose-500 w-3 h-3 cursor-pointer"
-            />
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 select-none">Auto-Save</span>
-          </label>
+          <div className="flex items-center gap-2 px-2 py-1 bg-zinc-900/50 border border-zinc-800 rounded">
+            <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Auto-Save</span>
+            <button 
+              onClick={() => updatePrefs({ ...prefs, replacementsAutoSave: !autoSaveEnabled })}
+              className={`w-8 h-4 rounded-full relative transition-colors ${autoSaveEnabled ? 'bg-rose-500/50' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-2 h-2 rounded-full transition-all ${autoSaveEnabled ? 'right-1 bg-rose-400' : 'left-1 bg-zinc-600'}`} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
