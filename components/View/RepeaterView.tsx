@@ -301,8 +301,17 @@ export function RepeaterView() {
           currentReq ? (
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <div className="space-y-3">
-                <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Metadata</h3>
-                <div className={`grid ${simpleMode ? 'grid-cols-1' : 'grid-cols-4'} gap-4`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
+                    <span className="opacity-50">#</span> Request_Metadata
+                  </h3>
+                  {currentReq.hitCount !== undefined && currentReq.hitCount > 0 && (
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
+                      Hits: <span className="text-emerald-500 font-bold">{currentReq.hitCount}</span>
+                    </span>
+                  )}
+                </div>
+                <div className={`grid ${simpleMode ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
                   <div>
                     <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Request Name</label>
                     <input
@@ -350,12 +359,6 @@ export function RepeaterView() {
                       </button>
                     </div>
                   )}
-                  <div>
-                    <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest block mb-1.5">Execution Hits</label>
-                    <div className="w-full bg-zinc-950 border border-zinc-700 px-3 py-2 rounded text-emerald-400 text-[11px] font-mono">
-                      {currentReq.hitCount || 0} times
-                    </div>
-                  </div>
                 </div>
               </div>
 
