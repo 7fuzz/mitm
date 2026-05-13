@@ -59,7 +59,7 @@ function TrafficApp() {
             onClick={() => setActiveTab('repeater')}
             className={`px-6 h-full flex items-center gap-3 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'repeater' ? 'border-purple-500 text-purple-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
           >
-            Workbench
+            {simpleMode ? 'Repeater' : 'Workbench'}
             {repeaterRequests.length > 0 && (
               <span className="flex items-center justify-center min-w-5 h-5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full text-[9px] px-1 font-black">
                 {repeaterRequests.length}

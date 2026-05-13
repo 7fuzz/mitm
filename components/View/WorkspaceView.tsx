@@ -12,6 +12,7 @@ export function WorkspaceView() {
     variables, activeEnvId,
     repeaterGroups,
     importPostman, importProject,
+    simpleMode
   } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'env' | 'collections' | 'replacements'>('env');
@@ -184,13 +185,13 @@ export function WorkspaceView() {
             onClick={() => setActiveTab('collections')}
             className={`flex items-center text-left px-3 py-2.5 rounded text-[11px] font-bold tracking-wider transition-all border ${activeTab === 'collections' ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900'}`}
           >
-            Workbench Collections
+            {simpleMode ? 'Repeater' : 'Workbench'} Collections
           </button>
           <button
             onClick={() => setActiveTab('replacements')}
             className={`flex items-center text-left px-3 py-2.5 rounded text-[11px] font-bold tracking-wider transition-all border ${activeTab === 'replacements' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900'}`}
           >
-            Workbench Replacements
+            {simpleMode ? 'Repeater' : 'Workbench'} Replacements
           </button>
         </div>
       )}

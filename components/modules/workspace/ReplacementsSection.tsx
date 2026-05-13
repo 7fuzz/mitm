@@ -273,8 +273,8 @@ export function ReplacementsSection() {
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-rose-500 font-bold uppercase text-[10px] tracking-widest">Workbench Replacements</h3>
-            <p className="text-zinc-500 text-[10px] font-mono mt-1">Configure variable placeholders applied when sending requests from History to Workbench.</p>
+            <h3 className="text-rose-500 font-bold uppercase text-[10px] tracking-widest">{simpleMode ? 'Repeater' : 'Workbench'} Replacements</h3>
+            <p className="text-zinc-500 text-[10px] font-mono mt-1">Configure variable placeholders applied when sending requests from History to {simpleMode ? 'Repeater' : 'Workbench'}.</p>
           </div>
           <div className="flex items-center gap-2 px-2 py-1 bg-zinc-900/50 border border-zinc-800 rounded">
             <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Auto-Save</span>

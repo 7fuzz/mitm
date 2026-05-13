@@ -90,10 +90,10 @@ export function InterceptView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        notify.success(isRaw ? 'Staged Raw to Workbench' : 'Staged in Workbench');
+        notify.success(isRaw ? `Staged Raw to ${simpleMode ? 'Repeater' : 'Workbench'}` : `Staged in ${simpleMode ? 'Repeater' : 'Workbench'}`);
       }
     } catch (error) {
-      notify.error(`Failed to stage: ${error}`);
+      notify.error(`Failed to stage in ${simpleMode ? 'Repeater' : 'Workbench'}: ${error}`);
     }
   };
 
@@ -205,7 +205,7 @@ export function InterceptView() {
                   onClick={() => handleStageToWorkbench(false)}
                   className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
                 >
-                  Stage_to_Workbench
+                  Stage_to_{simpleMode ? 'Repeater' : 'Workbench'}
                 </button>
                 {!simpleMode && (
                   <button
