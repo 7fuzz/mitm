@@ -3,6 +3,24 @@ import { NextRequest } from 'next/server';
 
 // Manage multiple connected clients
 const clients = new Set<ReadableStreamDefaultController>();
+let globalHeartbeat: NodeJS.Timeout | null = null;
+
+function cleanupAll() {
+  if (globalHeartbeat) {
+    clearInterval(globalHeartbeat);
+    globalHeartbeat = null;
+  }
+  clients.forEach(c => {
+    try { c.close(); } catch(e) {}
+  });
+  clients.clear();
+}
+
+// Ensure connections are closed on process termination so Next.js can exit
+if (typeof process !== 'undefined') {
+  process.on('SIGINT', cleanupAll);
+  process.on('SIGTERM', cleanupAll);
+}
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
@@ -24,25 +42,37 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   const encoder = new TextEncoder();
-  let heartbeatTimer: any;
 
   const stream = new ReadableStream({
     start(controller) {
       clients.add(controller);
       
-      // Keep-alive heartbeat every 20 seconds
-      heartbeatTimer = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(': heartbeat\n\n'));
-        } catch (_e) {
-          clients.delete(controller);
-          clearInterval(heartbeatTimer);
-        }
-      }, 20000);
+      // Start global heartbeat if not already running
+      if (!globalHeartbeat) {
+        globalHeartbeat = setInterval(() => {
+          const message = encoder.encode(': heartbeat\n\n');
+          clients.forEach(c => {
+            try {
+              c.enqueue(message);
+            } catch (_e) {
+              clients.delete(c);
+            }
+          });
+          
+          // Stop heartbeat if no clients left
+          if (clients.size === 0 && globalHeartbeat) {
+            clearInterval(globalHeartbeat);
+            globalHeartbeat = null;
+          }
+        }, 20000);
+      }
     },
     cancel(controller) {
       clients.delete(controller);
-      clearInterval(heartbeatTimer);
+      if (clients.size === 0 && globalHeartbeat) {
+        clearInterval(globalHeartbeat);
+        globalHeartbeat = null;
+      }
     },
   });
 
