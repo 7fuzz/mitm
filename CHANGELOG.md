@@ -1,33 +1,27 @@
 # CHANGELOG
 
-All notable changes to MITM Real will be documented in this file.
+## 2026-05-15
+- **Graceful Shutdown**: Improved signal handling (`SIGINT`/`SIGTERM`) and refactored SSE traffic route to ensure Next.js and the Python proxy shut down cleanly.
+- **Windows Support**: Added `scripts/start-proxy.js` launcher to handle OS-specific virtual environment paths.
+- **UI Unification**: Created a consistent `TrafficItem` component and updated all sidebars to use a Trash icon for deletion.
+- **Workbench Enhancements**: Added single item deletion for repeater history and automatic response capturing when staging from History.
+- **Security**: Completely removed the accidental database backup from git history and updated `.gitignore`.
+- **Cleanup**: Removed the legacy Proxy_Vault feature.
 
-## [1.2.0] - 2026-05-15
-### Added
-- **Single Repeater History Deletion**: You can now delete individual items from a request's execution history in the Workbench.
-- **Unified Sidebar Components**: Created a consistent `TrafficItem` component for all sidebars.
-- **Visual Consistency**: Replaced the "X" delete icon with a Trash icon across the entire application.
-- **Automatic History Injection**: When staging a request from HTTP History to Workbench, the captured response is now automatically saved to the repeater history.
-- **Cross-Platform Launcher**: Added `scripts/start-proxy.js` to ensure the proxy runs correctly on both POSIX (Linux/macOS) and Windows.
-- **Graceful Shutdown**: Improved signal handling (`SIGINT`/`SIGTERM`) to ensure Next.js and the Python proxy shut down cleanly on `Ctrl+C`.
+## 2026-05-13
+- **Repeater UI**: Improved `simpleMode` support and renamed Workbench to Repeater in simple mode.
+- **Analytics**: Added hit count tracking and display for repeater items.
+- **History Viewer**: Added request history modal for repeater items with raw message support.
+- **Replacements**: Fixed auto-save loops and styled the replacements section for better consistency.
 
-### Removed
-- **Proxy Vault**: Removed the Vault feature in favor of the more robust Workbench Collections and History system.
+## 2026-05-12
+- **Persistence**: Fixed history limit leaks and ensured limits apply correctly to the SQLite database.
+- **UI Components**: Integrated `DebouncedInput` across Environment and Replacement modules to prevent database thrashing.
+- **Bugfixes**: Resolved edge cases in variable variant switching.
 
-### Fixed
-- **Next.js Shutdown Hang**: Refactored the SSE traffic route to clear heartbeat timers and close connections on exit.
-
-## [1.1.0] - Earlier
-### Added
-- **Workbench (Repeater)**: Manual request testing with environment variable support.
-- **Collections**: Grouping and organization for repeater requests.
-- **SSE Traffic Streaming**: Real-time traffic updates from the mitmproxy bridge.
-- **Variable System**: Environment-based placeholders for dynamic requests.
-- **Multipart/Form-Data Engine**: Advanced abstraction for complex form payloads.
-
-## [1.0.0] - Initial Release
-### Added
-- **mitmproxy Bridge**: Integration with mitmproxy for traffic interception.
-- **HTTP History**: Persistent logging of captured traffic.
-- **Intercept Mode**: Pause and modify requests/responses in real-time.
-- **SQLite Persistence**: Master database for settings and logs.
+## 2026-05-11 & Earlier
+- **Workbench Collections**: Added grouping and reordering support for Workbench requests.
+- **Form Data Engine**: Implemented advanced abstraction for `multipart/form-data` payloads.
+- **Variable System**: Core implementation of `{{variable}}` interpolation and environment switching.
+- **Intercept & Modify**: Real-time traffic control and editing via mitmproxy bridge.
+- **Initial Release**: Core Proxy Engine, HTTP History, and SQLite master database integration.
