@@ -88,6 +88,11 @@ export function HistoryView() {
           url: transformedUrl,
           headers: transformedHeaders,
           body: transformedBody,
+          response: req.status_code !== 0 ? {
+            status: req.status_code,
+            headers: req.response_headers || {},
+            body: req.response_body || '',
+          } : undefined
         })
       });
 

@@ -194,6 +194,9 @@ class RepeaterHandlers:
                 "body": body,
             }
 
+            res_data = data.get("response")
+            hit_count = 1 if res_data else 0
+
             # Find next order index
             order_index = 0
             row = self.db.execute("SELECT MAX(order_index) FROM repeater_workspace WHERE group_id IS ?", (group_id,) if group_id else (None,)).fetchone()
@@ -209,13 +212,30 @@ class RepeaterHandlers:
                     data.get("method", "GET"),
                     data.get("url", ""),
                     json.dumps(req_data),
-                    None,
+                    json.dumps(res_data) if res_data else None,
                     int(time.time() * 1000),
                     order_index,
                     json.dumps(data.get("extract", {})),
-                    0
+                    hit_count
                 ),
             )
+
+            # If response is provided, also add to history
+            if res_data:
+                history_id = str(uuid.uuid4())
+                self.db.execute(
+                    "INSERT INTO repeater_history (id, repeater_id, method, url, request, response, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        history_id,
+                        item_id,
+                        data.get("method", "GET"),
+                        data.get("url", ""),
+                        json.dumps(req_data),
+                        json.dumps(res_data),
+                        int(time.time() * 1000)
+                    )
+                )
+
             self.db.commit()
             return web.json_response(
                 {"success": True, "id": item_id, "groupId": group_id}
