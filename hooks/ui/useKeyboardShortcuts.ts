@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export type TabType = 'history' | 'intercept' | 'repeater' | 'options' | 'utilities' | 'workspace';
 
@@ -16,6 +16,7 @@ interface ShortcutOptions {
 export function useKeyboardShortcuts({ activeTab, onTabChange, simpleMode }: ShortcutOptions) {
   const waitingForSecondKey = useRef<boolean>(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,10 +59,12 @@ export function useKeyboardShortcuts({ activeTab, onTabChange, simpleMode }: Sho
       if (!waitingForSecondKey.current) {
         if (key === 'g') {
           waitingForSecondKey.current = true;
+          setIsWaiting(true);
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
             waitingForSecondKey.current = false;
-          }, 800);
+            setIsWaiting(false);
+          }, 1500);
         }
         return;
       }
@@ -84,6 +87,7 @@ export function useKeyboardShortcuts({ activeTab, onTabChange, simpleMode }: Sho
         }
 
         waitingForSecondKey.current = false;
+        setIsWaiting(false);
         if (timerRef.current) {
           clearTimeout(timerRef.current);
           timerRef.current = null;
@@ -97,4 +101,6 @@ export function useKeyboardShortcuts({ activeTab, onTabChange, simpleMode }: Sho
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [activeTab, onTabChange, simpleMode]);
+
+  return { isWaiting };
 }

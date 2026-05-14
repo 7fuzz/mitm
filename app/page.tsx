@@ -8,6 +8,7 @@ import { OptionsView } from '@/components/View/OptionsView';
 import { UtilitiesView } from '@/components/View/UtilitiesView';
 import { WorkspaceView } from '@/components/View/WorkspaceView';
 import { useKeyboardShortcuts } from '@/hooks/ui/useKeyboardShortcuts';
+import { ShortcutHint } from '@/components/ui/ShortcutHint';
 
 // ==========================================
 // 1. THE OUTER WRAPPER (No Hooks Here!)
@@ -28,7 +29,7 @@ function TrafficApp() {
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
 
-  useKeyboardShortcuts({
+  const { isWaiting } = useKeyboardShortcuts({
     activeTab,
     onTabChange: setActiveTab,
     simpleMode
@@ -117,6 +118,8 @@ function TrafficApp() {
         {!simpleMode && activeTab === 'utilities' && <UtilitiesView />}
         {activeTab === 'options' && <OptionsView />}
       </main>
+
+      <ShortcutHint isOpen={isWaiting} simpleMode={simpleMode} />
     </div>
   );
 }
