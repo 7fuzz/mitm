@@ -55,6 +55,10 @@ class InterceptBridge:
         asyncio.create_task(self.server.start())
         ctx.log.info("Command Server started on http://127.0.0.1:3001")
 
+    def done(self):
+        """Called when mitmproxy shuts down"""
+        asyncio.create_task(self.server.stop())
+
     def should_intercept(self, flow, phase):
         if not self.intercept_enabled:
             return False

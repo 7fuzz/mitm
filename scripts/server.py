@@ -105,7 +105,11 @@ class APIServer:
         app.router.add_put("/replacements", replacements.handle_replacements_put)
         app.router.add_delete("/replacements", replacements.handle_replacements_delete)
 
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, "127.0.0.1", 3001)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        site = web.TCPSite(self.runner, "127.0.0.1", 3001)
         await site.start()
+
+    async def stop(self):
+        if hasattr(self, 'runner') and self.runner:
+            await self.runner.cleanup()
