@@ -7,6 +7,7 @@ import { HistoryView } from '@/components/View/HistoryView';
 import { OptionsView } from '@/components/View/OptionsView';
 import { UtilitiesView } from '@/components/View/UtilitiesView';
 import { WorkspaceView } from '@/components/View/WorkspaceView';
+import { useKeyboardShortcuts } from '@/hooks/ui/useKeyboardShortcuts';
 
 // ==========================================
 // 1. THE OUTER WRAPPER (No Hooks Here!)
@@ -26,6 +27,12 @@ function TrafficApp() {
   const { traffic, repeaterRequests, simpleMode } = useTraffic();
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
+
+  useKeyboardShortcuts({
+    activeTab,
+    onTabChange: setActiveTab,
+    simpleMode
+  });
 
   const pendingCount = traffic.filter(t => t.is_intercepted).length;
 
