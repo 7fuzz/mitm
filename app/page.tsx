@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { TrafficProvider, useTraffic } from '@/hooks/traffic';
 import { InterceptView } from '@/components/View/InterceptView';
-import { SavedView } from '@/components/View/SavedView';
 import { RepeaterView } from '@/components/View/RepeaterView';
 import { HistoryView } from '@/components/View/HistoryView';
 import { OptionsView } from '@/components/View/OptionsView';
@@ -26,7 +25,7 @@ export default function Page() {
 function TrafficApp() {
   const { traffic, repeaterRequests, simpleMode } = useTraffic();
 
-  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'saved' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
 
   const pendingCount = traffic.filter(t => t.is_intercepted).length;
 
@@ -65,13 +64,6 @@ function TrafficApp() {
                 {repeaterRequests.length}
               </span>
             )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`px-6 h-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest border-b-2 transition-all ${activeTab === 'saved' ? 'border-sky-500 text-sky-400 bg-zinc-900/50' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`}
-          >
-            Proxy_Vault
           </button>
 
           {!simpleMode && (
@@ -113,7 +105,6 @@ function TrafficApp() {
       <main className="flex-1 flex overflow-hidden relative">
         {activeTab === 'history' && <HistoryView />}
         {activeTab === 'intercept' && <InterceptView />}
-        {activeTab === 'saved' && <SavedView />}
         {activeTab === 'repeater' && <RepeaterView />}
         {!simpleMode && activeTab === 'workspace' && <WorkspaceView />}
         {!simpleMode && activeTab === 'utilities' && <UtilitiesView />}

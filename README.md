@@ -42,7 +42,6 @@ The dashboard will be available at `http://localhost:3000`.
 ---
 
 ## 📖 Quick Tutorial
-
 ### 1. HTTP History
 As soon as you point your device or browser to the proxy (default port `8080`), traffic will appear in the **HTTP_History** tab. You can inspect requests, search through them, and clear the log at any time.
 
@@ -59,6 +58,9 @@ The **Workbench** is where you perform manual request testing.
 - Create new requests from scratch or import them from History/Intercept.
 - Organize requests into **Collections**.
 - Hit **Execute** to send the request and view the response.
+- **History Tracking**: Every execution is recorded. You can view, compare, and delete individual history items or clear the entire history for a specific request.
+
+---
 
 ### 4. Options & UI Modes
 Found in the **Options** tab, you can customize your experience:

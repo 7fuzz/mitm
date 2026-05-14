@@ -58,6 +58,20 @@ export function RepeaterHistoryModal({ isOpen, onClose, repeaterId, repeaterName
     }
   };
 
+  const deleteHistoryItem = async (e: React.MouseEvent, itemId: string) => {
+    e.stopPropagation();
+    if (!confirm('Delete this history item?')) return;
+    try {
+      await fetch(`/api/repeater-history/${itemId}`, { method: 'DELETE' });
+      setHistory(prev => prev.filter(item => item.id !== itemId));
+      if (selectedItem?.id === itemId) {
+        setSelectedItem(history.find(item => item.id !== itemId) || null);
+      }
+    } catch (error) {
+      console.error('Failed to delete history item:', error);
+    }
+  };
+
   if (!isOpen) return null;
 
   const buildRawRequest = (item: HistoryItem) => {
@@ -120,15 +134,24 @@ export function RepeaterHistoryModal({ isOpen, onClose, repeaterId, repeaterName
                 <div
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
-                  className={`p-3 border-b border-zinc-900/50 cursor-pointer transition-all ${selectedItem?.id === item.id ? 'bg-purple-500/10 border-l-4 border-l-purple-500' : 'hover:bg-zinc-900 border-l-4 border-l-transparent'}`}
+                  className={`p-3 border-b border-zinc-900/50 cursor-pointer transition-all group/item ${selectedItem?.id === item.id ? 'bg-purple-500/10 border-l-4 border-l-purple-500' : 'hover:bg-zinc-900 border-l-4 border-l-transparent'}`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className={`text-[10px] font-black uppercase ${item.response.status >= 400 ? 'text-rose-500' : 'text-emerald-500'}`}>
                       {item.response.status}
                     </span>
-                    <span className="text-zinc-600 text-[9px] font-mono">
-                      {new Date(item.timestamp).toLocaleTimeString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-600 text-[9px] font-mono">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </span>
+                      <button
+                        onClick={(e) => deleteHistoryItem(e, item.id)}
+                        className="opacity-0 group-hover/item:opacity-100 p-1 text-zinc-600 hover:text-rose-500 transition-all"
+                        title="Delete this item"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </div>
                   </div>
                   <div className="text-[10px] text-zinc-300 truncate font-mono">
                     {item.method} {item.url}

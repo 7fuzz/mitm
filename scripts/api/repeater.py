@@ -535,6 +535,15 @@ class RepeaterHandlers:
         except Exception as e:
             return web.json_response({"success": False, "error": str(e)}, status=500)
 
+    async def handle_history_delete_single(self, request):
+        try:
+            item_id = request.match_info["id"]
+            self.db.execute("DELETE FROM repeater_history WHERE id = ?", (item_id,))
+            self.db.commit()
+            return web.json_response({"success": True})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
     async def handle_postman_import(self, request):
         """Import Postman collection OR our own custom exported format"""
         try:

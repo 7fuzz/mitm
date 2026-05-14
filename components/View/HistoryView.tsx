@@ -5,7 +5,6 @@ import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { UrlEditor } from '../Editor/UrlEditor';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { useTraffic } from '@/hooks/traffic';
-import { SaveModal } from '../ui/SaveModal'; // Assuming you have this
 import { useNotification } from '../ui/NotificationProvider';
 
 // === NEW: HTTP Formatters for the Viewer ===
@@ -40,7 +39,6 @@ export function HistoryView() {
 
   const { notify } = useNotification();
 
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [localLimit, setLocalLimit] = useState(historyLimit.toString());
   const [prevHistoryLimit, setPrevHistoryLimit] = useState(historyLimit);
 
@@ -53,11 +51,6 @@ export function HistoryView() {
     const val = Number(localLimit);
     if (!isNaN(val) && val > 0) setHistoryLimit(val);
     else setLocalLimit(historyLimit.toString());
-  };
-
-  const handleSaveToVault = async (data: unknown) => {
-    await fetch('/api/saved', { method: 'POST', body: JSON.stringify(data) });
-    setShowSaveModal(false);
   };
 
   const handleDeleteHistoryRequest = (id: string) => {
@@ -169,7 +162,6 @@ export function HistoryView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <header className="flex flex-col items-start border-b border-zinc-800 pb-6">
                 <div className="ml-auto flex gap-3 mb-4">
-                  <button onClick={() => setShowSaveModal(true)} className="px-4 py-2 bg-sky-900/30 hover:bg-sky-600 text-sky-400 hover:text-white text-[10px] rounded border border-sky-800 transition-all uppercase font-bold">Save_to_Vault</button>
                   <button onClick={() => handleAddToRepeater(selectedReq, false)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_{simpleMode ? 'Repeater' : 'Workbench'}</button>
                   {!simpleMode && <button onClick={() => handleAddToRepeater(selectedReq, true)} className="px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Raw</button>}
                   <button onClick={copyAsCurl} className="px-3 py-1 bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Copy_as_cURL</button>
@@ -206,7 +198,6 @@ export function HistoryView() {
           )
         )}
       />
-      {showSaveModal && <SaveModal req={selectedReq} onClose={() => setShowSaveModal(false)} onSave={handleSaveToVault} />}
     </>
   );
 }

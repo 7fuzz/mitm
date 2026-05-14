@@ -13,11 +13,6 @@ class Database:
         self.init_db()
 
     def init_db(self):
-        self.conn.execute("""CREATE TABLE IF NOT EXISTS proxy_vault (
-            id TEXT PRIMARY KEY, name TEXT, group_name TEXT, 
-            request TEXT, response TEXT, timestamp INTEGER
-        )""")
-
         self.conn.execute("""CREATE TABLE IF NOT EXISTS history_log (
             id TEXT PRIMARY KEY, method TEXT, url TEXT, status_code INTEGER, 
             request TEXT, response TEXT, timestamp INTEGER

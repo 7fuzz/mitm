@@ -5,7 +5,6 @@ from api.variables import VariableHandlers
 from api.history import HistoryHandlers
 from api.repeater import RepeaterHandlers
 from api.core import CoreHandlers
-from api.vault import VaultHandlers
 from api.replacements import ReplacementHandlers
 from api.upload import UploadHandlers
 
@@ -46,7 +45,6 @@ class APIServer:
         variables = VariableHandlers(self.bridge, self.db)
         history = HistoryHandlers(self.bridge, self.db)
         repeater = RepeaterHandlers(self.bridge, self.db)
-        vault = VaultHandlers(self.bridge, self.db)
         replacements = ReplacementHandlers(self.bridge, self.db)
         upload = UploadHandlers(self.db)
 
@@ -74,12 +72,8 @@ class APIServer:
         app.router.add_delete("/history", history.handle_history_delete)
         app.router.add_delete("/history/{id}", history.handle_history_delete_single)
 
-        # Register Repeater & Vault Routes
+        # Register Repeater Routes
         app.router.add_post("/repeat", repeater.handle_repeat)
-
-        app.router.add_post("/saved", vault.handle_save)
-        app.router.add_get("/saved", vault.handle_get_saved)
-        app.router.add_delete("/saved/{id}", vault.handle_delete_saved)
 
         # Repeater CRUD (individual operations)
         app.router.add_get("/repeater-db", repeater.handle_repeater_get)
@@ -91,6 +85,8 @@ class APIServer:
         # Repeater History
         app.router.add_get("/repeater/{id}/history", repeater.handle_history_get)
         app.router.add_delete("/repeater/{id}/history", repeater.handle_history_delete)
+        app.router.add_delete("/repeater-history/{id}", repeater.handle_history_delete_single)
+
 
         # Repeater Groups
         app.router.add_get("/repeater-groups", repeater.handle_group_get_all)
