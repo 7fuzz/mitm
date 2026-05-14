@@ -5,17 +5,19 @@ interface TrafficItemProps {
   method: string;
   status: number; // 0 for pending/unsent
   title: string;
+  subtitle?: string;
+  timestamp?: number;
   group?: string;
   hitCount?: number;
   isIntercepted?: boolean;
   isActive: boolean;
-  activeColor?: 'emerald' | 'purple' | 'sky';
+  activeColor?: 'emerald' | 'purple' | 'sky' | 'rose';
   onClick: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
 export const TrafficItem = memo(({
-  id, method, status, title, group, hitCount, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
+  id, method, status, title, subtitle, timestamp, group, hitCount, isIntercepted, isActive, activeColor = 'emerald', onClick, onDelete
 }: TrafficItemProps) => {
 
   const getMethodColor = (m: string) => {
@@ -36,7 +38,8 @@ export const TrafficItem = memo(({
   const activeBorder =
     activeColor === 'purple' ? 'border-l-purple-500' :
       activeColor === 'sky' ? 'border-l-sky-500' :
-        'border-l-emerald-500';
+        activeColor === 'rose' ? 'border-l-rose-500' :
+          'border-l-emerald-500';
 
   return (
     <div
@@ -52,10 +55,10 @@ export const TrafficItem = memo(({
               {status === 0 ? (isIntercepted ? 'PAUSED' : 'PENDING') : status}
             </span>
             {isIntercepted && (
-               <span className="relative flex h-2 w-2">
-                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                 <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
-               </span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
             )}
             {/* Visual badge for Groups */}
             {group && group !== 'Default' && (
@@ -69,22 +72,34 @@ export const TrafficItem = memo(({
               </span>
             )}
           </div>
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(id);
-              }}
-              className="p-1 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
-              title="Delete"
-            >
-              ✕
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {timestamp && (
+              <span className="text-zinc-600 text-[9px] font-mono">
+                {new Date(timestamp).toLocaleTimeString()}
+              </span>
+            )}
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(id);
+                }}
+                className="p-1 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded opacity-0 group-hover:opacity-100 transition-all"
+                title="Delete"
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            )}
+          </div>
         </div>
         <div className="text-zinc-300 text-xs truncate w-full font-medium" title={title}>
           {title}
         </div>
+        {subtitle && (
+          <div className="text-zinc-500 text-[10px] truncate font-mono" title={subtitle}>
+            {subtitle}
+          </div>
+        )}
       </div>
     </div>
   );
