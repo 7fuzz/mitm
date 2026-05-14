@@ -24,11 +24,37 @@
 - **UI Components**: Refactored debounced input into a reusable UI component and integrated it across the app to prevent database thrashing.
 - **Migrations**: Added database migrations for missing columns in `repeater_workspace`.
 
-## 2026-05-11
-- **JSON Viewer**: Fixed rendering of double quotes in string values.
-
 ## 2026-05-09
 - **Initial Core Features**: Implemented Simple Mode, global text replacements, and unified UI.
 - **Workspace Redesign**: Refactored `WorkspaceView` into modular sections and implemented resizable sidebars.
 - **Cleanup**: Modularized config folders and moved seeding logic into the Python backend.
 - **Quality**: Resolved initial linting errors and enhanced type safety across the board.
+
+## 2026-05-06
+- **Architecture**: Implemented standalone proxy bridge and integrated Workspace View for streamlined traffic management.
+
+## 2026-05-04
+- **Refactoring**: Overhauled replacements system and updated Next.js API routes for better performance.
+
+## 2026-04-29
+- **Replacements**: Initial implementation of "replace when send" functionality.
+- **Documentation**: Updated README with architectural insights.
+
+## 2026-04-25
+- **Features**: Added Utilities view, JSON Toolkit integration, and support for request grouping in Workbench.
+
+## 2026-04-24
+- **UI**: Added table layout for history and refined overall application layout.
+- **Refactoring**: Significant codebase cleanup and modernization.
+
+## 2026-04-23
+- **Variables**: Core implementation of environment variables and multi-variant support.
+- **Repeater**: Added variable interpolation to repeater requests.
+- **UI**: Improved header view and fixed repeater length mismatch issues.
+
+## 2026-04-22
+- **Core Logging**: Implemented HTTP History filters and improved response viewing.
+- **Persistence**: Added initial state saving logic and global options panel.
+
+## 2026-04-21
+- **Initial Release**: Project initialization from `create-next-app`.
