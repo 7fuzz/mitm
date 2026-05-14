@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "proxy": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others --kill-signal SIGINT \"./scripts/venv/bin/mitmdump -s scripts/bridge.py\" \"next start\"",
-    "proxy:dev": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others --kill-signal SIGINT \"./scripts/venv/bin/mitmdump -s scripts/bridge.py\" \"next dev\""
+    "proxy": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others --kill-signal SIGINT \"node scripts/start-proxy.js\" \"next start\"",
+    "proxy:dev": "concurrently -n \"PROXY,NEXT\" -c \"magenta.bold,cyan.bold\" --kill-others --kill-signal SIGINT \"node scripts/start-proxy.js\" \"next dev\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
