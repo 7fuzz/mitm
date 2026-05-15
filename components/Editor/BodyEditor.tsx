@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { JsonEditor } from './JsonEditor';
 import { FormEditor } from './FormEditor';
 import { formToJson, jsonToUrlEncoded, jsonToMultipartStructured } from '@/lib/utils/converter';
+import { Textarea } from '../ui';
 
 interface Props {
   body: string;
@@ -119,11 +120,11 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
 
       <div className="flex-1 overflow-y-auto p-3 min-h-0">
         {mode === 'raw' && (
-          <textarea
+          <Textarea
             value={body}
             onChange={(e) => onChange(e.target.value)}
-            spellCheck="false"
-            className="w-full h-full min-h-25 bg-transparent text-zinc-300 outline-none focus:border-amber-500 transition-colors text-[11px] font-mono leading-relaxed resize-y"
+            spellCheck={false}
+            className="w-full h-full min-h-25 leading-relaxed bg-transparent border-transparent focus:border-transparent"
           />
         )}
         {mode === 'json' && <JsonEditor initialBody={body} onChange={onChange} />}

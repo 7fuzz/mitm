@@ -10,7 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
+const ButtonComponent = forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'secondary',
   size = 'md',
   className = '',
@@ -47,4 +47,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   );
 });
 
-Button.displayName = 'Button';
+ButtonComponent.displayName = 'Button';
+
+export { ButtonComponent as Button };

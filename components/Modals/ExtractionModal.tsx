@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GlobalVariable } from '@/hooks/traffic';
+import { Button, Input } from '../ui';
 
 interface ExtractionModalProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export function ExtractionModal({ isOpen, onClose, onSave, initialRules, availab
                     <select
                       value={rule.varName}
                       onChange={(e) => updateRule(rule.id, 'varName', e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-emerald-400 text-xs font-mono outline-none focus:border-amber-500/50 transition-colors"
+                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-emerald-600 dark:text-emerald-400 text-xs font-mono outline-none focus:border-amber-500/50 transition-colors"
                     >
                       <option value="">Select Variable...</option>
                       {availableVariables.map(v => (
@@ -88,12 +89,12 @@ export function ExtractionModal({ isOpen, onClose, onSave, initialRules, availab
                   </div>
                   <span className="text-zinc-700 text-xs">←</span>
                   <div className="flex-[1.5]">
-                    <input
+                    <Input
                       type="text"
                       value={rule.path}
                       onChange={(e) => updateRule(rule.id, 'path', e.target.value)}
                       placeholder="Response Path (e.g. result.token)"
-                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-zinc-300 text-xs font-mono outline-none focus:border-amber-500/50 transition-colors"
+                      className="bg-zinc-900"
                     />
                   </div>
                   <button
@@ -116,18 +117,21 @@ export function ExtractionModal({ isOpen, onClose, onSave, initialRules, availab
         </div>
 
         <div className="px-6 py-4 bg-zinc-900/30 border-t border-zinc-800 flex justify-end gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="amber"
+            size="md"
             onClick={handleSave}
-            className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-zinc-950 text-[10px] font-bold uppercase tracking-widest rounded shadow-lg shadow-amber-900/20 transition-all"
+            className="px-6"
           >
             Apply Rules
-          </button>
+          </Button>
         </div>
       </div>
     </div>

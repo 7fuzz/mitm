@@ -4,6 +4,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DebouncedInput } from '../../ui/DebouncedInput';
+import { Button } from '../../ui';
 
 const CATEGORY_INFO: Record<ReplacementCategory, { label: string; description: string; color: string }> = {
   URL_REPLACEMENTS: { label: 'URL Patterns', description: 'Domain prefix replacements for environment switching', color: 'sky' },
@@ -36,7 +37,7 @@ function SortableReplacementItem({
       </div>
       <button
         onClick={() => updateEntry(category, idx, 'is_active', !entry.is_active)}
-        className={`p-2 rounded transition-colors ${entry.is_active ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 bg-zinc-950'}`}
+        className={`p-2 rounded transition-colors ${entry.is_active ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 bg-input-bg'}`}
         title={entry.is_active ? "Rule is Active" : "Rule is Inactive"}
       >
         {entry.is_active ? (
@@ -49,8 +50,8 @@ function SortableReplacementItem({
         value={entry.pattern}
         onChange={(val) => updateEntry(category, idx, 'pattern', val)}
         placeholder={category === 'HEADER_REPLACEMENTS' ? "Header Key (e.g. Authorization)" : category === 'BODY_KEY_REPLACEMENTS' ? "JSON Key (e.g. user_id)" : category === 'TEXT_REPLACEMENTS' ? "Any Text (e.g. xyz)" : "Pattern (e.g. api.)"}
-        className={`flex-1 bg-zinc-950 border border-zinc-800 rounded transition-all`}
-        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-zinc-300'}`}
+        className={`flex-1 transition-all`}
+        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : ''}`}
         showIcon={false}
       />
       <span className="text-zinc-600 text-xs">→</span>
@@ -58,8 +59,8 @@ function SortableReplacementItem({
         value={entry.replacement}
         onChange={(val) => updateEntry(category, idx, 'replacement', val)}
         placeholder={category === 'HEADER_REPLACEMENTS' ? "Value (e.g. Bearer {{token}})" : category === 'TEXT_REPLACEMENTS' ? "Replacement (e.g. {{something}})" : "Replacement (e.g. {{env}})"}
-        className={`flex-1 bg-zinc-950 border border-zinc-800 rounded transition-all`}
-        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-amber-400/70'}`}
+        className={`flex-1 transition-all`}
+        inputClassName={`font-mono text-xs !px-1 ${!entry.is_active ? 'text-zinc-600 opacity-50' : 'text-amber-500'}`}
         showIcon={false}
       />
       <button
@@ -113,11 +114,9 @@ export function ReplacementsSection() {
       TEXT_REPLACEMENTS: orderedReplacements.filter(r => r.type === 'TEXT_REPLACEMENTS').map(r => ({ id: r.id, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })),
     };
     
-    // Set syncing flag to true so the useEffect doesn't trigger a save
     isSyncingRef.current = true;
     setLocalReplacements(converted);
     
-    // Update lastSavedRef immediately to prevent race conditions in useEffect
     const sortedItems = [...orderedReplacements].sort((a, b) => {
       if (a.type !== b.type) return a.type.localeCompare(b.type);
       return (a.order_index || 0) - (b.order_index || 0);
@@ -151,7 +150,6 @@ export function ReplacementsSection() {
 
     const currentPayloadString = JSON.stringify(sortedCurrent.map(r => ({ id: r.id, type: r.type, pattern: r.pattern, replacement: r.replacement, is_active: r.is_active })));
     
-    // If this change was from a sync (top-down), don't save it back
     if (isSyncingRef.current) {
       isSyncingRef.current = false;
       return;
@@ -195,7 +193,7 @@ export function ReplacementsSection() {
   }, [localReplacements, debouncedSave, autoSaveEnabled]);
 
   const updateEntry = (category: ReplacementCategory, index: number, field: 'pattern' | 'replacement' | 'is_active', value: string | boolean) => {
-    isSyncingRef.current = false; // User interaction, not a sync
+    isSyncingRef.current = false;
     setLocalReplacements(prev => ({
       ...prev,
       [category]: prev[category].map((entry, i) => i === index ? { ...entry, [field]: value } : entry)
@@ -351,13 +349,15 @@ export function ReplacementsSection() {
           <span className={`text-[10px] font-mono uppercase tracking-widest ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
             {saveMessage}
           </span>
-          <button
+          <Button
+            variant="destructive"
+            size="md"
             onClick={handleManualSave}
             disabled={isSaving}
-            className="px-6 py-2 bg-rose-600 hover:bg-rose-500 text-white text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
+            className="bg-rose-600 hover:bg-rose-500 text-zinc-950 px-8"
           >
             {isSaving ? 'Saving...' : 'Save Configuration'}
-          </button>
+          </Button>
         </div>
       </section>
     </div>

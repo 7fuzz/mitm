@@ -59,7 +59,7 @@ export function DebouncedInput({
   };
 
   return (
-    <div className={`relative flex items-center bg-zinc-950 border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0 ${className}`}>
+    <div className={`relative flex items-center bg-input-bg border border-zinc-800 rounded px-2 focus-within:border-emerald-500 transition-colors shrink-0 ${className}`}>
       {showIcon && (
         <svg 
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" 
@@ -72,7 +72,7 @@ export function DebouncedInput({
         {...props}
         value={value}
         onChange={e => setValue(e.target.value)}
-        className={`w-full bg-transparent outline-none text-[10px] font-mono text-zinc-300 px-2 py-1 placeholder:text-zinc-600 ${inputClassName}`}
+        className={`w-full bg-transparent outline-none text-[10px] font-mono text-foreground px-2 py-1 placeholder:text-zinc-600 ${inputClassName}`}
       />
       {value && (
         <button 

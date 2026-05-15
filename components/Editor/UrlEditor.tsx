@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Input, Textarea } from '../ui';
 
 interface Props {
   method?: string;
@@ -103,17 +104,24 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
 
       <div className="p-3 flex-1 overflow-y-auto min-h-0">
         {mode === 'raw' ? (
-          <textarea
+          <Textarea
             value={rawUrl}
             readOnly={readOnly}
             onChange={(e) => { setRawUrl(e.target.value); if (onChange) onChange(e.target.value); }}
-            className={`w-full h-full min-h-15 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono resize-y ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : 'text-emerald-100'}`}
+            variant={readOnly ? 'default' : 'emerald'}
+            className={`h-full min-h-15 ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : ''}`}
           />
         ) : (
           <div className="space-y-6">
             <div className="space-y-1">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Base Domain</label>
-              <input value={domain} readOnly={readOnly} onChange={(e) => updateStructuredUrl(e.target.value, paths, params, fragment)} className={`w-full bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`} />
+              <Input 
+                value={domain} 
+                readOnly={readOnly} 
+                onChange={(e) => updateStructuredUrl(e.target.value, paths, params, fragment)} 
+                variant={readOnly ? 'default' : 'emerald'}
+                className={readOnly ? 'text-zinc-400' : ''}
+              />
             </div>
 
             <div className="space-y-1">
@@ -123,7 +131,14 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                 {paths.map((p) => (
                   <div key={p.id} className="flex gap-2 items-center group">
                     <span className="text-zinc-600 font-black text-sm">/</span>
-                    <input value={p.v} readOnly={readOnly} onChange={(e) => updatePath(p.id, e.target.value)} className={`w-32 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-400' : 'text-fuchsia-400'}`} placeholder="path" />
+                    <Input 
+                      value={p.v} 
+                      readOnly={readOnly} 
+                      onChange={(e) => updatePath(p.id, e.target.value)} 
+                      variant={readOnly ? 'default' : 'fuchsia'}
+                      className={`w-32 ${readOnly ? 'text-zinc-400' : ''}`}
+                      placeholder="path" 
+                    />
                     {!readOnly && <button onClick={() => deletePath(p.id)} className="text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded px-1">✕</button>}
                   </div>
                 ))}
@@ -137,8 +152,22 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
               <div className="space-y-2">
                 {params.map(p => (
                   <div key={p.id} className="flex gap-2 group">
-                    <input value={p.k} readOnly={readOnly} onChange={(e) => updateParam(p.id, e.target.value, p.v)} className={`w-1/3 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono ${readOnly ? 'text-zinc-500' : 'text-sky-400'}`} placeholder="Key" />
-                    <input value={p.v} readOnly={readOnly} onChange={(e) => updateParam(p.id, p.k, e.target.value)} className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-[11px] font-mono break-all ${readOnly ? 'text-zinc-400' : 'text-emerald-100'}`} placeholder="Value" />
+                    <Input 
+                      value={p.k} 
+                      readOnly={readOnly} 
+                      onChange={(e) => updateParam(p.id, e.target.value, p.v)} 
+                      variant={readOnly ? 'default' : 'sky'}
+                      className={`w-1/3 ${readOnly ? 'text-zinc-500' : ''}`}
+                      placeholder="Key" 
+                    />
+                    <Input 
+                      value={p.v} 
+                      readOnly={readOnly} 
+                      onChange={(e) => updateParam(p.id, p.k, e.target.value)} 
+                      variant={readOnly ? 'default' : 'emerald'}
+                      className={`flex-1 break-all ${readOnly ? 'text-zinc-400' : ''}`}
+                      placeholder="Value" 
+                    />
                     {!readOnly && <button onClick={() => deleteParam(p.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>}
                   </div>
                 ))}
@@ -151,7 +180,13 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                 <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Fragment (Hash)</label>
                 <div className="flex gap-2 items-center">
                   <span className="text-zinc-600 font-black">#</span>
-                  <input value={fragment} readOnly={readOnly} onChange={(e) => updateStructuredUrl(domain, paths, params, e.target.value)} className={`flex-1 bg-zinc-950 border border-zinc-700 p-2 rounded outline-none focus:border-emerald-500 transition-colors text-xs font-mono ${readOnly ? 'text-zinc-400' : 'text-amber-400'}`} />
+                  <Input 
+                    value={fragment} 
+                    readOnly={readOnly} 
+                    onChange={(e) => updateStructuredUrl(domain, paths, params, e.target.value)} 
+                    variant={readOnly ? 'default' : 'amber'}
+                    className={`flex-1 ${readOnly ? 'text-zinc-400' : ''}`}
+                  />
                 </div>
               </div>
             )}

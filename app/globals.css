@@ -19,6 +19,7 @@
   --destructive-foreground: #fafafa;
   --border: #27272a;     /* zinc-800 */
   --input: #27272a;
+  --input-bg: #09090b;   /* zinc-950 */
   --ring: #10b981;
   --backdrop: rgba(0, 0, 0, 0.8);
   --shadow: rgba(0, 0, 0, 0.5);
@@ -56,6 +57,7 @@
   --destructive-foreground: #ffffff;
   --border: #d4d4d8;     /* zinc-300 */
   --input: #d4d4d8;
+  --input-bg: #f4f4f5;   /* zinc-900 - subtle gray for inputs in light mode */
   --ring: #059669;
   --backdrop: rgba(255, 255, 255, 0.85);
   --shadow: rgba(0, 0, 0, 0.2);
@@ -90,6 +92,7 @@
   --color-zinc-900: var(--zinc-900);
   --color-zinc-950: var(--zinc-950);
 
+  --color-input-bg: var(--input-bg);
   --color-backdrop: var(--backdrop);
   --color-app-shadow: var(--shadow);
 

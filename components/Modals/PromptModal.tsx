@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '../ui/Button';
+import { Button, Input } from '../ui';
 
 interface PromptModalProps {
   isOpen: boolean;
@@ -44,12 +44,13 @@ export function PromptModal({ isOpen, title, initialValue = '', onClose, onSubmi
           <h3 className="text-zinc-200 font-bold uppercase tracking-widest text-[11px]">{title}</h3>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-700 p-3 rounded text-amber-400 outline-none focus:border-emerald-500 transition-colors text-xs font-mono font-bold placeholder:text-zinc-600"
+            variant="amber"
+            className="p-3 placeholder:text-zinc-600 font-bold"
             placeholder="Type here..."
           />
           <div className="flex items-center justify-end gap-2 mt-2">
