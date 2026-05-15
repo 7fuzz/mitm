@@ -39,39 +39,39 @@
 
 [data-theme='light'] {
   --background: #ffffff;
-  --foreground: #09090b;
+  --foreground: #09090b; /* zinc-950 */
   --card: #ffffff;
   --card-foreground: #09090b;
   --popover: #ffffff;
   --popover-foreground: #09090b;
-  --primary: #10b981;
+  --primary: #059669;    /* emerald-600 */
   --primary-foreground: #ffffff;
   --secondary: #f4f4f5;
   --secondary-foreground: #09090b;
   --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --muted-foreground: #52525b; /* zinc-600 */
   --accent: #f4f4f5;
   --accent-foreground: #09090b;
-  --destructive: #ef4444;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #10b981;
-  --backdrop: rgba(255, 255, 255, 0.8);
-  --shadow: rgba(0, 0, 0, 0.1);
+  --border: #d4d4d8;     /* zinc-300 */
+  --input: #d4d4d8;
+  --ring: #059669;
+  --backdrop: rgba(255, 255, 255, 0.85);
+  --shadow: rgba(0, 0, 0, 0.2);
 
-  /* Inverted zinc for light mode or specific light palette */
-  --zinc-50: #09090b;
+  /* Inverted zinc for light mode - meticulously tuned for contrast */
+  --zinc-50: #09090b;   /* Main headers / Pure black */
   --zinc-100: #18181b;
   --zinc-200: #27272a;
-  --zinc-300: #3f3f46;
-  --zinc-400: #52525b;
-  --zinc-500: #71717a;
-  --zinc-600: #a1a1aa;
-  --zinc-700: #d4d4d8;
-  --zinc-800: #e4e4e7;
-  --zinc-900: #f4f4f5;
-  --zinc-950: #ffffff;
+  --zinc-300: #3f3f46;  /* High contrast text */
+  --zinc-400: #52525b;  /* Normal text */
+  --zinc-500: #71717a;  /* Sub-text */
+  --zinc-600: #a1a1aa;  /* Borders (darker) */
+  --zinc-700: #d4d4d8;  /* Borders (light) */
+  --zinc-800: #e4e4e7;  /* Subtle backgrounds */
+  --zinc-900: #f4f4f5;  /* Very subtle backgrounds */
+  --zinc-950: #ffffff;  /* Pure white background */
 }
 
 @theme inline {

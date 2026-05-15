@@ -140,10 +140,10 @@ export function TrafficList({ items, activeId, onSelect, onDelete, onReorder, ac
       {/* List / Table Render */}
       <div className="flex-1 overflow-auto relative">
         {filteredItems.length === 0 ? (
-          <div className="p-4 text-center text-zinc-600 text-[10px] uppercase tracking-widest mt-4">No requests</div>
+          <div className="p-4 text-center text-zinc-500 text-[10px] uppercase tracking-widest mt-4">No requests</div>
         ) : layout === 'table' ? (
           <table className="w-full text-left border-collapse whitespace-nowrap">
-            <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-500 uppercase tracking-widest z-10 shadow-sm">
+            <thead className="sticky top-0 bg-zinc-900 border-b border-zinc-800 text-[10px] text-zinc-400 uppercase tracking-widest z-10 shadow-sm">
               <tr>
                 <th className="p-2 pl-4 font-bold">#</th>
                 <th className="p-2 font-bold">Method</th>

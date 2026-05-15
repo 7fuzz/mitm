@@ -86,7 +86,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
           {/* ZONE B: GLOBAL CONTEXT (Environment Switcher) */}
           {!simpleMode && (
             <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-app-shadow/50">
-              <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Env:</span>
+              <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest hidden sm:inline-block">Env:</span>
               <select
                 value={activeEnvId}
                 onChange={(e) => setActiveEnvironment(e.target.value)}

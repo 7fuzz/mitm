@@ -96,7 +96,7 @@ export const TrafficItem = memo(({
           {title}
         </div>
         {subtitle && (
-          <div className="text-zinc-500 text-[10px] truncate font-mono" title={subtitle}>
+          <div className="text-zinc-400 text-[10px] truncate font-mono" title={subtitle}>
             {subtitle}
           </div>
         )}

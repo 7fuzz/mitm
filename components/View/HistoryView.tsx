@@ -145,7 +145,7 @@ export function HistoryView() {
               </div>
             )}
 
-            <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest ml-2 mr-2">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest ml-2 mr-2">
               Total: {traffic.length}
             </span>
 
