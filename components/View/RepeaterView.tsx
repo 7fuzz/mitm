@@ -234,7 +234,7 @@ export function RepeaterView() {
         )}
 
         toolbarLeft={!simpleMode ? (
-          <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
+          <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-app-shadow/50">
             <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Collection:</span>
             <select
               value={activeGroupId}
@@ -399,7 +399,7 @@ export function RepeaterView() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-150 flex flex-col shadow-inner shadow-black/50"><HttpResponseViewer text={getPreviewRequestText()} /></div>
+                    <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-150 flex flex-col shadow-inner shadow-app-shadow/50"><HttpResponseViewer text={getPreviewRequestText()} /></div>
                   )}
                 </div>
 

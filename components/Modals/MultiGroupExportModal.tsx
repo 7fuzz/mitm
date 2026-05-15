@@ -35,8 +35,8 @@ export function MultiGroupExportModal({ isOpen, groups, onClose, onExport }: Mul
   };
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4">
-      <div className="bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl shadow-black w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-backdrop backdrop-blur-sm px-4">
+      <div className="bg-zinc-950 border border-zinc-800 rounded-lg shadow-2xl shadow-app-shadow w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
           <h3 className="text-zinc-200 font-bold uppercase tracking-widest text-[11px]">Multi-Group Export</h3>
         </div>

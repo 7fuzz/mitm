@@ -151,7 +151,7 @@ export function CvssTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
     <div className={`space-y-8 mx-auto ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-4xl'}`}>
 
       {/* Top Console */}
-      <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded flex flex-col xl:flex-row xl:items-center gap-4 justify-between shadow-inner shadow-black/20">
+      <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded flex flex-col xl:flex-row xl:items-center gap-4 justify-between shadow-inner shadow-app-shadow/20">
 
         <div className="flex flex-col gap-1.5 flex-1 w-full">
           <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">CVSS 4.0 Vector (Editable)</span>

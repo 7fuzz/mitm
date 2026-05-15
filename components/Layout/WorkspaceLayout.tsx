@@ -57,7 +57,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
         <div className="flex items-center justify-between p-2 min-h-12 gap-4">
 
           {/* ZONE A: UI CONTROLS */}
-          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50 shadow-inner shadow-black/20">
+          <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50 shadow-inner shadow-app-shadow/20">
             <button
               onClick={() => onUpdateLayout({ isListOpen: !isListOpen })}
               className={`p-1.5 rounded-md transition-all ${isListOpen ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
@@ -85,7 +85,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
 
           {/* ZONE B: GLOBAL CONTEXT (Environment Switcher) */}
           {!simpleMode && (
-            <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-black/50">
+            <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-app-shadow/50">
               <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Env:</span>
               <select
                 value={activeEnvId}

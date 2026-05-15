@@ -70,12 +70,12 @@ export function OptionsView() {
 
         <div className="flex items-center justify-between border-b border-zinc-800 pb-6 mb-8">
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter uppercase mb-2">Proxy_Options</h1>
+            <h1 className="text-2xl font-black text-zinc-50 tracking-tighter uppercase mb-2">Proxy_Options</h1>
             <p className="text-zinc-500 text-xs font-mono">Configure local network bindings and install SSL certificates for HTTPS interception.</p>
           </div>
 
           <div className="flex flex-col items-end gap-2">
-            <label className="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-700 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all shadow-lg">
+            <label className="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-700 rounded-lg cursor-pointer hover:border-emerald-500/50 transition-all shadow-lg shadow-app-shadow/20">
               <div className="flex flex-col items-end mr-2">
                 <span className="text-[10px] text-zinc-300 font-black uppercase tracking-widest">Simple_Mode</span>
                 <span className="text-[8px] text-zinc-500 font-mono">Lightweight UI</span>
@@ -87,7 +87,7 @@ export function OptionsView() {
                   onChange={() => togglePref('simpleMode')}
                   className="sr-only peer"
                 />
-                <div className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${prefs.simpleMode ? 'translate-x-5 bg-emerald-500' : 'translate-x-0 bg-zinc-400'}`}></div>
+                <div className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-zinc-950 shadow-sm ring-0 transition duration-200 ease-in-out ${prefs.simpleMode ? 'translate-x-5 bg-emerald-500' : 'translate-x-0 bg-zinc-400'}`}></div>
               </div>
             </label>
           </div>
@@ -139,7 +139,7 @@ export function OptionsView() {
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="px-6 py-2 bg-sky-600 hover:bg-sky-500 text-white text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-sky-600 hover:bg-sky-500 text-zinc-950 text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
             >
               {isSaving ? 'Rebinding...' : 'Apply & Restart'}
             </button>
@@ -170,7 +170,7 @@ export function OptionsView() {
             <a
               href="/api/cert"
               download="mitmproxy-ca-cert.pem"
-              className="inline-flex items-center justify-center w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 text-xs rounded uppercase font-black tracking-widest transition-colors"
+              className="inline-flex items-center justify-center w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 text-xs rounded uppercase font-black tracking-widest transition-colors shadow-lg shadow-emerald-500/20"
             >
               Download Root CA (.pem)
             </a>

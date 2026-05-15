@@ -300,24 +300,24 @@ export default function HttpResponseViewer({ text }: { text: string }) {
           {/* STRICT HEIGHT: h-7 */}
           <div className="flex bg-zinc-950 p-0.5 rounded items-center border border-zinc-800 shrink-0 h-7">
             {!isForm && (
-              <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              <button onClick={() => setViewMode("pretty")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "pretty" ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-300"}`}>
                 {isMediaOrFile ? "Preview" : "Pretty"}
               </button>
             )}
             {isForm && (
-              <button onClick={() => setViewMode("form")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "form" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              <button onClick={() => setViewMode("form")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "form" ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-300"}`}>
                 Form
               </button>
             )}
             {isHtml && (
-              <button onClick={() => setViewMode("render")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "render" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+              <button onClick={() => setViewMode("render")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "render" ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-300"}`}>
                 Render
               </button>
             )}
-            <button onClick={() => setViewMode("raw")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "raw" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+            <button onClick={() => setViewMode("raw")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "raw" ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-300"}`}>
               Raw
             </button>
-            <button onClick={() => setViewMode("message")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "message" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"}`}>
+            <button onClick={() => setViewMode("message")} className={`px-3 h-full flex items-center text-[10px] font-bold uppercase tracking-widest rounded transition-all ${viewMode === "message" ? "bg-zinc-800 text-zinc-50" : "text-zinc-500 hover:text-zinc-300"}`}>
               Message
             </button>
           </div>
@@ -384,7 +384,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
               {copiedAll ? "✓ Copied Body!" : "Copy Body"}
             </button>
             <div className="w-px h-3 bg-zinc-700"></div>
-            <button onClick={handleCopyFull} className="h-full flex items-center text-[10px] uppercase font-bold text-zinc-400 hover:text-white tracking-widest transition-colors shrink-0">
+            <button onClick={handleCopyFull} className="h-full flex items-center text-[10px] uppercase font-bold text-zinc-400 hover:text-zinc-50 tracking-widest transition-colors shrink-0">
               {copiedFull ? "✓ Copied Full!" : "Copy Full"}
             </button>
           </div>
@@ -401,7 +401,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
         ) : viewMode === "form" ? (
           <FormViewer body={parsed.rawBody} contentType={parsed.fullContentType || ""} />
         ) : viewMode === "render" && isHtml ? (
-          <iframe srcDoc={parsed.rawBody} className="w-full h-full bg-white rounded" title="HTML Preview" sandbox="allow-same-origin" />
+          <iframe srcDoc={parsed.rawBody} className="w-full h-full bg-zinc-950 rounded" title="HTML Preview" sandbox="allow-same-origin" />
         ) : isImage && mediaUrl ? (
           <div className="flex flex-col items-center justify-center gap-4 h-full">
             <img src={mediaUrl} alt="Preview" className="max-w-full max-h-100 rounded border border-zinc-800 shadow-xl" />

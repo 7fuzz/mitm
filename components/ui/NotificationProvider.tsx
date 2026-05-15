@@ -62,7 +62,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             type="button"
             onClick={clearAll}
             style={{ pointerEvents: 'auto' }}
-            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 text-[9px] uppercase tracking-widest font-black rounded transition-all shadow-lg shadow-black/50 animate-in fade-in duration-200 cursor-pointer"
+            className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 text-[9px] uppercase tracking-widest font-black rounded transition-all shadow-lg shadow-app-shadow/50 animate-in fade-in duration-200 cursor-pointer"
           >
             Clear All
           </button>
@@ -71,7 +71,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`pointer-events-auto relative flex items-start px-4 py-3.5 w-full rounded border bg-zinc-950 shadow-2xl shadow-black animate-in slide-in-from-right-8 fade-in duration-200
+            className={`pointer-events-auto relative flex items-start px-4 py-3.5 w-full rounded border bg-zinc-950 shadow-2xl shadow-app-shadow animate-in slide-in-from-right-8 fade-in duration-200
               ${n.type === 'success' ? 'border-emerald-500/50 text-emerald-400' : ''}
               ${n.type === 'error' ? 'border-rose-500/50 text-rose-400' : ''}
               ${n.type === 'info' ? 'border-sky-500/50 text-sky-400' : ''}

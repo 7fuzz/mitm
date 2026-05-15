@@ -72,16 +72,16 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Body Format:</span>
           <div className="flex bg-zinc-950 p-0.5 rounded items-center">
-            <button onClick={() => setMode('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+            <button onClick={() => setMode('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
               raw
             </button>
             {(isBodyJson || mode === 'json') && (
-              <button onClick={() => setMode('json')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'json' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <button onClick={() => setMode('json')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'json' ? 'bg-zinc-700 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 json
               </button>
             )}
             {(isBodyForm || mode === 'form') && (
-              <button onClick={() => setMode('form')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'form' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
+              <button onClick={() => setMode('form')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'form' ? 'bg-zinc-700 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 form
               </button>
             )}

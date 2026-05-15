@@ -10,6 +10,8 @@ import { WorkspaceView } from '@/components/View/WorkspaceView';
 import { useKeyboardShortcuts } from '@/hooks/ui/useKeyboardShortcuts';
 import { ShortcutHint } from '@/components/ui/ShortcutHint';
 
+import { useTheme } from '@/hooks/ui/useTheme';
+
 // ==========================================
 // 1. THE OUTER WRAPPER (No Hooks Here!)
 // ==========================================
@@ -26,6 +28,7 @@ export default function Page() {
 // ==========================================
 function TrafficApp() {
   const { traffic, repeaterRequests, simpleMode } = useTraffic();
+  const { theme, toggleTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<'history' | 'intercept' | 'repeater' | 'options' | 'utilities' | 'workspace'>('history');
 
@@ -100,12 +103,26 @@ function TrafficApp() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full group hover:border-emerald-500/40 transition-all cursor-default">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all cursor-pointer"
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="18.36" x2="5.64" y2="16.92"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            )}
+          </button>
+
+          <div className="flex items-center gap-3 px-3 py-1.5 bg-emerald-500/5 border border-emerald-500/20 rounded-full group hover:border-emerald-500/40 transition-all cursor-default">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
+            <span className="text-[10px] text-emerald-500/80 font-black uppercase tracking-[0.15em]">Proxy_Live</span>
           </div>
-          <span className="text-[10px] text-emerald-500/80 font-black uppercase tracking-[0.15em]">Proxy_Live</span>
         </div>
       </header>
 

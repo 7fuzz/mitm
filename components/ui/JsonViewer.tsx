@@ -42,7 +42,7 @@ const HighlightText = ({ text, query }: { text: string; query: string }) => {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <span key={i} className="bg-amber-500/50 text-white rounded-sm px-px">{part}</span>
+          <span key={i} className="bg-amber-500/50 text-zinc-50 rounded-sm px-px">{part}</span>
         ) : (
           part
         )

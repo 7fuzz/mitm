@@ -96,8 +96,8 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
         </div>
 
         <div className="flex bg-zinc-950 p-0.5 rounded items-center">
-          <button onClick={() => handleModeSwitch('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw</button>
-          <button onClick={() => handleModeSwitch('structured')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Structured</button>
+          <button onClick={() => handleModeSwitch('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-700 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw</button>
+          <button onClick={() => handleModeSwitch('structured')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-700 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Structured</button>
         </div>
       </div>
 

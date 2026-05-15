@@ -194,7 +194,7 @@ export function InterceptView() {
           <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
 
             {/* MOVED & UPGRADED: Target Endpoint & Stage Button */}
-            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-between shadow-inner shadow-black/20">
+            <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-between shadow-inner shadow-app-shadow/20">
               <div className="flex items-center gap-3">
                 <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Target Endpoint:</span>
                 <span className={`text-xs font-black ${isRes ? 'text-amber-500' : 'text-emerald-500'}`}>{currentReq.method}</span>
@@ -203,14 +203,14 @@ export function InterceptView() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleStageToRepeater(false)}
-                  className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
+                  className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-zinc-50 text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
                 >
                   Stage_to_Repeater
                 </button>
                 {!simpleMode && (
                   <button
                     onClick={() => handleStageToRepeater(true)}
-                    className="px-4 py-1.5 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold"
+                    className="px-4 py-1.5 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-50 text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold"
                   >
                     Raw
                   </button>

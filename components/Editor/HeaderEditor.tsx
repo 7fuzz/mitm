@@ -62,9 +62,9 @@ export function HeaderEditor({ initialHeaders, onChange }: Props) {
     <div className="flex flex-col h-full min-h-25 overflow-hidden p-2">
       <div className="flex justify-between items-center mb-3 shrink-0">
         <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Headers</span>
-        <div className="flex bg-zinc-950 p-0.5 rounded items-center border border-zinc-800">
-          <button onClick={() => handleModeSwitch('structured')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Structured</button>
-          <button onClick={() => handleModeSwitch('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw</button>
+        <div className="flex bg-zinc-950 p-0.5 rounded items-center">
+          <button onClick={() => handleModeSwitch('structured')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'structured' ? 'bg-zinc-800 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Structured</button>
+          <button onClick={() => handleModeSwitch('raw')} className={`px-3 py-1 text-[10px] font-bold uppercase rounded transition-all duration-200 ${mode === 'raw' ? 'bg-zinc-800 text-zinc-50 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Raw</button>
         </div>
       </div>
 
