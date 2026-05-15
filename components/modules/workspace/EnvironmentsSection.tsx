@@ -72,7 +72,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
 
       <section className="space-y-4 pt-8 border-t border-zinc-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-emerald-500 font-bold uppercase text-[10px] tracking-widest">Global Variables ({environments.find(e => e.id === activeEnvId)?.name})</h3>
+          <h3 className="text-emerald-text font-bold uppercase text-[10px] tracking-widest">Global Variables ({environments.find(e => e.id === activeEnvId)?.name})</h3>
           <button 
             onClick={() => addVariable({ 
               id: crypto.randomUUID(), 
@@ -84,7 +84,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
               ], 
               activeIndex: 0 
             })}
-            className="px-3 py-1.5 bg-emerald-600/10 border border-emerald-600/30 text-emerald-500 hover:bg-emerald-600/20 rounded text-[9px] font-black uppercase tracking-widest transition-all"
+            className="px-3 py-1.5 bg-emerald-600/10 border border-emerald-600/30 text-emerald-text hover:bg-emerald-600/20 rounded text-[9px] font-black uppercase tracking-widest transition-all"
           >
             + Add New Variable
           </button>
@@ -110,7 +110,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
                     {!prefs.autoSave && (
                       <button 
                         onClick={() => saveVariable(v.id, v)}
-                        className="text-[8px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors"
+                        className="text-[8px] font-black uppercase tracking-widest text-emerald-text hover:text-emerald-text transition-colors"
                       >
                         [Save]
                       </button>
@@ -127,7 +127,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
                           updateVariable(v.id, { values: newVals });
                         }}
                         className={`w-24 bg-zinc-900/50 border border-zinc-800 rounded`}
-                        inputClassName={`${val.name === '(auto)' ? 'text-purple-400' : 'text-sky-400'} font-bold`}
+                        inputClassName={`${val.name === '(auto)' ? 'text-purple-400' : 'text-sky-text'} font-bold`}
                         placeholder="Variant"
                         disabled={val.name === '(auto)'}
                         showIcon={false}
@@ -157,7 +157,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
                   ))}
                   <button 
                     onClick={() => updateVariable(v.id, { values: [...v.values, { id: crypto.randomUUID(), name: `Variant ${v.values.length + 1}`, value: '' }] })}
-                    className="text-[9px] text-zinc-500 hover:text-emerald-400 font-bold uppercase tracking-widest w-fit"
+                    className="text-[9px] text-zinc-500 hover:text-emerald-text font-bold uppercase tracking-widest w-fit"
                   >
                     + New Variant
                   </button>
@@ -170,7 +170,7 @@ export function EnvironmentsSection({ openPrompt, openConfirm }: EnvironmentsSec
 
         {!prefs.autoSave && variables.filter(v => v.environmentId === activeEnvId).length > 0 && (
           <div className="flex items-center justify-between pt-4">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-500">{saveMessage}</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-text">{saveMessage}</span>
             <button 
               onClick={handleSaveAll}
               disabled={isSavingAll}

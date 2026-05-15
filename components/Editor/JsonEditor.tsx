@@ -26,7 +26,7 @@ const EditableKey = ({ initialKey, onCommit }: { initialKey: string, onCommit: (
         value={localKey}
         onChange={(e) => setLocalKey(e.target.value)}
         onBlur={handleBlur}
-        className="flex-1 bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-sky-500 text-sky-400 text-[11px] font-mono outline-none min-w-0 transition-colors"
+        className="flex-1 bg-transparent border-b border-transparent hover:border-zinc-700 focus:border-sky-500 text-sky-text text-[11px] font-mono outline-none min-w-0 transition-colors"
       />
       <span className="text-zinc-600 font-mono text-[11px] ml-1">&quot;:</span>
     </div>
@@ -117,7 +117,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
             />
           </div>
         ))}
-        <button onClick={handleAdd} className="text-[9px] text-sky-500 hover:text-sky-400 mt-2 font-bold uppercase tracking-widest px-1 hover:bg-sky-500/10 rounded transition-colors">
+        <button onClick={handleAdd} className="text-[9px] text-sky-text hover:text-sky-text mt-2 font-bold uppercase tracking-widest px-1 hover:bg-sky-500/10 rounded transition-colors">
           + Add {isArray ? 'Item' : 'Key'}
         </button>
       </div>
@@ -172,7 +172,7 @@ const JsonNode = ({ label, value, onChange, onDelete, onKeyChange }: JsonNodePro
             type={valueType === 'number' ? 'number' : 'text'}
             value={value as string | number}
             onChange={(e) => onChange(valueType === 'number' ? Number(e.target.value) : e.target.value)}
-            className={`w-full bg-transparent p-1.5 outline-none text-[11px] font-mono ${valueType === 'number' ? 'text-sky-400' : 'text-emerald-400'}`}
+            className={`w-full bg-transparent p-1.5 outline-none text-[11px] font-mono ${valueType === 'number' ? 'text-sky-text' : 'text-emerald-text'}`}
           />
           {valueType === 'string' && <span className="text-zinc-600 pr-2">&quot;</span>}
         </div>

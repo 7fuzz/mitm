@@ -206,8 +206,8 @@ export function WorkspaceView() {
 
       toolbarRight={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={importPostman} className="text-zinc-500 hover:text-sky-400">Import PM</Button>
-          <Button variant="ghost" size="sm" onClick={importProject} className="text-zinc-500 hover:text-sky-400">Import Project</Button>
+          <Button variant="ghost" size="sm" onClick={importPostman} className="text-zinc-500 hover:text-sky-text">Import PM</Button>
+          <Button variant="ghost" size="sm" onClick={importProject} className="text-zinc-500 hover:text-sky-text">Import Project</Button>
           <Button variant="ghost" size="sm" onClick={() => setExportModalOpen(true)} className="text-zinc-500 hover:text-amber-400">Export</Button>
         </div>
       }

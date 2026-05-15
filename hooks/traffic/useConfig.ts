@@ -10,7 +10,8 @@ export function useConfig() {
     intercept: true, 
     simpleMode: true, 
     autoSave: true,
-    replacementsAutoSave: true 
+    replacementsAutoSave: true,
+    theme: 'dark' as 'dark' | 'light'
   });
   const [isIntercepting, setIsIntercepting] = useState(false);
   const [interceptMode, setInterceptMode] = useState<'both' | 'request' | 'response'>('both');

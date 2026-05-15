@@ -93,7 +93,7 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
           {mode === 'form' && (
             <button 
               onClick={handleConvertToJSON}
-              className="text-[9px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 transition-all"
+              className="text-[9px] font-black uppercase tracking-widest text-emerald-text hover:text-emerald-text bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 transition-all"
             >
               Convert to JSON
             </button>
@@ -114,7 +114,7 @@ export function BodyEditor({ body, headers, onChange, onHeadersChange }: Props) 
               </button>
             </div>
           )}
-          {contentType && <span className="text-[9px] text-emerald-500/70 font-mono italic truncate max-w-40 hidden sm:inline">Detected: {contentType.split(';')[0]}</span>}
+          {contentType && <span className="text-[9px] text-emerald-text/70 font-mono italic truncate max-w-40 hidden sm:inline">Detected: {contentType.split(';')[0]}</span>}
         </div>
       </div>
 

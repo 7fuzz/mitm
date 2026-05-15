@@ -200,7 +200,7 @@ export function InterceptView() {
           </div>
           {currentReq && (
             <div className="flex border-t border-zinc-800 shrink-0">
-              <div className={`flex-1 px-4 py-1.5 text-[9px] uppercase font-black tracking-[0.3em] flex items-center ${isRes ? 'bg-amber-500/10 text-amber-500' : 'bg-sky-500/10 text-sky-500'}`}>
+              <div className={`flex-1 px-4 py-1.5 text-[9px] uppercase font-black tracking-[0.3em] flex items-center ${isRes ? 'bg-amber-500/10 text-amber-500' : 'bg-sky-500/10 text-sky-text'}`}>
                 Currently Modifying: {currentReq.phase} Phase
               </div>
               {currentReq.intercepted_at && (
@@ -219,7 +219,7 @@ export function InterceptView() {
             <div className="p-3 bg-zinc-900/50 border border-zinc-800 rounded flex items-center justify-between shadow-inner shadow-app-shadow/20">
               <div className="flex items-center gap-3">
                 <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Target Endpoint:</span>
-                <span className={`text-xs font-black ${isRes ? 'text-amber-500' : 'text-emerald-500'}`}>{currentReq.method}</span>
+                <span className={`text-xs font-black ${isRes ? 'text-amber-500' : 'text-emerald-text'}`}>{currentReq.method}</span>
                 <span className="text-zinc-300 text-xs font-mono break-all">{currentReq.url}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -244,7 +244,7 @@ export function InterceptView() {
             </div>
 
             <div className="space-y-3">
-              <h3 className={`${isRes ? 'text-amber-500' : 'text-emerald-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
+              <h3 className={`${isRes ? 'text-amber-500' : 'text-emerald-text'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
                 <span className="opacity-50">#</span> 1. {isRes ? 'Response_Status' : 'Request_Line'}
               </h3>
 
@@ -253,7 +253,7 @@ export function InterceptView() {
                   <span className="text-zinc-500 text-xs font-mono">HTTP/2.0</span>
                   <input
                     type="number" value={editStatusCode} onChange={(e) => setEditStatusCode(Number(e.target.value))}
-                    className="w-24 bg-zinc-950 border border-zinc-800 p-3 rounded text-emerald-400 font-black outline-none focus:border-amber-500 transition-colors text-sm text-center"
+                    className="w-24 bg-zinc-950 border border-zinc-800 p-3 rounded text-emerald-text font-black outline-none focus:border-amber-500 transition-colors text-sm text-center"
                   />
                 </div>
               ) : (
@@ -268,7 +268,7 @@ export function InterceptView() {
 
             <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
               <div className="flex flex-col space-y-3">
-                <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
+                <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-text'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
                   <span className="opacity-50">#</span> 2. {isRes ? 'Response_Headers' : 'Request_Headers'}
                 </h3>
                 <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-75">
@@ -277,7 +277,7 @@ export function InterceptView() {
               </div>
 
               <div className="flex flex-col space-y-3">
-                <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-500'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
+                <h3 className={`${isRes ? 'text-amber-500' : 'text-sky-text'} font-bold uppercase text-[10px] tracking-widest flex items-center gap-2`}>
                   <span className="opacity-50">#</span> 3. {isRes ? 'Response_Body' : 'Request_Body'}
                 </h3>
                 <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-87.5">

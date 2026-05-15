@@ -162,3 +162,12 @@ MITM Real abstracts `multipart/form-data` and `application/x-www-form-urlencoded
 - **Variable Syntax**: Uses `{{variable_name}}` for dynamic interpolation.
 - **Persistence**: 1-2s debouncing to prevent database thrashing.
 - **Port Mappings**: Next.js (`3000`), Python API (`3001`), Proxy Listener (`8080`).
+
+## 🎨 Theme & Styling
+The application supports both **Light** and **Dark** modes, which are persisted to the SQLite master database.
+
+- **Color Management**: All colors are defined in `app/globals.css` using CSS variables (`--background`, `--foreground`, `--primary`, etc.). 
+- **Theming**: Uses Tailwind CSS 4 with `@theme inline` to map these variables.
+- **High Contrast**: The light theme is meticulously tuned for readability, specifically for developers who prefer higher contrast on white backgrounds.
+- **Atomic Components**: Standardized UI elements (Buttons, Inputs, Textareas) are located in `components/ui/` and should be used to maintain theme consistency.
+

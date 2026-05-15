@@ -37,7 +37,7 @@ function SortableReplacementItem({
       </div>
       <button
         onClick={() => updateEntry(category, idx, 'is_active', !entry.is_active)}
-        className={`p-2 rounded transition-colors ${entry.is_active ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 bg-input-bg'}`}
+        className={`p-2 rounded transition-colors ${entry.is_active ? 'text-emerald-text bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 bg-input-bg'}`}
         title={entry.is_active ? "Rule is Active" : "Rule is Inactive"}
       >
         {entry.is_active ? (
@@ -346,7 +346,7 @@ export function ReplacementsSection() {
         </div>
 
         <div className="flex items-center justify-between pt-6 border-t border-zinc-800/50">
-          <span className={`text-[10px] font-mono uppercase tracking-widest ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
+          <span className={`text-[10px] font-mono uppercase tracking-widest ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-text'}`}>
             {saveMessage}
           </span>
           <Button

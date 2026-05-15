@@ -72,9 +72,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           <div
             key={n.id}
             className={`pointer-events-auto relative flex items-start px-4 py-3.5 w-full rounded border bg-zinc-950 shadow-2xl shadow-app-shadow animate-in slide-in-from-right-8 fade-in duration-200
-              ${n.type === 'success' ? 'border-emerald-500/50 text-emerald-400' : ''}
+              ${n.type === 'success' ? 'border-emerald-500/50 text-emerald-text' : ''}
               ${n.type === 'error' ? 'border-rose-500/50 text-rose-400' : ''}
-              ${n.type === 'info' ? 'border-sky-500/50 text-sky-400' : ''}
+              ${n.type === 'info' ? 'border-sky-500/50 text-sky-text' : ''}
             `}
           >
             <div className="flex items-start gap-3 w-full">

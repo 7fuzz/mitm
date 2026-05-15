@@ -138,7 +138,7 @@ export function HistoryView() {
                   onChange={(e) => setLocalLimit(e.target.value)}
                   onBlur={handleLimitCommit}
                   onKeyDown={(e) => e.key === 'Enter' && handleLimitCommit()}
-                  className="w-16 bg-zinc-950 border border-zinc-700 text-emerald-400 text-[10px] font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 text-center"
+                  className="w-16 bg-zinc-950 border border-zinc-700 text-emerald-text text-[10px] font-bold tracking-widest p-1.5 rounded outline-none focus:border-emerald-500 text-center"
                 />
               </div>
             )}
@@ -200,7 +200,7 @@ export function HistoryView() {
 
               <div className={`grid ${splitMode === 'horizontal' ? 'grid-cols-2 gap-8' : 'grid-cols-1 gap-10'}`}>
                 <div className="flex flex-col space-y-3">
-                  <h3 className="text-sky-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Payload</h3>
+                  <h3 className="text-sky-text text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Request_Payload</h3>
                   <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">
                     <HttpResponseViewer text={buildRawRequestMessage(selectedReq)} />
                   </div>

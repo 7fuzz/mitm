@@ -164,7 +164,7 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
                       />
                    </div>
                    {e.v && e.v !== 'Uploading...' && e.v !== 'Upload Failed' && e.v !== 'Upload Error' && (
-                     <span className="text-[9px] text-emerald-500 font-bold uppercase shrink-0">Ready</span>
+                     <span className="text-[9px] text-emerald-text font-bold uppercase shrink-0">Ready</span>
                    )}
                 </div>
                 <input 
@@ -182,7 +182,7 @@ export function FormEditor({ initialBody, contentType, onChange }: { initialBody
           <button onClick={() => deleteRow(e.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>
         </div>
       ))}
-      <button onClick={addRow} className="w-full py-2 border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-400 hover:border-sky-500/50 rounded text-[10px] uppercase font-bold tracking-widest transition-colors">+ Add Form Data</button>
+      <button onClick={addRow} className="w-full py-2 border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-text hover:border-sky-500/50 rounded text-[10px] uppercase font-bold tracking-widest transition-colors">+ Add Form Data</button>
     </div>
   );
 }

@@ -172,7 +172,7 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                   </div>
                 ))}
               </div>
-              {!readOnly && <button onClick={addParam} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-400 hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Parameter</button>}
+              {!readOnly && <button onClick={addParam} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-text hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Parameter</button>}
             </div>
 
             {(fragment || !readOnly) && (

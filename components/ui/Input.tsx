@@ -18,9 +18,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   const variantStyles = {
     default: 'text-foreground focus:border-emerald-500',
     fuchsia: 'text-fuchsia-600 dark:text-fuchsia-400 focus:border-emerald-500',
-    sky: 'text-sky-600 dark:text-sky-400 focus:border-emerald-500',
+    sky: 'text-sky-text focus:border-emerald-500',
     amber: 'text-amber-600 dark:text-amber-400 focus:border-emerald-500',
-    emerald: 'text-emerald-600 dark:text-emerald-400 focus:border-emerald-500',
+    emerald: 'text-emerald-text focus:border-emerald-500',
   };
 
   const combinedClassName = `${baseStyles} ${variantStyles[variant]} ${className}`;

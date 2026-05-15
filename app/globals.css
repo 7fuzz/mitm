@@ -23,6 +23,10 @@
   --ring: #10b981;
   --backdrop: rgba(0, 0, 0, 0.8);
   --shadow: rgba(0, 0, 0, 0.5);
+  --base-weight: 400;
+  --bold-weight: 700;
+  --emerald-text: #34d399; /* emerald-400 */
+  --sky-text: #38bdf8;     /* sky-400 */
   
   /* Zinc replacements for semantic use */
   --zinc-50: #fafafa;
@@ -61,6 +65,10 @@
   --ring: #059669;
   --backdrop: rgba(255, 255, 255, 0.85);
   --shadow: rgba(0, 0, 0, 0.2);
+  --base-weight: 500;
+  --bold-weight: 800;
+  --emerald-text: #047857; /* emerald-700 for better light mode contrast */
+  --sky-text: #0369a1;     /* sky-700 for better light mode contrast */
 
   /* Inverted zinc for light mode - meticulously tuned for contrast */
   --zinc-50: #09090b;   /* Main headers / Pure black */
@@ -95,13 +103,17 @@
   --color-input-bg: var(--input-bg);
   --color-backdrop: var(--backdrop);
   --color-app-shadow: var(--shadow);
+  --color-emerald-text: var(--emerald-text);
+  --color-sky-text: var(--sky-text);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-weight-bold: var(--bold-weight);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  font-weight: var(--base-weight);
 }

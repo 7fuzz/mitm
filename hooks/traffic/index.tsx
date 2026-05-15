@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { Traffic } from '@/types/traffic';
 

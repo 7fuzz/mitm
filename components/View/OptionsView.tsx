@@ -96,14 +96,14 @@ export function OptionsView() {
 
         {/* Listen Settings */}
         <div className="p-6 border border-zinc-800 rounded bg-zinc-900/30 space-y-6">
-          <h2 className="text-sky-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+          <h2 className="text-sky-text font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
             <span className="opacity-50">#</span> 1. Network_Binding
           </h2>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
               <span>Listen Addresses (IP:PORT)</span>
-              <Button variant="ghost" size="xs" onClick={addBinding} className="text-sky-400 hover:text-sky-300">+ Add Binding</Button>
+              <Button variant="ghost" size="xs" onClick={addBinding} className="text-sky-text hover:text-sky-300">+ Add Binding</Button>
             </div>
 
             <div className="space-y-2">
@@ -131,12 +131,12 @@ export function OptionsView() {
             </div>
 
             <p className="text-zinc-500 text-[10px] font-mono leading-relaxed bg-zinc-950 p-3 border border-zinc-800 rounded">
-              <span className="text-sky-400 font-bold">Pro-tip:</span> Type just a port (e.g. <strong className="text-zinc-300">8080</strong>) to listen on all interfaces. Type an IP and port (e.g. <strong className="text-zinc-300">127.0.0.1:8888</strong>) to restrict access to a specific network.
+              <span className="text-sky-text font-bold">Pro-tip:</span> Type just a port (e.g. <strong className="text-zinc-300">8080</strong>) to listen on all interfaces. Type an IP and port (e.g. <strong className="text-zinc-300">127.0.0.1:8888</strong>) to restrict access to a specific network.
             </p>
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
-            <span className={`text-xs font-mono ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
+            <span className={`text-xs font-mono ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-text'}`}>
               {saveMessage}
             </span>
             <Button
@@ -153,7 +153,7 @@ export function OptionsView() {
 
         {/* Certificate Settings */}
         <div className="p-6 border border-zinc-800 rounded bg-zinc-900/30 space-y-6">
-          <h2 className="text-emerald-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+          <h2 className="text-emerald-text font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
             <span className="opacity-50">#</span> 2. SSL_Certificates
           </h2>
 
@@ -166,9 +166,9 @@ export function OptionsView() {
               <h4 className="text-zinc-300 text-[10px] font-bold uppercase tracking-widest">Setup Instructions:</h4>
               <ol className="list-decimal list-inside text-xs text-zinc-500 font-mono space-y-2">
                 <li>Connect your device to the same Wi-Fi network.</li>
-                <li>Configure your device&apos;s proxy to point to your <strong className="text-sky-400">IP address</strong>.</li>
+                <li>Configure your device&apos;s proxy to point to your <strong className="text-sky-text">IP address</strong>.</li>
                 <li>Download the certificate below and transfer it to the device.</li>
-                <li>Go to device settings and explicitly <strong className="text-emerald-400">Trust the Root Certificate</strong>.</li>
+                <li>Go to device settings and explicitly <strong className="text-emerald-text">Trust the Root Certificate</strong>.</li>
               </ol>
             </div>
 

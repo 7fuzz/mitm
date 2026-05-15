@@ -122,7 +122,7 @@ export default function JsonViewer({
     let formattedValue = String(value);
     const isString = typeof value === "string";
 
-    if (isString) valueColor = "text-emerald-400";
+    if (isString) valueColor = "text-emerald-text";
     else if (typeof value === "number") valueColor = "text-amber-400";
     else if (typeof value === "boolean") valueColor = "text-purple-400";
     else if (value === null) { valueColor = "text-rose-400"; formattedValue = "null"; }
@@ -146,7 +146,7 @@ export default function JsonViewer({
           {label && onToggleRedact && (
             <button
               onClick={() => onToggleRedact(label)}
-              className={`transition-opacity text-[11px] ${isRedacted ? 'text-rose-500 opacity-100' : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-sky-400'}`}
+              className={`transition-opacity text-[11px] ${isRedacted ? 'text-rose-500 opacity-100' : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-sky-text'}`}
               title={isRedacted ? "Unredact Value" : "Redact Value"}
             >
               {isRedacted ? (
@@ -159,7 +159,7 @@ export default function JsonViewer({
         </div>
         <div className="flex-1 min-w-0 break-all flex items-center">
           {label && (
-            <span className="text-sky-400 mr-1 whitespace-nowrap">
+            <span className="text-sky-text mr-1 whitespace-nowrap">
               &quot;<HighlightText text={label} query={searchTerm} />&quot;:
             </span>
           )}
@@ -197,7 +197,7 @@ export default function JsonViewer({
         </button>
         <div className="flex-1 min-w-0 flex items-center flex-wrap">
           {label && (
-            <span className="text-sky-400 mr-1 whitespace-nowrap">
+            <span className="text-sky-text mr-1 whitespace-nowrap">
               &quot;<HighlightText text={label} query={searchTerm} />&quot;:
             </span>
           )}
@@ -223,7 +223,7 @@ export default function JsonViewer({
               <JsonViewer key={key} label={key} value={val} isLast={index === visibleItems.length - 1} path={`${path}-${encodeURIComponent(key)}`} searchTerm={searchTerm} filterMode={filterMode} forceShow={shouldForceShow} redactedKeys={redactedKeys} onToggleRedact={onToggleRedact} collapsedPaths={collapsedPaths} onToggleCollapse={onToggleCollapse} expandedArrays={expandedArrays} onExpandArray={onExpandArray} />
             ))}
           {isLongArray && !effectiveShowAll && (
-            <div className="text-zinc-500 hover:text-sky-400 text-xs py-1 cursor-pointer select-none pl-2 flex items-center gap-1" onClick={() => onExpandArray && onExpandArray(path)}>
+            <div className="text-zinc-500 hover:text-sky-text text-xs py-1 cursor-pointer select-none pl-2 flex items-center gap-1" onClick={() => onExpandArray && onExpandArray(path)}>
               <span className="bg-zinc-800 px-1.5 py-0.5 rounded">+{processedItems.length - 1} more items</span>
             </div>
           )}

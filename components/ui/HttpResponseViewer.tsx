@@ -131,7 +131,7 @@ const FormViewer = ({ body, contentType }: { body: string; contentType: string }
         <tbody className="divide-y divide-zinc-800/50">
           {entries.map((e, i) => (
             <tr key={i} className="hover:bg-zinc-800/20 transition-colors">
-              <td className="px-3 py-2 text-sky-400 font-bold align-top break-all">{e.k}</td>
+              <td className="px-3 py-2 text-sky-text font-bold align-top break-all">{e.k}</td>
               <td className="px-3 py-2 text-zinc-300 align-top break-all">
                 {e.type === 'file' ? (
                   <span className="text-amber-500 flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
         <div className="border-b border-zinc-800 bg-zinc-950 resize-y overflow-auto min-h-20 max-h-[60%] z-10" style={{ height: '160px' }}>
           <div className="p-4 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-[11px] font-mono">
             {parsed.firstLine && (
-              <div className="col-span-2 text-sky-400 font-black text-[12px] mb-2 pb-2 border-b border-zinc-800/50 break-all">
+              <div className="col-span-2 text-sky-text font-black text-[12px] mb-2 pb-2 border-b border-zinc-800/50 break-all">
                 {parsed.firstLine}
               </div>
             )}
@@ -336,7 +336,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
               <button
                 onClick={() => setFilterMode(!filterMode)}
                 title={filterMode ? "Filter Active: Hiding unmatched lines" : "Highlight Active: Showing all lines"}
-                className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${filterMode ? 'bg-emerald-500/20 text-emerald-400' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
+                className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${filterMode ? 'bg-emerald-500/20 text-emerald-text' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
@@ -346,14 +346,14 @@ export default function HttpResponseViewer({ text }: { text: string }) {
               <div className="w-px h-4 bg-zinc-700 mx-1 hidden sm:block"></div>
 
               {/* STRICT HEIGHT/WIDTH: h-7 w-7 */}
-              <button onClick={() => setCollapsedPaths(new Set())} title="Expand All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
+              <button onClick={() => setCollapsedPaths(new Set())} title="Expand All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-text transition-colors shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="7 13 12 18 17 13"></polyline>
                   <polyline points="7 6 12 11 17 6"></polyline>
                 </svg>
               </button>
 
-              <button onClick={collapseAllNodes} title="Collapse All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-400 transition-colors shrink-0">
+              <button onClick={collapseAllNodes} title="Collapse All" className="h-7 w-7 flex items-center justify-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-sky-text transition-colors shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="17 11 12 6 7 11"></polyline>
                   <polyline points="17 18 12 13 7 18"></polyline>
@@ -372,7 +372,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
                 notify.success("Sent to JSON Toolkit");
               }}
               // STRICT HEIGHT: h-7
-              className="h-7 flex items-center px-3 text-[9px] uppercase font-bold text-sky-400 hover:bg-sky-500/20 tracking-widest transition-colors shrink-0 border border-sky-500/30 bg-sky-500/10 rounded"
+              className="h-7 flex items-center px-3 text-[9px] uppercase font-bold text-sky-text hover:bg-sky-500/20 tracking-widest transition-colors shrink-0 border border-sky-500/30 bg-sky-500/10 rounded"
             >
               Send to Toolkit
             </button>
@@ -380,7 +380,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
 
           {/* STRICT HEIGHT: h-7 */}
           <div className="flex items-center gap-2 h-7">
-            <button onClick={handleCopyBody} className="h-full flex items-center text-[10px] uppercase font-bold text-emerald-500 hover:text-emerald-400 tracking-widest transition-colors shrink-0">
+            <button onClick={handleCopyBody} className="h-full flex items-center text-[10px] uppercase font-bold text-emerald-text hover:text-emerald-text tracking-widest transition-colors shrink-0">
               {copiedAll ? "✓ Copied Body!" : "Copy Body"}
             </button>
             <div className="w-px h-3 bg-zinc-700"></div>
@@ -431,7 +431,7 @@ export default function HttpResponseViewer({ text }: { text: string }) {
           />
 
         ) : (isXml || isHtml) && viewMode === "pretty" ? (
-          <pre className="text-[11px] font-mono text-emerald-400 whitespace-pre-wrap wrap-break-words">
+          <pre className="text-[11px] font-mono text-emerald-text whitespace-pre-wrap wrap-break-words">
             {formatMarkup(parsed.rawBody)}
           </pre>
         ) : (

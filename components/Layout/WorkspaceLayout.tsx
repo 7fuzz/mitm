@@ -60,7 +60,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
           <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-800/50 shadow-inner shadow-app-shadow/20">
             <button
               onClick={() => onUpdateLayout({ isListOpen: !isListOpen })}
-              className={`p-1.5 rounded-md transition-all ${isListOpen ? 'text-emerald-500 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
+              className={`p-1.5 rounded-md transition-all ${isListOpen ? 'text-emerald-text bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
               title={`${isListOpen ? 'Hide' : 'Show'} Sidebar`}
             >
               {isListOpen ? (
@@ -72,7 +72,7 @@ export function WorkspaceLayout({ children, listComponent, mainContent, toolbarL
             <div className="w-px h-4 bg-zinc-800 mx-1"></div>
             <button
               onClick={() => onUpdateLayout({ splitMode: splitMode === 'vertical' ? 'horizontal' : 'vertical' })}
-              className={`p-1.5 rounded-md transition-all ${splitMode === 'horizontal' ? 'text-sky-400 bg-sky-500/10' : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800'}`}
+              className={`p-1.5 rounded-md transition-all ${splitMode === 'horizontal' ? 'text-sky-text bg-sky-500/10' : 'text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800'}`}
               title="Toggle Split Mode"
             >
               {splitMode === 'horizontal' ? (

@@ -29,7 +29,7 @@ export function ShortcutHint({ isOpen, simpleMode }: ShortcutHintProps) {
         </div>
         {shortcuts.map((s) => (
           <div key={s.key} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition-colors">
-            <kbd className="min-w-5 h-5 flex items-center justify-center bg-zinc-950 border border-zinc-700 rounded text-[10px] font-bold text-emerald-400 uppercase">
+            <kbd className="min-w-5 h-5 flex items-center justify-center bg-zinc-950 border border-zinc-700 rounded text-[10px] font-bold text-emerald-text uppercase">
               {s.key}
             </kbd>
             <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">

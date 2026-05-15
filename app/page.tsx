@@ -17,9 +17,7 @@ import { useTheme } from '@/hooks/ui/useTheme';
 // ==========================================
 export default function Page() {
   return (
-    <TrafficProvider>
-      <TrafficApp />
-    </TrafficProvider>
+    <TrafficApp />
   );
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useTraffic } from '@/hooks/traffic';
 
 type Theme = 'dark' | 'light';
 
@@ -13,23 +14,33 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const { prefs, updatePrefs } = useTraffic();
   const [theme, setThemeState] = useState<Theme>('dark');
 
+  // 1. Initial Load from localStorage (faster than waiting for API)
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme;
     if (savedTheme) {
       setThemeState(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
-    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      // Default to dark as per original app, but check system preference if no saved
-      // Actually, original app was all dark, so let's stick to dark as default.
     }
   }, []);
+
+  // 2. Sync with Global State when it arrives from Backend
+  useEffect(() => {
+    if (prefs.theme && prefs.theme !== theme) {
+      setThemeState(prefs.theme);
+      document.documentElement.setAttribute('data-theme', prefs.theme);
+    }
+  }, [prefs.theme]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+    
+    // Persist to backend
+    updatePrefs({ ...prefs, theme: newTheme });
   };
 
   const toggleTheme = () => {

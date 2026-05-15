@@ -21,8 +21,8 @@ export const TrafficItem = memo(({
 }: TrafficItemProps) => {
 
   const getMethodColor = (m: string) => {
-    if (m === 'GET') return 'text-sky-400';
-    if (m === 'POST') return 'text-emerald-400';
+    if (m === 'GET') return 'text-sky-text';
+    if (m === 'POST') return 'text-emerald-text';
     if (m === 'DELETE') return 'text-rose-400';
     if (m === 'PUT' || m === 'PATCH') return 'text-amber-400';
     return 'text-purple-400';
@@ -30,7 +30,7 @@ export const TrafficItem = memo(({
 
   const getStatusColor = (s: number) => {
     if (s === 0) return 'text-zinc-600';
-    if (s < 300) return 'text-emerald-500';
+    if (s < 300) return 'text-emerald-text';
     if (s < 400) return 'text-amber-500';
     return 'text-rose-500';
   };
@@ -67,7 +67,7 @@ export const TrafficItem = memo(({
               </span>
             )}
             {hitCount !== undefined && hitCount > 0 && (
-              <span className="text-[8px] bg-emerald-500/10 text-emerald-400/80 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono shrink-0">
+              <span className="text-[8px] bg-emerald-500/10 text-emerald-text/80 px-1.5 py-0.5 rounded border border-emerald-500/20 font-mono shrink-0">
                 Hits: {hitCount}
               </span>
             )}

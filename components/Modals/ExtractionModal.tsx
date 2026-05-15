@@ -79,7 +79,7 @@ export function ExtractionModal({ isOpen, onClose, onSave, initialRules, availab
                     <select
                       value={rule.varName}
                       onChange={(e) => updateRule(rule.id, 'varName', e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-emerald-600 dark:text-emerald-400 text-xs font-mono outline-none focus:border-amber-500/50 transition-colors"
+                      className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded text-emerald-text text-xs font-mono outline-none focus:border-amber-500/50 transition-colors"
                     >
                       <option value="">Select Variable...</option>
                       {availableVariables.map(v => (

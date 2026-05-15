@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { HeaderEditor } from '../Editor/HeaderEditor';
 import { BodyEditor } from '../Editor/BodyEditor';
 import { UrlEditor } from '../Editor/UrlEditor';
@@ -39,7 +39,7 @@ export function RepeaterView() {
   const [editExtract, setEditExtract] = useState<Record<string, string>>({});
 
   // Modals
-  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (_val: string) => { } });
+  const [promptConfig, setPromptConfig] = useState({ isOpen: false, title: '', initialValue: '', action: (_: string) => { } });
   const openPrompt = (title: string, initialValue: string, action: (val: string) => void) => setPromptConfig({ isOpen: true, title, initialValue, action });
   const closePrompt = () => setPromptConfig(prev => ({ ...prev, isOpen: false }));
 
@@ -62,6 +62,13 @@ export function RepeaterView() {
 
   const [prevReqId, setPrevReqId] = useState<string | null>(null);
 
+  // Auto-update selectedId if we defaulted to repeaterRequests[0]
+  useEffect(() => {
+    if (currentReq && currentReq.id !== selectedId && setSelectedId) {
+      setSelectedId(currentReq.id);
+    }
+  }, [currentReq, selectedId, setSelectedId]);
+
   if (currentReq && currentReq.id !== prevReqId) {
     setPrevReqId(currentReq.id);
     setEditName(currentReq.name);
@@ -71,10 +78,6 @@ export function RepeaterView() {
     setEditHeaders(currentReq.headers || {});
     setEditBody(currentReq.body || '');
     setEditExtract(currentReq.extract || {});
-    // Auto-update selectedId if we defaulted to repeaterRequests[0]
-    if (currentReq.id !== selectedId && setSelectedId) {
-      setSelectedId(currentReq.id);
-    }
   }
 
   const trafficMapped: Traffic[] = repeaterRequests.map(req => {
@@ -123,7 +126,7 @@ export function RepeaterView() {
               updateVariableAutoValue(varName, String(value));
             }
           });
-        } catch (_e) {
+        } catch {
           console.error("Failed to parse response for extraction");
         }
       }
@@ -176,7 +179,7 @@ export function RepeaterView() {
       try {
         const parsed = JSON.parse(editBody);
         if (parsed.__form_data) {
-          finalBody = parsed.__form_data.map((e: any) => `${interpolate(e.k)}: ${e.type === 'file' ? `[FILE: ${e.fileName}]` : interpolate(e.v)}`).join('\n');
+          finalBody = (parsed.__form_data as Array<{ k: string, v: string, type?: string, fileName?: string }>).map((e) => `${interpolate(e.k)}: ${e.type === 'file' ? `[FILE: ${e.fileName}]` : interpolate(e.v)}`).join('\n');
         }
       } catch { /* fallback to raw */ }
     } else {
@@ -283,7 +286,7 @@ export function RepeaterView() {
             <Button variant="destructive" size="sm" onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="mr-2">Clear</Button>
 
             <div className="flex items-center gap-px">
-              <Button variant="secondary" size="sm" onClick={handleAdd} className="rounded-r-none border-r-0 text-emerald-400" title="New Request">+ New</Button>
+              <Button variant="secondary" size="sm" onClick={handleAdd} className="rounded-r-none border-r-0 text-emerald-text" title="New Request">+ New</Button>
               <Button variant="secondary" size="sm" onClick={handleDuplicate} disabled={!currentReq} className="rounded-l-none" title="Duplicate Request">Copy</Button>
             </div>
 
@@ -303,7 +306,7 @@ export function RepeaterView() {
                   </h3>
                   {currentReq.hitCount !== undefined && currentReq.hitCount > 0 && (
                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800">
-                      Hits: <span className="text-emerald-500 font-bold">{currentReq.hitCount}</span>
+                      Hits: <span className="text-emerald-text font-bold">{currentReq.hitCount}</span>
                     </span>
                   )}
                 </div>
@@ -405,7 +408,7 @@ export function RepeaterView() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-amber-500 font-bold uppercase text-[10px] tracking-widest flex items-center gap-2"><span className="opacity-50">#</span> Response_Received</h3>
                     {currentReq.response && (
-                      <div className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest ${currentReq.response.status >= 400 ? 'bg-rose-500/10 border border-rose-500/30 text-rose-500' : currentReq.response.status >= 300 ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-500'}`}>Status: {currentReq.response.status}</div>
+                      <div className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-widest ${currentReq.response.status >= 400 ? 'bg-rose-500/10 border border-rose-500/30 text-rose-500' : currentReq.response.status >= 300 ? 'bg-amber-500/10 border border-amber-500/30 text-amber-500' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-text'}`}>Status: {currentReq.response.status}</div>
                     )}
                   </div>
                   <div className="flex-1 bg-zinc-900/20 border border-zinc-800/50 rounded overflow-hidden min-h-100">

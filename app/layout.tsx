@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "@/components/ui/NotificationProvider";
 import { ThemeProvider } from "@/hooks/ui/useTheme";
+import { TrafficProvider } from "@/hooks/traffic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,11 +32,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          <NotificationProvider>
-            {children}
-          </NotificationProvider>
-        </ThemeProvider>
+        <TrafficProvider>
+          <ThemeProvider>
+            <NotificationProvider>
+              {children}
+            </NotificationProvider>
+          </ThemeProvider>
+        </TrafficProvider>
       </body>
     </html>
   );

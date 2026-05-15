@@ -141,7 +141,7 @@ export function CvssTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
   const sevColor = score.severity === 'Critical' ? 'bg-rose-500/20 text-rose-400 border-rose-500/50' :
     score.severity === 'High' ? 'bg-orange-500/20 text-orange-400 border-orange-500/50' :
       score.severity === 'Medium' ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' :
-        score.severity === 'Low' ? 'bg-sky-500/20 text-sky-400 border-sky-500/50' :
+        score.severity === 'Low' ? 'bg-sky-500/20 text-sky-text border-sky-500/50' :
           'bg-zinc-800 text-zinc-500 border-zinc-700';
 
   const exploitabilityGroup = CVSS4_GROUPS[0];

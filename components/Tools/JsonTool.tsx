@@ -177,14 +177,14 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
         </div>
 
         <div className="flex gap-2">
-          <button onClick={handleFormat} className="px-4 py-1.5 bg-zinc-900 text-emerald-400 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold uppercase rounded transition-colors" title="Format raw code">
+          <button onClick={handleFormat} className="px-4 py-1.5 bg-zinc-900 text-emerald-text hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold uppercase rounded transition-colors" title="Format raw code">
             Format Raw
           </button>
           <div className="w-px h-6 bg-zinc-800 mx-2 self-center"></div>
           <button onClick={() => copyToClipboard(true)} className="px-4 py-1.5 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold uppercase rounded transition-colors" title="Copies only expanded nodes">
             Copy Visible
           </button>
-          <button onClick={() => copyToClipboard(false)} className="px-4 py-1.5 bg-sky-900/30 text-sky-400 hover:bg-sky-600 hover:text-zinc-950 border border-sky-800 text-[10px] font-bold uppercase rounded transition-colors" title="Copies entire JSON structure">
+          <button onClick={() => copyToClipboard(false)} className="px-4 py-1.5 bg-sky-900/30 text-sky-text hover:bg-sky-600 hover:text-zinc-950 border border-sky-800 text-[10px] font-bold uppercase rounded transition-colors" title="Copies entire JSON structure">
             Copy All
           </button>
         </div>
@@ -213,7 +213,7 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
                 value={rawJson}
                 onChange={(e) => setRawJson(e.target.value)}
                 // Removed h-full, added flex-1 so it securely anchors to the wrapper
-                className="flex-1 w-full bg-transparent text-emerald-400 font-mono text-xs p-4 outline-none resize-none"
+                className="flex-1 w-full bg-transparent text-emerald-text font-mono text-xs p-4 outline-none resize-none"
                 spellCheck={false}
               />
             ) : (
@@ -235,12 +235,12 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
                   placeholder="Search nodes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent p-1.5 outline-none text-[11px] font-mono text-sky-400"
+                  className="w-full bg-transparent p-1.5 outline-none text-[11px] font-mono text-sky-text"
                 />
               </div>
               <button
                 onClick={() => setFilterMode(!filterMode)}
-                className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-colors ${filterMode ? 'bg-sky-500/20 text-sky-400 border-sky-500/50' : 'bg-zinc-900 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
+                className={`px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-colors ${filterMode ? 'bg-sky-500/20 text-sky-text border-sky-500/50' : 'bg-zinc-900 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
                 title="Hide non-matching nodes"
               >
                 Filter
@@ -261,7 +261,7 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
                 <div className="flex bg-zinc-900 border border-zinc-700 rounded p-1 animate-in fade-in zoom-in-95 duration-200">
                   <button
                     onClick={autoRedact}
-                    className="px-2 py-1 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 text-[9px] font-bold uppercase tracking-widest rounded transition-colors"
+                    className="px-2 py-1 hover:bg-zinc-800 text-zinc-400 hover:text-sky-text text-[9px] font-bold uppercase tracking-widest rounded transition-colors"
                     title="Auto-mask sensitive fields"
                   >
                     Auto
@@ -277,7 +277,7 @@ export function JsonTool({ splitMode }: { splitMode: 'horizontal' | 'vertical' }
                   <div className="w-px h-3 bg-zinc-700 self-center"></div>
                   <button
                     onClick={clearRedaction}
-                    className="px-2 py-1 hover:bg-zinc-800 text-zinc-400 hover:text-emerald-400 text-[9px] font-bold uppercase tracking-widest rounded transition-colors"
+                    className="px-2 py-1 hover:bg-zinc-800 text-zinc-400 hover:text-emerald-text text-[9px] font-bold uppercase tracking-widest rounded transition-colors"
                     title="Clear all masks"
                   >
                     Clear
