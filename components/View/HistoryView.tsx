@@ -170,7 +170,6 @@ export function HistoryView() {
                     variant="purple"
                     size="sm"
                     onClick={() => handleAddToRepeater(selectedReq, false)}
-                    className="bg-purple-900/30 text-purple-400 border-purple-800 hover:text-zinc-50"
                   >
                     Send_to_Repeater
                   </Button>
@@ -180,7 +179,6 @@ export function HistoryView() {
                       variant="secondary"
                       size="sm"
                       onClick={() => handleAddToRepeater(selectedReq, true)}
-                      className="bg-zinc-800/50"
                     >
                       Raw
                     </Button>
