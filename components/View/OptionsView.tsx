@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTraffic } from '@/hooks/traffic';
+import { Button } from '../ui/Button';
 
 export function OptionsView() {
   const { prefs, updatePrefs } = useTraffic();
@@ -102,7 +103,7 @@ export function OptionsView() {
           <div className="space-y-4">
             <div className="flex items-center justify-between text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
               <span>Listen Addresses (IP:PORT)</span>
-              <button onClick={addBinding} className="text-sky-400 hover:text-sky-300 transition-colors">+ Add Binding</button>
+              <Button variant="ghost" size="xs" onClick={addBinding} className="text-sky-400 hover:text-sky-300">+ Add Binding</Button>
             </div>
 
             <div className="space-y-2">
@@ -116,12 +117,14 @@ export function OptionsView() {
                     className="w-full bg-zinc-950 border border-zinc-700 p-3 rounded text-amber-400 font-black outline-none focus:border-sky-500 transition-colors text-xs font-mono"
                   />
                   {bindings.length > 1 && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => removeBinding(idx)}
-                      className="p-3 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-3 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       ✕
-                    </button>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -136,13 +139,15 @@ export function OptionsView() {
             <span className={`text-xs font-mono ${saveMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
               {saveMessage}
             </span>
-            <button
+            <Button
+              variant="sky"
+              size="md"
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="px-6 py-2 bg-sky-600 hover:bg-sky-500 text-zinc-950 text-[10px] rounded uppercase font-black tracking-widest transition-colors disabled:opacity-50"
+              className="min-w-32"
             >
               {isSaving ? 'Rebinding...' : 'Apply & Restart'}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -167,13 +172,14 @@ export function OptionsView() {
               </ol>
             </div>
 
-            <a
-              href="/api/cert"
-              download="mitmproxy-ca-cert.pem"
-              className="inline-flex items-center justify-center w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 text-xs rounded uppercase font-black tracking-widest transition-colors shadow-lg shadow-emerald-500/20"
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => window.location.href = '/api/cert'}
+              className="w-full"
             >
               Download Root CA (.pem)
-            </a>
+            </Button>
           </div>
         </div>
 

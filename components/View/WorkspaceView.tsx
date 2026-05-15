@@ -5,6 +5,7 @@ import { ConfirmModal, PromptModal, MultiGroupExportModal } from '../Modals';
 import { EnvironmentsSection } from '../modules/workspace/EnvironmentsSection';
 import { CollectionsSection } from '../modules/workspace/CollectionsSection';
 import { ReplacementsSection } from '../modules/workspace/ReplacementsSection';
+import { Button } from '../ui/Button';
 
 export function WorkspaceView() {
   const {
@@ -32,7 +33,7 @@ export function WorkspaceView() {
       const fetchPromises = selectedGroupIds.map(gid => fetch(`/api/repeater-db?groupId=${gid}`).then(r => r.json()));
       const results = await Promise.all(fetchPromises);
       const flattenedRequests: RepeaterRequest[] = results.flat();
-      
+
       if (flattenedRequests.length === 0) return alert('No requests found in selected groups.');
 
       const placeholders: Record<string, string> = {};
@@ -103,7 +104,7 @@ export function WorkspaceView() {
         if (groupReqs.length === 0) return null;
 
         const groupName = gid === 'null' ? 'Default' : (repeaterGroups.find(g => g.id === gid)?.name || 'Unknown Group');
-        
+
         const baseUrls = groupReqs.map(r => splitUrl(r.url).baseUrl);
         const mostCommonBase = baseUrls.sort((a, b) => baseUrls.filter(v => v === a).length - baseUrls.filter(v => v === b).length).pop() || '{{apiUrl}}';
 
@@ -202,11 +203,12 @@ export function WorkspaceView() {
           </span>
         </div>
       }
+
       toolbarRight={
         <div className="flex items-center gap-2">
-          <button onClick={importPostman} className="px-3 py-1.5 text-zinc-500 hover:text-sky-400 text-[10px] rounded transition-all uppercase font-bold">Import PM</button>
-          <button onClick={importProject} className="px-3 py-1.5 text-zinc-500 hover:text-sky-400 text-[10px] rounded transition-all uppercase font-bold">Import Project</button>
-          <button onClick={() => setExportModalOpen(true)} className="px-3 py-1.5 text-zinc-500 hover:text-amber-400 text-[10px] rounded transition-all uppercase font-bold">Export</button>
+          <Button variant="ghost" size="sm" onClick={importPostman} className="text-zinc-500 hover:text-sky-400">Import PM</Button>
+          <Button variant="ghost" size="sm" onClick={importProject} className="text-zinc-500 hover:text-sky-400">Import Project</Button>
+          <Button variant="ghost" size="sm" onClick={() => setExportModalOpen(true)} className="text-zinc-500 hover:text-amber-400">Export</Button>
         </div>
       }
       mainContent={() => (

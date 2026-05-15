@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Button } from '../ui/Button';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -23,7 +24,6 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Auto-focus the confirm button so the user can just hit "Enter"
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => confirmBtnRef.current?.focus(), 10);
@@ -50,24 +50,22 @@ export function ConfirmModal({
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors rounded"
             >
               {cancelText}
-            </button>
-            <button
+            </Button>
+            <Button
               ref={confirmBtnRef}
-              type="button"
+              variant={isDestructive ? 'destructive' : 'primary'}
+              size="md"
               onClick={handleConfirm}
-              className={`px-5 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-950 transition-colors rounded ${isDestructive
-                  ? 'bg-rose-600 hover:bg-rose-500'
-                  : 'bg-emerald-600 hover:bg-emerald-500'
-                }`}
+              className="px-6"
             >
               {confirmText}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

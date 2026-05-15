@@ -6,6 +6,7 @@ import { UrlEditor } from '../Editor/UrlEditor';
 import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { useTraffic } from '@/hooks/traffic';
 import { useNotification } from '../ui/NotificationProvider';
+import { Button } from '../ui/Button';
 
 // === NEW: HTTP Formatters for the Viewer ===
 const buildRawRequestMessage = (req: Traffic) => {
@@ -30,9 +31,7 @@ export function HistoryView() {
     traffic, setTraffic, selectedReq, selectedId, setSelectedId,
     historyLimit, setHistoryLimit, isLimitEnabled, setIsLimitEnabled,
     uiLayout, updateUILayout,
-    // NEW: Destructure the safe repeater functions instead of raw setters
     refreshRepeater, setRepeaterSelectedId,
-    // NEW: Get replacement apply function
     applyAllReplacements,
     simpleMode
   } = useTraffic();
@@ -64,16 +63,13 @@ export function HistoryView() {
     fetch('/api/history', { method: 'DELETE' }).catch(console.error);
   };
 
-  // === UPGRADED: Network-safe Repeater Injection ===
   const handleAddToRepeater = async (req: Traffic, raw: boolean = false) => {
     try {
       let path = req.url;
       try { path = new URL(req.url).pathname; } catch { }
 
-      // Simple Mode: ALWAYS raw send
       const isRaw = simpleMode || raw;
 
-      // Apply replacements to URL, headers, and body only if not raw mode
       const { url: transformedUrl, headers: transformedHeaders, body: transformedBody } = isRaw
         ? { url: req.url, headers: req.request_headers || {}, body: req.request_body || '' }
         : applyAllReplacements({ url: req.url, headers: req.request_headers || {}, body: req.request_body || '' });
@@ -83,7 +79,7 @@ export function HistoryView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: `${req.method} ${path}`,
-          group: isRaw ? 'Raw Imports' : 'History Imports', // Groups it cleanly!
+          group: isRaw ? 'Raw Imports' : 'History Imports',
           method: req.method,
           url: transformedUrl,
           headers: transformedHeaders,
@@ -124,12 +120,14 @@ export function HistoryView() {
 
         toolbarRight={
           <>
-            <button
+            <Button
+              variant={isLimitEnabled ? 'secondary' : 'ghost'}
+              size="sm"
               onClick={() => setIsLimitEnabled(!isLimitEnabled)}
-              className={`text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded transition-all border ${isLimitEnabled ? 'bg-zinc-800 border-zinc-600 text-zinc-300' : 'bg-transparent border-dashed border-zinc-700 text-zinc-600 hover:text-zinc-400'}`}
+              className={!isLimitEnabled ? 'border-dashed border-zinc-700' : ''}
             >
               {isLimitEnabled ? 'Limit: ON' : 'Limit: OFF'}
-            </button>
+            </Button>
 
             {isLimitEnabled && (
               <div className="flex items-center gap-2 mr-2">
@@ -149,16 +147,17 @@ export function HistoryView() {
               Total: {traffic.length}
             </span>
 
-            <button
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => {
                 if (confirm('Clear all history? This cannot be undone.')) {
                   handleClearHistory();
                 }
               }}
-              className="text-[10px] uppercase font-bold tracking-widest px-3 py-1.5 rounded transition-all border bg-rose-900/30 border-rose-800 text-rose-400 hover:bg-rose-600 hover:text-zinc-50"
             >
               Clear_History
-            </button>
+            </Button>
           </>
         }
 
@@ -167,10 +166,34 @@ export function HistoryView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <header className="flex flex-col items-start border-b border-zinc-800 pb-6">
                 <div className="ml-auto flex gap-3 mb-4">
-                  <button onClick={() => handleAddToRepeater(selectedReq, false)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-zinc-50 text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_Repeater</button>
-                  {!simpleMode && <button onClick={() => handleAddToRepeater(selectedReq, true)} className="px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-50 text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Raw</button>}
+                  <Button
+                    variant="purple"
+                    size="sm"
+                    onClick={() => handleAddToRepeater(selectedReq, false)}
+                    className="bg-purple-900/30 text-purple-400 border-purple-800 hover:text-zinc-50"
+                  >
+                    Send_to_Repeater
+                  </Button>
+                  
+                  {!simpleMode && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleAddToRepeater(selectedReq, true)}
+                      className="bg-zinc-800/50"
+                    >
+                      Raw
+                    </Button>
+                  )}
 
-                  <button onClick={copyAsCurl} className="px-3 py-1 bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-zinc-50 text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Copy_as_cURL</button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={copyAsCurl}
+                    className="hover:bg-emerald-600 hover:border-emerald-500"
+                  >
+                    Copy_as_cURL
+                  </Button>
                 </div>
                 <div className="w-full">
                   <UrlEditor method={selectedReq.method} onMethodChange={() => { }} url={selectedReq.url} onChange={() => { }} readOnly={true} />

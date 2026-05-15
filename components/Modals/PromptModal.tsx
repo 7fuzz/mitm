@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Button } from '../ui/Button';
 
 interface PromptModalProps {
   isOpen: boolean;
@@ -22,7 +23,6 @@ export function PromptModal({ isOpen, title, initialValue = '', onClose, onSubmi
     setPrevOpen(false);
   }
 
-  // Auto-focus the input when the modal opens
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 10);
@@ -53,12 +53,12 @@ export function PromptModal({ isOpen, title, initialValue = '', onClose, onSubmi
             placeholder="Type here..."
           />
           <div className="flex items-center justify-end gap-2 mt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-zinc-300 transition-colors rounded">
+            <Button variant="ghost" size="sm" type="button" onClick={onClose}>
               Cancel
-            </button>
-            <button type="submit" disabled={!value.trim()} className="px-5 py-2 text-[10px] font-bold uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-zinc-950 disabled:opacity-30 disabled:hover:bg-emerald-600 transition-colors rounded">
+            </Button>
+            <Button variant="primary" size="md" type="submit" disabled={!value.trim()} className="px-6">
               Confirm
-            </button>
+            </Button>
           </div>
         </form>
       </div>

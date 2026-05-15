@@ -8,6 +8,7 @@ import HttpResponseViewer from '../ui/HttpResponseViewer';
 import { WorkspaceLayout } from '../Layout/WorkspaceLayout';
 import { useTraffic } from '@/hooks/traffic';
 import { PromptModal, ConfirmModal, ExtractionModal, RepeaterHistoryModal } from '../Modals';
+import { Button } from '../ui/Button';
 
 export interface RepeaterRequest {
   id: string; name: string; groupId: string | null; method: string; url: string; headers: Record<string, string>; body: string; timestamp: number;
@@ -235,7 +236,7 @@ export function RepeaterView() {
 
         toolbarLeft={!simpleMode ? (
           <div className="flex items-center gap-2 bg-zinc-950 p-1 rounded-full border border-zinc-800 px-3 shadow-inner shadow-app-shadow/50">
-            <span className="text-[9px] text-zinc-600 font-black uppercase tracking-widest hidden sm:inline-block">Collection:</span>
+            <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest hidden sm:inline-block">Collection:</span>
             <select
               value={activeGroupId}
               onChange={(e) => switchGroup(e.target.value)}
@@ -278,22 +279,17 @@ export function RepeaterView() {
 
         toolbarRight={
           <>
-            <button 
-              onClick={() => setHistoryModalOpen(true)} 
-              disabled={!currentReq} 
-              className="px-3 py-1.5 text-zinc-500 hover:text-purple-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2"
-              title="View Request History"
-            >
-              History
-            </button>
-            <button onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="px-3 py-1.5 text-zinc-500 hover:text-rose-400 disabled:opacity-30 text-[10px] rounded transition-all uppercase font-bold mr-2">Clear</button>
+            <Button variant="ghost" size="sm" onClick={() => setHistoryModalOpen(true)} disabled={!currentReq} title="View Request History" className="mr-2">History</Button>
+            <Button variant="destructive" size="sm" onClick={() => currentReq && updateRequest(currentReq.id, { response: undefined })} disabled={!currentReq?.response} className="mr-2">Clear</Button>
 
             <div className="flex items-center gap-px">
-              <button onClick={handleAdd} className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-emerald-400 text-[10px] rounded-l border border-zinc-800 transition-all uppercase font-black" title="New Request">+ New</button>
-              <button onClick={handleDuplicate} disabled={!currentReq} className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 disabled:opacity-30 text-zinc-300 text-[10px] rounded-r transition-all uppercase font-black" title="Duplicate Request">Copy</button>
+              <Button variant="secondary" size="sm" onClick={handleAdd} className="rounded-r-none border-r-0 text-emerald-400" title="New Request">+ New</Button>
+              <Button variant="secondary" size="sm" onClick={handleDuplicate} disabled={!currentReq} className="rounded-l-none" title="Duplicate Request">Copy</Button>
             </div>
 
-            <button onClick={handleSend} disabled={isLoading || !currentReq} className="px-6 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-30 text-zinc-950 text-[10px] rounded transition-all uppercase font-black shadow-lg shadow-purple-500/20 ml-2">{isLoading ? 'Executing...' : 'Execute'}</button>
+            <Button variant="purple" size="sm" onClick={handleSend} disabled={isLoading || !currentReq} className="ml-2 min-w-24">
+              {isLoading ? 'Executing...' : 'Execute'}
+            </Button>
           </>
         }
 
@@ -336,15 +332,17 @@ export function RepeaterView() {
                           <option value="null">Default (Uncategorized)</option>
                           {repeaterGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                         </select>
-                        <button
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => openPrompt('New Collection Name', '', async (name) => {
                             const newId = await createGroup(name);
                             if (newId) { setEditGroupId(newId); updateRequest(currentReq.id, { groupId: newId }); }
                           })}
-                          className="px-3 border border-zinc-700 bg-zinc-900 hover:bg-purple-900/30 text-purple-400 rounded transition-colors text-[10px] font-bold uppercase tracking-wider"
+                          className="text-purple-400"
                         >
                           + New
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -419,7 +417,7 @@ export function RepeaterView() {
           ) : (
             <div className="flex flex-col items-center justify-center opacity-50 relative z-10 min-h-[60vh]">
               <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">REPEATER_IDLE</div>
-              <button onClick={handleAdd} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Specification</button>
+              <Button variant="purple" size="lg" onClick={handleAdd}>+ Create New Specification</Button>
             </div>
           )
         )}
