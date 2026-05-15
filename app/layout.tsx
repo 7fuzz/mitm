@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Traffic Proxy",
-  description: "Security testing workbench",
+  description: "Security testing repeater",
 };
 
 export default function RootLayout({

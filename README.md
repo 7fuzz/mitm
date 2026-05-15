@@ -51,10 +51,10 @@ Go to the **Intercept** tab to pause traffic in real-time.
 - **Modify**: You can edit the URL, headers, or body.
 - **Forward**: Send the modified request/response on its way.
 - **Drop**: Kill the request entirely.
-- **Stage to Workbench**: Send the current state of an intercepted request to the Workbench for further testing.
+- **Stage to Repeater**: Send the current state of an intercepted request to the Repeater for further testing.
 
-### 3. Workbench
-The **Workbench** is where you perform manual request testing.
+### 3. Repeater
+The **Repeater** is where you perform manual request testing.
 - Create new requests from scratch or import them from History/Intercept.
 - Organize requests into **Collections**.
 - Hit **Execute** to send the request and view the response.
@@ -74,12 +74,12 @@ Found in the **Options** tab, you can customize your experience:
 
 ### 🌍 Environments & Variable System
 Manage multiple server environments (e.g., Development, Staging, Production) with a robust variable system:
-- **Variables**: Use `{{placeholder}}` in any Workbench request.
+- **Variables**: Use `{{placeholder}}` in any Repeater request.
 - **Variable Variants**: Create multiple values for a single variable (e.g., "User A", "User B").
 - **Smart Persistence**: Debounced auto-save (1s) and auto-capture from responses.
 
-### 📁 Workbench Collections
-Keep your Workbench organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects.
+### 📁 Repeater Collections
+Keep your Repeater organized by grouping requests into **Collections**. You can reorder groups, rename them, and export entire collections as JSON projects.
 
 ### 🔄 Automated Replacements
 Configure transformation rules that automatically tokenize your traffic in real-time based on URL, Header, or Body patterns.
@@ -118,7 +118,7 @@ The application follows a dual-stack architecture:
 ### 1. Frontend (`/app`, `/components`, `/hooks`)
 -   **`app/api/`**: Proxy routes bridging the frontend to the Python backend.
 -   **`hooks/traffic/`**: Segmented state management unified under `TrafficProvider`.
--   **`components/View/`**: Main page modules (History, Intercept, Workbench, etc.).
+-   **`components/View/`**: Main page modules (History, Intercept, Repeater, etc.).
 
 ### 2. Backend (`/scripts`)
 -   **`server.py`**: The main API server.
@@ -146,7 +146,7 @@ MITM Real abstracts `multipart/form-data` and `application/x-www-form-urlencoded
 | :--- | :--- | :--- |
 | **Core** | `/resume/{id}`, `/cert`, `/state` | Intercept control and global state. |
 | **Traffic** | `/history`, `/history/{id}` | Traffic log management. |
-| **Workbench** | `/repeat`, `/repeater-db`, `/repeater/{id}` | Request execution and persistence. |
+| **Repeater** | `/repeat`, `/repeater-db`, `/repeater/{id}` | Request execution and persistence. |
 | **Collections** | `/repeater-groups`, `/repeater-import` | Group management and imports. |
 | **Variables** | `/variables`, `/variables-bulk`, `/environments` | Workspace configuration. |
 | **Rules** | `/replacements` | Automated traffic modification rules. |
@@ -155,7 +155,7 @@ MITM Real abstracts `multipart/form-data` and `application/x-www-form-urlencoded
 - **`useTraffic`**: Primary unified context hook.
 - **`useTrafficLog`**: Captured flows and history.
 - **`useVariables`**: Environment and variable resolution.
-- **`useRepeater`**: Workbench and collection orchestration.
+- **`useRepeater`**: Repeater and collection orchestration.
 - **`useConfig`**: Global preferences and intercept modes.
 
 ## 📝 Developer Patterns

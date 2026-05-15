@@ -199,7 +199,7 @@ export function OptionsView() {
             <label className="flex items-center gap-3 p-3 bg-zinc-950 border border-zinc-800 rounded cursor-pointer hover:border-purple-500/50 transition-colors">
               <input type="checkbox" checked={prefs.repeater} onChange={() => togglePref('repeater')} className="accent-purple-500 w-4 h-4" />
               <div className="flex flex-col">
-                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">{prefs.simpleMode ? 'Repeater' : 'Workbench'} Workspace</span>
+                <span className="text-xs text-zinc-300 font-bold uppercase tracking-widest">Repeater Workspace</span>
                 <span className="text-[10px] text-zinc-600 font-mono">Saves tabs & payloads</span>
               </div>
             </label>

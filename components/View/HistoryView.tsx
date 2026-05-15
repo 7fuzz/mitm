@@ -64,7 +64,7 @@ export function HistoryView() {
     fetch('/api/history', { method: 'DELETE' }).catch(console.error);
   };
 
-  // === UPGRADED: Network-safe Workbench Injection ===
+  // === UPGRADED: Network-safe Repeater Injection ===
   const handleAddToRepeater = async (req: Traffic, raw: boolean = false) => {
     try {
       let path = req.url;
@@ -100,10 +100,10 @@ export function HistoryView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        notify.success(isRaw ? `Staged Raw to ${simpleMode ? 'Repeater' : 'Workbench'}!` : `Staged to ${simpleMode ? 'Repeater' : 'Workbench'}!`);
+        notify.success(isRaw ? `Staged Raw to Repeater!` : `Staged to Repeater!`);
       }
     } catch (error) {
-      notify.error(`Error sending to ${simpleMode ? 'Repeater' : 'Workbench'}: ` + error);
+      notify.error(`Error sending to Repeater: ` + error);
     }
   };
 
@@ -167,8 +167,9 @@ export function HistoryView() {
             <div className={`w-full mx-auto pb-24 space-y-10 ${splitMode === 'horizontal' ? 'max-w-360' : 'max-w-5xl'}`}>
               <header className="flex flex-col items-start border-b border-zinc-800 pb-6">
                 <div className="ml-auto flex gap-3 mb-4">
-                  <button onClick={() => handleAddToRepeater(selectedReq, false)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_{simpleMode ? 'Repeater' : 'Workbench'}</button>
+                  <button onClick={() => handleAddToRepeater(selectedReq, false)} className="px-4 py-2 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold">Send_to_Repeater</button>
                   {!simpleMode && <button onClick={() => handleAddToRepeater(selectedReq, true)} className="px-4 py-2 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Raw</button>}
+
                   <button onClick={copyAsCurl} className="px-3 py-1 bg-zinc-800 hover:bg-emerald-600 text-zinc-300 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold">Copy_as_cURL</button>
                 </div>
                 <div className="w-full">

@@ -55,7 +55,7 @@ export function InterceptView() {
     setEditBody(formattedBody);
   }
 
-  const handleStageToWorkbench = async (raw: boolean = false) => {
+  const handleStageToRepeater = async (raw: boolean = false) => {
     if (!currentReq) return;
     try {
       let path = currentReq.url;
@@ -90,10 +90,10 @@ export function InterceptView() {
       if (data.success || data.id) {
         if (refreshRepeater) await refreshRepeater();
         if (setRepeaterSelectedId) setRepeaterSelectedId(data.id);
-        notify.success(isRaw ? `Staged Raw to ${simpleMode ? 'Repeater' : 'Workbench'}` : `Staged in ${simpleMode ? 'Repeater' : 'Workbench'}`);
+        notify.success(isRaw ? 'Staged Raw to Repeater' : 'Staged in Repeater');
       }
     } catch (error) {
-      notify.error(`Failed to stage in ${simpleMode ? 'Repeater' : 'Workbench'}: ${error}`);
+      notify.error(`Failed to stage in Repeater: ${error}`);
     }
   };
 
@@ -202,14 +202,14 @@ export function InterceptView() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => handleStageToWorkbench(false)}
+                  onClick={() => handleStageToRepeater(false)}
                   className="px-4 py-1.5 bg-purple-900/30 hover:bg-purple-600 text-purple-400 hover:text-white text-[10px] rounded border border-purple-800 transition-all uppercase font-bold shadow-lg shadow-purple-900/20"
                 >
-                  Stage_to_{simpleMode ? 'Repeater' : 'Workbench'}
+                  Stage_to_Repeater
                 </button>
                 {!simpleMode && (
                   <button
-                    onClick={() => handleStageToWorkbench(true)}
+                    onClick={() => handleStageToRepeater(true)}
                     className="px-4 py-1.5 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-400 hover:text-white text-[10px] rounded border border-zinc-700 transition-all uppercase font-bold"
                   >
                     Raw

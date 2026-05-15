@@ -57,7 +57,7 @@ export function CollectionsSection({ selectedGroupId, setSelectedGroupId, openPr
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest">{simpleMode ? 'Repeater' : 'Workbench'} Collections Management</h3>
+          <h3 className="text-purple-500 font-bold uppercase text-[10px] tracking-widest">Repeater Collections Management</h3>
           <button onClick={() => openPrompt('New Collection Name', '', createGroup)} className="px-3 py-1.5 bg-purple-600/10 border border-purple-600/30 text-purple-500 hover:bg-purple-600/20 rounded text-[9px] font-black uppercase tracking-widest transition-all">+ Create Collection</button>
         </div>
         

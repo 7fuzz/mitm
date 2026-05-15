@@ -4,12 +4,12 @@
 - **Graceful Shutdown**: Improved signal handling (`SIGINT`/`SIGTERM`) and refactored SSE traffic route to ensure Next.js and the Python proxy shut down cleanly on `Ctrl+C`.
 - **Windows Support**: Added `scripts/start-proxy.js` launcher to handle OS-specific virtual environment paths (`bin` vs `Scripts`).
 - **UI Unification**: Created a consistent `TrafficItem` component and updated all sidebars to use a Trash icon for deletion.
-- **Workbench Enhancements**: Added single item deletion for repeater history and automatic response capturing when staging from History.
+- **Repeater Enhancements**: Added single item deletion for repeater history and automatic response capturing when staging from History.
 - **Security**: Completely removed the accidental database backup from git history and updated `.gitignore` to prevent future tracking of `.bak` and `.sqlite` files.
 - **Cleanup**: Removed the legacy Proxy_Vault feature.
 
 ## 2026-05-13
-- **Repeater UI**: Renamed Workbench to Repeater in simple mode for better clarity.
+- **Repeater UI**: Ensured naming is consistent as "Repeater" across the entire application.
 - **Analytics**: Added hit count tracking and display for repeater items, optimized into the header layout.
 - **History Viewer**: Added request history modal for repeater items with raw message support.
 - **Replacements**: Fixed auto-save loops and styled the replacements section for better consistency with other modules.
@@ -41,7 +41,7 @@
 - **Documentation**: Updated README with architectural insights.
 
 ## 2026-04-25
-- **Features**: Added Utilities view, JSON Toolkit integration, and support for request grouping in Workbench.
+- **Features**: Added Utilities view, JSON Toolkit integration, and support for request grouping in Repeater.
 
 ## 2026-04-24
 - **UI**: Added table layout for history and refined overall application layout.

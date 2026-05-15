@@ -418,7 +418,7 @@ export function RepeaterView() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center opacity-50 relative z-10 min-h-[60vh]">
-              <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">{simpleMode ? 'REPEATER_IDLE' : 'WORKBENCH_IDLE'}</div>
+              <div className="text-[60px] font-black tracking-tighter text-zinc-700 mb-6">REPEATER_IDLE</div>
               <button onClick={handleAdd} className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-zinc-950 font-black uppercase tracking-widest text-xs rounded transition-colors shadow-lg shadow-purple-500/20">+ Create New Specification</button>
             </div>
           )
