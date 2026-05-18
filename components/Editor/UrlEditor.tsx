@@ -76,16 +76,16 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
   const deleteParam = (id: string) => updateStructuredUrl(domain, paths, params.filter(p => p.id !== id), fragment);
 
   return (
-    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-25">
+    <div className="flex flex-col bg-zinc-900/50 border border-zinc-800 rounded resize-y overflow-hidden min-h-48">
 
-      <div className="bg-zinc-800/50 px-3 py-1.5 flex justify-between items-center border-b border-zinc-800 shrink-0">
+      <div className="bg-zinc-800/50 px-3 py-2 flex justify-between items-center border-b border-zinc-800 shrink-0">
 
         <div className="flex items-center gap-3">
           <select
             value={method}
             disabled={readOnly}
             onChange={(e) => onMethodChange && onMethodChange(e.target.value)}
-            className={`bg-zinc-950 border border-zinc-700 px-2 py-0.5 rounded font-black outline-none transition-colors text-[10px] text-center uppercase tracking-widest
+            className={`bg-zinc-950 border border-zinc-700 px-2 py-1 rounded font-black outline-none transition-colors text-[10px] text-center uppercase tracking-widest
               ${readOnly ? 'text-zinc-500 appearance-none' : 'text-amber-500 focus:border-amber-500 cursor-pointer'}
             `}
           >
@@ -102,18 +102,19 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
         </div>
       </div>
 
-      <div className="p-3 flex-1 overflow-y-auto min-h-0">
+      <div className="p-4 flex-1 overflow-y-auto min-h-0">
         {mode === 'raw' ? (
           <Textarea
             value={rawUrl}
             readOnly={readOnly}
             onChange={(e) => { setRawUrl(e.target.value); if (onChange) onChange(e.target.value); }}
             variant={readOnly ? 'default' : 'emerald'}
-            className={`h-full min-h-15 ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : ''}`}
+            className={`h-full min-h-32 ${readOnly ? 'text-zinc-400 border-dashed focus:border-zinc-700' : ''}`}
+            spellCheck={false}
           />
         ) : (
-          <div className="space-y-6">
-            <div className="space-y-1">
+          <div className="space-y-8">
+            <div className="space-y-2">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Base Domain</label>
               <Input 
                 value={domain} 
@@ -121,13 +122,14 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                 onChange={(e) => updateStructuredUrl(e.target.value, paths, params, fragment)} 
                 variant={readOnly ? 'default' : 'emerald'}
                 className={readOnly ? 'text-zinc-400' : ''}
+                placeholder="https://api.example.com"
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Path Segments</label>
-              {paths.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-2 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">/ (Root)</div>}
-              <div className="flex flex-wrap gap-2 items-center">
+              {paths.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-3 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">/ (Root)</div>}
+              <div className="flex flex-wrap gap-3 items-center">
                 {paths.map((p) => (
                   <div key={p.id} className="flex gap-2 items-center group">
                     <span className="text-zinc-600 font-black text-sm">/</span>
@@ -136,47 +138,51 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                       readOnly={readOnly} 
                       onChange={(e) => updatePath(p.id, e.target.value)} 
                       variant={readOnly ? 'default' : 'fuchsia'}
-                      className={`w-32 ${readOnly ? 'text-zinc-400' : ''}`}
+                      className={`w-40 ${readOnly ? 'text-zinc-400' : ''}`}
                       placeholder="path" 
                     />
-                    {!readOnly && <button onClick={() => deletePath(p.id)} className="text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded px-1">✕</button>}
+                    {!readOnly && <button onClick={() => deletePath(p.id)} className="text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded px-1.5 py-1 transition-colors">✕</button>}
                   </div>
                 ))}
               </div>
-              {!readOnly && <button onClick={addPath} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-fuchsia-400 hover:border-fuchsia-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Path</button>}
+              {!readOnly && <button onClick={addPath} className="mt-3 py-2 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-fuchsia-400 hover:border-fuchsia-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Path</button>}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Query Parameters</label>
-              {params.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-2 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">No parameters found.</div>}
-              <div className="space-y-2">
+              {params.length === 0 && <div className="text-xs text-zinc-600 italic font-mono p-3 bg-zinc-950/50 rounded border border-zinc-800 border-dashed">No parameters found.</div>}
+              <div className="space-y-3">
                 {params.map(p => (
-                  <div key={p.id} className="flex gap-2 group">
-                    <Input 
-                      value={p.k} 
-                      readOnly={readOnly} 
-                      onChange={(e) => updateParam(p.id, e.target.value, p.v)} 
-                      variant={readOnly ? 'default' : 'sky'}
-                      className={`w-1/3 ${readOnly ? 'text-zinc-500' : ''}`}
-                      placeholder="Key" 
-                    />
-                    <Input 
-                      value={p.v} 
-                      readOnly={readOnly} 
-                      onChange={(e) => updateParam(p.id, p.k, e.target.value)} 
-                      variant={readOnly ? 'default' : 'emerald'}
-                      className={`flex-1 break-all ${readOnly ? 'text-zinc-400' : ''}`}
-                      placeholder="Value" 
-                    />
-                    {!readOnly && <button onClick={() => deleteParam(p.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded">✕</button>}
+                  <div key={p.id} className="flex gap-3 group items-start">
+                    <div className="w-1/3 shrink-0">
+                      <Input 
+                        value={p.k} 
+                        readOnly={readOnly} 
+                        onChange={(e) => updateParam(p.id, e.target.value, p.v)} 
+                        variant={readOnly ? 'default' : 'sky'}
+                        className={readOnly ? 'text-zinc-500' : ''}
+                        placeholder="Key" 
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Input 
+                        value={p.v} 
+                        readOnly={readOnly} 
+                        onChange={(e) => updateParam(p.id, p.k, e.target.value)} 
+                        variant={readOnly ? 'default' : 'emerald'}
+                        className={readOnly ? 'text-zinc-400' : ''}
+                        placeholder="Value" 
+                      />
+                    </div>
+                    {!readOnly && <button onClick={() => deleteParam(p.id)} className="p-2 text-zinc-600 hover:text-rose-500 hover:bg-rose-500/10 rounded transition-colors shrink-0">✕</button>}
                   </div>
                 ))}
               </div>
-              {!readOnly && <button onClick={addParam} className="mt-2 py-1.5 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-text hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Parameter</button>}
+              {!readOnly && <button onClick={addParam} className="mt-3 py-2 w-full border border-dashed border-zinc-700 text-zinc-500 hover:text-sky-text hover:border-sky-500/50 rounded text-[9px] uppercase font-bold tracking-widest transition-colors">+ Add Parameter</button>}
             </div>
 
             {(fragment || !readOnly) && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Fragment (Hash)</label>
                 <div className="flex gap-2 items-center">
                   <span className="text-zinc-600 font-black">#</span>
@@ -186,6 +192,7 @@ export function UrlEditor({ method = 'GET', onMethodChange, url, onChange, readO
                     onChange={(e) => updateStructuredUrl(domain, paths, params, e.target.value)} 
                     variant={readOnly ? 'default' : 'amber'}
                     className={`flex-1 ${readOnly ? 'text-zinc-400' : ''}`}
+                    placeholder="section"
                   />
                 </div>
               </div>
